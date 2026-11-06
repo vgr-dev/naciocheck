@@ -49,10 +49,28 @@ describe('status catalogue', () => {
     for (const entry of STATUS_CATALOG) {
       expect(entry.sources.length, `${entry.key} has no source`).toBeGreaterThan(0);
       for (const source of entry.sources) {
+        if (source.kind === 'observed') continue;
         expect(source.label.trim(), `${entry.key} source label`).not.toBe('');
         expect(source.url, `${entry.key} source url`).toMatch(/^https:\/\//);
       }
     }
+  });
+
+  it('marks the texts that come from real files as observed, with no URL', () => {
+    const observed = STATUS_CATALOG.filter((entry) =>
+      entry.sources.some((source) => source.kind === 'observed'),
+    ).map((entry) => entry.key);
+
+    expect(observed).toEqual(
+      expect.arrayContaining([
+        'abierto-en-tramitacion',
+        'abierto-en-calificacion',
+        'pendiente-requerimiento',
+        'documentacion-aportada',
+        'doble-calificacion',
+        'archivado',
+      ]),
+    );
   });
 
   it('keeps every cited URL inside the privacy allow-list', () => {
@@ -68,6 +86,7 @@ describe('status catalogue', () => {
 
     for (const entry of STATUS_CATALOG) {
       for (const source of entry.sources) {
+        if (source.kind !== 'documented') continue;
         expect(
           allowList.urlPrefixes.some((prefix) => source.url.startsWith(prefix)),
           `${source.url} is not in scripts/allowed-urls.json`,

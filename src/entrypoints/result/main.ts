@@ -84,6 +84,10 @@ function render(payload: ResultPayload): void {
     app.append(element('p', 'explanation', view.explanation));
   }
 
+  if (view.observedMeaning !== null) {
+    app.append(element('p', 'observed-meaning', view.observedMeaning));
+  }
+
   if (view.whatYouCanDo !== null) {
     app.append(element('p', 'action', view.whatYouCanDo));
   }
@@ -97,11 +101,16 @@ function render(payload: ResultPayload): void {
     sources.className = 'sources';
     for (const source of view.sources) {
       const item = document.createElement('li');
-      const link = document.createElement('a');
-      link.href = source.url;
-      link.rel = 'noreferrer noopener';
-      link.textContent = source.label;
-      item.append(link);
+      if (source.kind === 'observed') {
+        // Not a page to open: it is what the user saw on real files, and it says so.
+        item.textContent = t('statuses.observedSource');
+      } else {
+        const link = document.createElement('a');
+        link.href = source.url;
+        link.rel = 'noreferrer noopener';
+        link.textContent = source.label;
+        item.append(link);
+      }
       sources.append(item);
     }
     app.append(sources);

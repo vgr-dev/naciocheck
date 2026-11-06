@@ -154,6 +154,7 @@ export const es = {
   'result.acknowledge': 'Entendido',
   'result.retry': 'Volver a intentarlo',
   'result.next': 'Continuar con la siguiente solicitud',
+  'result.observedMeaning': 'Observado en expedientes reales, no oficial: {text}',
   'result.disclaimer':
     'Información orientativa, no es asesoramiento jurídico. La resolución oficial llega por DEHú. NacioCheck no es una herramienta oficial del Ministerio de Justicia.',
 
@@ -161,6 +162,12 @@ export const es = {
   'statuses.title': 'Qué significa cada estado',
   'statuses.whatYouCanDo': 'Qué puedes hacer: {text}',
   'statuses.noOfficialDefinition': 'Sin definición oficial: las fuentes no coinciden.',
+  'statuses.mainPathTitle': 'El camino habitual',
+  'statuses.branchesTitle': 'Ramas conocidas',
+  'statuses.othersTitle': 'Estados que solo documentan los despachos',
+  'statuses.observedSteps': 'Pasos observados en expedientes reales, no oficiales:',
+  'statuses.observedSource': 'Observado en expedientes reales, no oficial',
+  'statuses.branchHint': 'Rama del camino habitual: no es un paso obligatorio.',
 
   // Alerts and the result model (core) -------------------------------------------------------------------------
   'alert.firstCheck': 'Primera comprobación.',

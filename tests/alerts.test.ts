@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildErrorView, buildResultView, decideAlert } from '../src/core/alerts';
+import { detectAnomaly } from '../src/core/anomaly';
 import type { Change } from '../src/core/changes';
 import type { Check } from '../src/core/storage';
 
@@ -72,6 +73,40 @@ describe('decideAlert', () => {
   });
 });
 
+describe('notifications and the path notes', () => {
+  const calificacion = check({
+    statusKey: 'abierto-en-calificacion',
+    raw: 'Abierto - En calificación.',
+    subStatus: 'Su expediente se encuentra en calificación.',
+  });
+  /** K → T1: a move the observations do not place, so the result view carries a note. */
+  const unusual: Change = { kind: 'changed', previous: calificacion, current: CURRENT };
+
+  it('sends an unusual change without any path text', () => {
+    expect(
+      detectAnomaly(unusual.previous, unusual.current),
+      'the change under test is unusual',
+    ).not.toBeNull();
+
+    const decision = decideAlert(unusual, 'Mi solicitud', 'es');
+    const message = decision.notification?.message ?? '';
+
+    expect(message).toBe('Nuevo estado: Abierto - En tramitación.');
+    for (const forbidden of ['Observado', 'observad', 'habitual', 'camino', 'calificación']) {
+      expect(message).not.toContain(forbidden);
+    }
+  });
+
+  it('keeps the path text out in English too', () => {
+    const decision = decideAlert(unusual, 'My application', 'en');
+    const message = decision.notification?.message ?? '';
+
+    expect(message).toBe('New status: Abierto - En tramitación.');
+    expect(message).not.toContain('Observed');
+    expect(message.toLowerCase()).not.toContain('usual path');
+  });
+});
+
 describe('buildResultView — status', () => {
   it('uses the catalogue title and says it is the first check', () => {
     const view = buildResultView({
@@ -122,6 +157,73 @@ describe('buildResultView — status', () => {
     });
 
     expect(view.anomaly).toBe('Nota en castellano.');
+  });
+
+  it('shows the meaning observed for the current state, labelled as not official', () => {
+    const view = buildResultView({ label: 'Primera', change: changeOf('changed') });
+
+    expect(view.observedMeaning).toContain('Observado en expedientes reales, no oficial:');
+    expect(view.observedMeaning).toContain('primer paso de la secuencia observada');
+  });
+
+  it('shows that meaning in English when asked', () => {
+    const view = buildResultView({ label: 'First', change: changeOf('changed'), locale: 'en' });
+
+    expect(view.observedMeaning).toContain('Observed on real files, not official:');
+    expect(view.observedMeaning).toContain('first step of the observed sequence');
+  });
+
+  it('gives the same sub-status text a different meaning for T4 and for K', () => {
+    const sentence = 'Su expediente se encuentra en calificación.';
+    const T4 = check({
+      statusKey: 'abierto-en-tramitacion',
+      raw: 'Abierto - En tramitación.',
+      subStatus: sentence,
+    });
+    const K = check({
+      statusKey: 'abierto-en-calificacion',
+      raw: 'Abierto - En calificación.',
+      subStatus: sentence,
+    });
+
+    const viewForT4 = buildResultView({
+      label: 'Primera',
+      change: { kind: 'changed', previous: CURRENT, current: T4 },
+    });
+    const viewForK = buildResultView({
+      label: 'Primera',
+      change: { kind: 'changed', previous: T4, current: K },
+    });
+
+    expect(viewForT4.observedMeaning).toContain('días o semanas');
+    expect(viewForK.observedMeaning).toContain('denegación directa');
+    expect(viewForK.observedMeaning).not.toBe(viewForT4.observedMeaning);
+  });
+
+  it('shows no observed meaning on a first check', () => {
+    const view = buildResultView({
+      label: 'Primera',
+      change: changeOf('first', { current: CURRENT }),
+    });
+
+    expect(view.observedMeaning).toBeNull();
+    expect(view.explanation).not.toBeNull();
+  });
+
+  it('shows no observed meaning for a move the observations do not place', () => {
+    const calificacion = check({
+      statusKey: 'abierto-en-calificacion',
+      raw: 'Abierto - En calificación.',
+      subStatus: 'Su expediente se encuentra en calificación.',
+    });
+    const view = buildResultView({
+      label: 'Primera',
+      change: { kind: 'changed', previous: calificacion, current: CURRENT },
+      anomaly: { kind: 'unusual', es: 'Nota.', en: 'Note.', source: null },
+    });
+
+    expect(view.observedMeaning).toBeNull();
+    expect(view.anomaly).toBe('Nota.');
   });
 
   it('speaks English when asked', () => {

@@ -150,6 +150,7 @@ export const en: Record<MessageKey, string> = {
   'result.acknowledge': 'Got it',
   'result.retry': 'Try again',
   'result.next': 'Continue with the next application',
+  'result.observedMeaning': 'Observed on real files, not official: {text}',
   'result.disclaimer':
     'Informational only, not legal advice. The official decision arrives through DEHú. NacioCheck is not an official Ministry of Justice tool.',
 
@@ -157,6 +158,12 @@ export const en: Record<MessageKey, string> = {
   'statuses.title': 'What each status means',
   'statuses.whatYouCanDo': 'What you can do: {text}',
   'statuses.noOfficialDefinition': 'No official definition: the sources disagree.',
+  'statuses.mainPathTitle': 'The usual path',
+  'statuses.branchesTitle': 'Known branches',
+  'statuses.othersTitle': 'States only the law firms document',
+  'statuses.observedSteps': 'Steps observed on real files, not official:',
+  'statuses.observedSource': 'Observed on real files, not official',
+  'statuses.branchHint': 'A branch off the usual path: not a required step.',
 
   // Alerts and the result model (core) -------------------------------------------------------------------------
   'alert.firstCheck': 'First check.',

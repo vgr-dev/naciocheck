@@ -46,10 +46,12 @@ export interface StatusText {
   whatYouCanDo: string;
 }
 
-export interface StatusSource {
-  label: string;
-  url: string;
-}
+/**
+ * Where a text comes from. `documented` is a page to open and cite; `observed` is what the user has seen on
+ * real files, which has no URL and must always be shown as non-official.
+ */
+export type StatusSource =
+  { kind: 'documented'; label: string; url: string } | { kind: 'observed' };
 
 export interface StatusEntry {
   key: StatusKey;
@@ -64,31 +66,41 @@ export interface StatusEntry {
   sources: readonly StatusSource[];
 }
 
+/** For the texts that come from the user's own observations rather than from a published source. */
+export const OBSERVED_ON_FILES: StatusSource = { kind: 'observed' };
+
 const SEDE: StatusSource = {
+  kind: 'documented',
   label: 'Sede Electrónica: consulta telemática de expedientes de nacionalidad',
   url: 'https://sede.mjusticia.gob.es/eConsultas/inicioNacionalidad',
 };
 const LAWFIDENCE: StatusSource = {
+  kind: 'documented',
   label: 'Lawfidence: fases o estados de la nacionalidad española',
   url: 'https://lawfidence.com/fases-o-estados-de-la-nacionalidad-espanola/',
 };
 const MACHELIN: StatusSource = {
+  kind: 'documented',
   label: 'Machelín Díaz: todas las fases o estados de la solicitud',
   url: 'https://machelindiaz.com/todas-fases-o-estados-de-la-solicitud-de-nacionalidad-espanola-por-residencia/',
 };
 const MACHELIN_DOBLE: StatusSource = {
+  kind: 'documented',
   label: 'Machelín Díaz: doble calificación de nacionalidad',
   url: 'https://machelindiaz.com/doble-calificacion-de-nacionalidad/',
 };
 const COHEN_CALIFICACION: StatusSource = {
+  kind: 'documented',
   label: 'Cohen y Aguirre: estados de la nacionalidad en calificación',
   url: 'https://cohenyaguirre.es/estados-nacionalidad-espanola-en-calificacion',
 };
 const PARAINMIGRANTES_RETROCESO: StatusSource = {
+  kind: 'documented',
   label: 'Parainmigrantes: retroceso de calificación a tramitación',
   url: 'https://www.parainmigrantes.info/retroceso-en-el-estado-expediente-de-nacionalidad-de-en-calificacion-a-tramitacion/',
 };
 const DEHU: StatusSource = {
+  kind: 'documented',
   label: 'Ministerio de Justicia: notificaciones de nacionalidad en DEHú',
   url: 'https://sede.mjusticia.gob.es/documents/d/guest/manual-acceso-a-notificaciones-de-nacionalidad-en-la-dehu',
 };
@@ -152,18 +164,18 @@ export const STATUS_CATALOG: readonly StatusEntry[] = [
     es: {
       title: 'Abierto - En tramitación',
       explanation:
-        'El expediente está en tramitación: se reúnen o se revisan los documentos e informes previstos. Suele ser la fase más larga, y es la que más matices muestra en la segunda línea de la página (solicitud de informes, recepción de informes, calificación).',
+        'El expediente está en tramitación: se reúnen o se revisan los documentos e informes previstos. Es la fase más larga y la que más matices muestra en la segunda línea de la página. En los expedientes observados pasa por estos pasos: expediente en tramitación, solicitud de los informes preceptivos, recepción de esos informes y, por último, expediente en calificación; desde ahí la resolución suele publicarse en días o semanas. En cualquier momento puede llegar un requerimiento.',
       whatYouCanDo:
         'Nada mientras no aparezca un requerimiento. Merece la pena mirar el subestado: ahí está el avance real.',
     },
     en: {
       title: 'Open - In progress',
       explanation:
-        'The file is in progress: the required documents and reports are being collected or reviewed. It is usually the longest phase, and the one whose second line on the page shows the most detail (reports requested, reports received, assessment).',
+        'The file is in progress: the required documents and reports are being collected or reviewed. It is the longest phase, and the one whose second line on the page shows the most detail. On the files observed it goes through these steps: file in progress, mandatory reports requested, those reports received and, last, the file under assessment; from there the decision is usually published within days or weeks. A requirement can arrive at any point.',
       whatYouCanDo:
         'Nothing until a requirement appears. Watch the sub-status: that is where the real progress is.',
     },
-    sources: [SEDE, LAWFIDENCE, MACHELIN],
+    sources: [SEDE, LAWFIDENCE, MACHELIN, OBSERVED_ON_FILES],
   },
   {
     key: 'pendiente-requerimiento',
@@ -174,18 +186,18 @@ export const STATUS_CATALOG: readonly StatusEntry[] = [
     es: {
       title: 'Requerido',
       explanation:
-        'El órgano ha pedido algo: un documento, una aclaración o un trámite previo. Mientras el requerimiento siga abierto el expediente no avanza, así que este es de los pocos estados que sí te conciernen.',
+        'El órgano ha pedido algo: un documento, una aclaración o un trámite previo. El requerimiento puede llegar en cualquier momento de «En tramitación» y también desde «En calificación», y mientras siga abierto el expediente no avanza. Si no se contesta, la Administración puede archivar la solicitud.',
       whatYouCanDo:
         'Presenta lo solicitado por el cauce que indique la propia Administración, dentro del plazo. Si no lo has recibido, pídelo por DEHú.',
     },
     en: {
       title: 'Requirement issued',
       explanation:
-        'The office has asked for something: a document, a clarification or a prior step. While the requirement stays open the file does not move, so this is one of the few states that concern you directly.',
+        'The office has asked for something: a document, a clarification or a prior step. The requirement can arrive at any point of "In progress" and also from "Under assessment", and while it stays open the file does not move. If it is not answered, the Administration may archive the application.',
       whatYouCanDo:
         'File what was asked for through the channel the Administration indicates, within the deadline. If you never received it, request it through DEHú.',
     },
-    sources: [LAWFIDENCE, MACHELIN, DEHU],
+    sources: [LAWFIDENCE, MACHELIN, DEHU, OBSERVED_ON_FILES],
   },
   {
     key: 'documentacion-aportada',
@@ -196,16 +208,16 @@ export const STATUS_CATALOG: readonly StatusEntry[] = [
     es: {
       title: 'Requerido - Documentación aportada',
       explanation:
-        'Has respondido al requerimiento y la página registra la documentación aportada. Es la continuación del estado anterior, no un retroceso: el expediente vuelve al circuito de tramitación.',
+        'Has respondido al requerimiento y la página registra la documentación aportada. Es la continuación del requerimiento, no un retroceso: el expediente vuelve al circuito de tramitación. En los expedientes observados vuelve a «En tramitación»; la página no indica todavía en qué punto.',
       whatYouCanDo: 'Nada. Guarda el justificante de la presentación por si hiciera falta.',
     },
     en: {
       title: 'Requirement - Documents provided',
       explanation:
-        'You answered the requirement and the page records the documents as provided. This continues the previous state rather than going backwards: the file returns to the normal pipeline.',
+        'You answered the requirement and the page records the documents as provided. This continues the requirement rather than going backwards: the file returns to the normal pipeline. On the files observed it goes back to "In progress"; the page does not say yet at which point.',
       whatYouCanDo: 'Nothing. Keep the filing receipt in case it is needed later.',
     },
-    sources: [SEDE, LAWFIDENCE],
+    sources: [SEDE, LAWFIDENCE, OBSERVED_ON_FILES],
   },
   {
     key: 'pendiente-informes',
@@ -261,16 +273,16 @@ export const STATUS_CATALOG: readonly StatusEntry[] = [
     es: {
       title: 'Abierto - En calificación',
       explanation:
-        'Se está decidiendo el sentido de la resolución. Según los despachos es la fase inmediatamente anterior a la firma y a la resolución, y puede durar semanas. Si la página repite «Su expediente se encuentra en calificación» como subestado, no des el trámite por cerrado: puede llegar todavía una petición de documentación.',
+        'Se está decidiendo el sentido de la resolución. No es un paso obligatorio del camino habitual: en los expedientes observados se llega aquí desde «En tramitación», y desde aquí lo normal es un requerimiento de documentación, una denegación directa, o una vuelta a «En tramitación» con «en estudio» y después un requerimiento (la doble calificación). Mientras la página muestre este estado, no des el trámite por cerrado.',
       whatYouCanDo: 'Nada por ahora, pero mantente atento a las notificaciones de DEHú.',
     },
     en: {
       title: 'Open - Under assessment',
       explanation:
-        'A decision is being reached. The law firms place it immediately before signature and resolution, and it can last weeks. If the page repeats "Su expediente se encuentra en calificación" as a sub-status, do not consider it settled: a request for more documents may still arrive.',
+        'A decision is being reached. It is not a required step of the usual path: on the files observed it is reached from "In progress", and from here what usually follows is a request for documents, a direct denial, or a return to "In progress" with "under study" and then a requirement (the double assessment). While the page shows this state, do not consider the procedure closed.',
       whatYouCanDo: 'Nothing for now, but keep an eye on DEHú notifications.',
     },
-    sources: [SEDE, COHEN_CALIFICACION, PARAINMIGRANTES_RETROCESO],
+    sources: [SEDE, COHEN_CALIFICACION, PARAINMIGRANTES_RETROCESO, OBSERVED_ON_FILES],
   },
   {
     key: 'doble-calificacion',
@@ -281,18 +293,18 @@ export const STATUS_CATALOG: readonly StatusEntry[] = [
     es: {
       title: 'Doble calificación',
       explanation:
-        'No existe definición oficial de este estado. Los blogs y despachos que lo mencionan lo interpretan de forma distinta —un segundo examen del expediente, un repaso antes de la firma o la revisión por otro órgano— y ninguna fuente administrativa lo confirma. Trátalo como un estado sin explicación verificada.',
+        'No existe definición oficial de este estado. En los expedientes observados aparece como el recorrido «En calificación» → «En tramitación» con «en estudio» → requerimiento de documentación: un segundo examen del expediente, no una resolución. Los blogs y despachos que lo mencionan lo interpretan de forma distinta y ninguna fuente administrativa lo confirma.',
       whatYouCanDo:
         'No lo interpretes como favorable ni como desfavorable. Si te preocupa, pregunta por el expediente por el cauce oficial.',
     },
     en: {
       title: 'Double assessment',
       explanation:
-        'There is no official definition for this state. The blogs and law firms that mention it read it differently — a second examination of the file, a review before signature, or a review by another body — and no administrative source confirms any of them. Treat it as a state with no verified meaning.',
+        'There is no official definition for this state. On the files observed it appears as the route "Under assessment" → "In progress" with "under study" → request for documents: a second examination of the file, not a decision. The blogs and law firms that mention it read it differently and no administrative source confirms any of them.',
       whatYouCanDo:
         'Do not read it as good or bad news. If it worries you, ask about the file through the official channel.',
     },
-    sources: [MACHELIN_DOBLE, COHEN_CALIFICACION],
+    sources: [MACHELIN_DOBLE, COHEN_CALIFICACION, OBSERVED_ON_FILES],
   },
   {
     key: 'calificacion-simple',
@@ -427,18 +439,18 @@ export const STATUS_CATALOG: readonly StatusEntry[] = [
     es: {
       title: 'Archivado',
       explanation:
-        'La Administración ha cerrado el expediente, normalmente por caducidad, desistimiento o por no responder a un requerimiento. La página no suele indicar el motivo.',
+        'La Administración ha cerrado el expediente. En los expedientes observados el motivo es no haber contestado a un requerimiento dentro de plazo; la página no suele indicar el motivo.',
       whatYouCanDo:
         'Busca la notificación que lo motive; si no la tienes, pídela por DEHú antes de dar nada por perdido.',
     },
     en: {
       title: 'Archived',
       explanation:
-        'The Administration has closed the file, usually through expiry, withdrawal or a requirement left unanswered. The page rarely states the reason.',
+        'The Administration has closed the file. On the files observed the reason is a requirement left unanswered within the deadline; the page rarely states the reason.',
       whatYouCanDo:
         'Look for the notification behind it; if you do not have it, request it through DEHú before assuming the worst.',
     },
-    sources: [LAWFIDENCE, MACHELIN, DEHU],
+    sources: [LAWFIDENCE, MACHELIN, DEHU, OBSERVED_ON_FILES],
   },
   {
     key: 'en-via-de-recurso',

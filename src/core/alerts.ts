@@ -1,7 +1,8 @@
 import type { AnomalyNote } from './anomaly';
 import type { Change } from './changes';
 import { translate } from './i18n';
-import { type StatusEntry, findStatus } from './statuses';
+import { classifyTransition, resolvePathState, type ResolvedPathState } from './paths';
+import { type StatusEntry, type StatusSource, findStatus, findSubStatus } from './statuses';
 import type { Check } from './storage';
 
 /**
@@ -61,8 +62,14 @@ export interface ResultView {
   /** "Primera comprobación" or "Sin cambios desde …". */
   versionLine: string;
   explanation: string | null;
+  /**
+   * What the current (status, sub-status) pair usually leads to, already labelled as observed on real files.
+   * Only for a move the observations place on the path (`main-path` or `known-branch`), never for `unusual`
+   * or `no-judgement`.
+   */
+  observedMeaning: string | null;
   whatYouCanDo: string | null;
-  sources: ReadonlyArray<{ label: string; url: string }>;
+  sources: ReadonlyArray<StatusSource>;
   /** Verbatim page messages for an error outcome (D12). */
   errorMessages: string[];
   anomaly: string | null;
@@ -72,6 +79,11 @@ function formatDate(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(locale === 'es' ? 'es-ES' : 'en-GB', {
     dateStyle: 'long',
   }).format(new Date(iso));
+}
+
+/** One check as the path table sees it; `null` for no previous check or a status the catalogue does not know. */
+function stateOf(check: Check | null): ResolvedPathState | null {
+  return check === null ? null : resolvePathState(check.raw, check.subStatus);
 }
 
 export function buildErrorView(input: {
@@ -87,6 +99,7 @@ export function buildErrorView(input: {
     previous: null,
     versionLine: '',
     explanation: null,
+    observedMeaning: null,
     whatYouCanDo: translate(locale, 'alert.retryHint'),
     sources: [],
     errorMessages: [...input.messages],
@@ -117,6 +130,18 @@ export function buildResultView(input: {
   const explanation = entry === null ? null : entry[locale].explanation;
   const whatYouCanDo = entry === null ? null : entry[locale].whatYouCanDo;
 
+  // The meaning of the state the file is in now, but only when the observations place the move on the path:
+  // for an unusual move the note says that instead, and for no-judgement the view judges nothing at all.
+  const transition = classifyTransition(stateOf(change.previous), stateOf(current));
+  const observed =
+    entry === null || current.subStatus === null
+      ? null
+      : findSubStatus(entry.key, current.subStatus);
+  const observedMeaning =
+    observed !== null && (transition === 'main-path' || transition === 'known-branch')
+      ? translate(locale, 'result.observedMeaning', { text: observed[locale] })
+      : null;
+
   return {
     view: change.kind === 'changed' ? 'changed' : 'status',
     label,
@@ -130,6 +155,7 @@ export function buildResultView(input: {
     previous: previousSummary(change, locale),
     versionLine: versionLine(change, locale),
     explanation,
+    observedMeaning,
     whatYouCanDo,
     sources: entry?.sources ?? [],
     errorMessages: [],

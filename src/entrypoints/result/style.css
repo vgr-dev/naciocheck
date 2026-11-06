@@ -82,6 +82,15 @@ body {
   font-size: 0.9375rem;
 }
 
+.observed-meaning {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-inline-start: 3px solid var(--gray-600);
+  border-radius: 6px;
+  color: var(--gray-600);
+  font-size: 0.875rem;
+}
+
 .errors {
   margin: 1rem 0 0;
   padding-inline-start: 1.25rem;
