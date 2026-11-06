@@ -84,6 +84,8 @@ raise it with the user rather than silently reverting it.
 | **Publish listed on Chrome Web Store and AMO only; no unlisted/self-hosted releases.** | Store installs are the trusted path, and AMO listing enables Firefox for Android. | 2026-11-06-status-tracker-extension |
 | **Public pages on a `vgr.cat` subdomain via Cloudflare Workers static assets, explicit custom domain.** | The org's Free GitHub plan cannot serve Pages from a private repo; the user already runs `vgr.cat` on Workers. No wildcard routes. | 2026-11-06-status-tracker-extension |
 | **Repo private until the first public release, then public for good.** | The whole git history becomes public, so personal data must never be committed; history is audited before the switch. | 2026-11-06-status-tracker-extension |
+| **Product name: NacioCheck** (slug `naciocheck`, `naciocheck.vgr.cat`, gecko id `naciocheck@vgr.cat`). | Clearest in Spanish and English (*Nacio* = nacionalidad / nation; *check* is a common anglicism in Spain) and does not suggest an official tool. The gecko id can never change after the first AMO upload. | 2026-11-06-status-tracker-extension |
+| **Icon: symmetric N-check on a white badge; logo: icon + "NacioCheck" in Nunito 800 + tagline.** Full guide: `brand/README.md`. | Chosen after five rounds. The N's last strokes form a check (mirror angles, check from the diagonal midpoint at 1:2). Colours: teal `#0F766E` with accent `#14B8A6` / `#0D9488`; no red/yellow or official symbols. Logotype ships as outlined paths, never a remote font. | 2026-11-06-status-tracker-extension |
 | **Implementation plans are not tracked by git.** | User decision: plans are local working documents; this table is the tracked record. | — |
 
 ## Verification culture

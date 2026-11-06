@@ -6,5 +6,7 @@
 
 # Plans are local working documents, never committed (folder skeleton kept via .gitkeep)
 .ai/plans/**
+.ai/drafts/**
+.ai/explorations/**
 !.ai/plans/*/
 !.ai/plans/*/.gitkeep

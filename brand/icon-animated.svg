@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="NacioCheck">
+  <!-- Check pops (0–0.28 s, overshoot at ~0.17 s); at the pop the badge, ring and N draw (0.17–0.65 s). -->
+  <style>
+    .check { transform-origin: 71px 64px; animation: pop .28s cubic-bezier(.2,.9,.3,1.4) both; }
+    .badge { animation: fade .2s .17s ease-out both; }
+    .s { stroke-dasharray: 1 2; stroke-dashoffset: 1; animation: draw var(--d) .17s cubic-bezier(.4,0,.2,1) both; }
+    .ring { --d: .48s; animation-name: draw-ring; } .n { --d: .4s; }
+    @keyframes pop { 0% { transform: scale(0); opacity: 0 } 60% { transform: scale(1.18); opacity: 1 } 100% { transform: scale(1); opacity: 1 } }
+    @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes draw { 0% { stroke-dashoffset: 1; opacity: 0 } 1% { opacity: 1 } 100% { stroke-dashoffset: 0; opacity: 1 } }
+    /* Ends on a plain solid stroke: a full-length dash leaves a hairline seam where the circle starts and ends. */
+    @keyframes draw-ring { 0% { stroke-dashoffset: 1; opacity: 0 } 1% { opacity: 1 } 99.9% { stroke-dasharray: 1 2; stroke-dashoffset: 0 } 100% { stroke-dasharray: none; stroke-dashoffset: 0; opacity: 1 } }
+    @media (prefers-reduced-motion: reduce) { .check, .badge, .s { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; opacity: 1 } }
+  </style>
+  <circle class="badge" cx="64" cy="64" r="60" fill="#FFFFFF"/>
+  <circle class="s ring" cx="64" cy="64" r="60" fill="none" stroke="#0F766E" stroke-width="4" pathLength="1" transform="rotate(-90 64 64)"/>
+  <path class="s n" d="M36 90V38L50 64" pathLength="1" fill="none" stroke="#0F766E" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="check" d="M50 64L64 90L92 38" fill="none" stroke="#14B8A6" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
