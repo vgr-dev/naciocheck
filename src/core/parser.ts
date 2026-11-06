@@ -37,7 +37,10 @@ export const RESULT_STEP_SELECTOR = '[data-paso="paso_02"]';
 /** Sentence that introduces the status; the status itself is the next paragraph's `<b>`. */
 const STATUS_ANCHOR = /se encuentra en el siguiente estado/i;
 
-/** Markers the site itself uses for a rejected submission (its inline script: `paso_01_error`). */
+/**
+ * A rejected submission comes back as a red informative block. `.textoBloqueError` is kept as a defensive
+ * extra: the site's own inline script looks for it, but the live error page (2026-11-06) did not contain one.
+ */
 const ERROR_SELECTOR = '.textoBloqueError, .bloqueInformativoRojo';
 
 const FORM_SELECTOR = 'form#idFormuNac';
