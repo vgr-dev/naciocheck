@@ -11,9 +11,13 @@ and nothing else.
 
 1. Read `AGENTS.md` and `.ai/rules/plans.md`.
 2. Find the plan in `.ai/plans/active/`. If there is none, or more than one, **stop** and say so.
-3. Pick the phase to work on: the one you were told, otherwise the first phase that is not marked
-   complete. If a previous phase has an unresolved review rejection, that rework comes first.
-4. Check `git status` is clean. If it is not, stop and report what is uncommitted.
+3. Pick the scope: the phase or single task you were told (`/implement-step`), otherwise the first
+   phase that is not marked complete. If a previous phase has an unresolved review rejection, that
+   rework comes first.
+4. Check `git status`. When starting a new phase it must be clean; otherwise the user has not yet
+   reviewed and committed the previous phase: stop and report what is uncommitted. When continuing a
+   task within a phase already in progress, uncommitted changes from that phase's earlier tasks are
+   expected. Never commit anything yourself.
 
 ## While working
 
@@ -29,8 +33,14 @@ and nothing else.
 
 1. Run every acceptance criterion of the phase and record the results.
 2. Set the phase's status line to `Status: Complete — awaiting review` (or `Blocked`).
-3. Commit code and plan together: `git add -A && git commit -m "<plan-slug> phase N: <summary>"`.
-   Do not push.
-4. Stop and report: what was done, deviations, what was not verified, and the commit hash.
+3. **Do not commit, stage, or push. Ever.** Reviewing and committing is the user's job.
+4. Stop and report: what was done, deviations, what was not verified, and then a
+   **"Proposed commits"** section for the user to review and run manually:
+   - Group the changed files into one or more logical commits.
+   - For each: the files to `git add`, and a [Conventional Commits](https://www.conventionalcommits.org/)
+     message (`type(scope): summary` in imperative mood, ≤ 72 chars; a body explaining why; a footer
+     `Refs: .ai/plans/active/<plan-file> — Phase N`).
+   - Present each as a ready-to-copy `bash` block, e.g.
+     `git add <files> && git commit -m "feat(api): add status lookup endpoint" -m "<body>" -m "Refs: …"`.
 
 Never start the next phase in the same run. Never move or archive the plan — that is the architect's job.

@@ -11,7 +11,14 @@
 Each folder keeps a `.gitkeep`. **Do not delete it** — git does not track empty directories.
 
 File names: `YYYY-MM-DD-<short-slug>.md`, dated on creation. Template: `.ai/templates/plan.md`.
-Always move plans with `git mv` so history follows them.
+Move plans with plain `mv`; git detects the rename when the user commits.
+
+## Commits belong to the user
+
+No agent ever runs `git add`, `git commit` or `git push`. The user reviews every change and commits it
+manually. At the end of a finished phase (builder) or a plan-file change (architect), the agent proposes
+[Conventional Commits](https://www.conventionalcommits.org/) messages as ready-to-copy commands.
+`.claude/settings.json` denies these commands as a backstop.
 
 ## Status values
 
@@ -40,8 +47,8 @@ When moving a plan to `finished/`, append:
 ## Archive Metadata
 
 - **Completed Date**: YYYY-MM-DD
-- **Verified Commit**: <short-hash>
-- **Sign-off**: Manual Review Passed
+- **Verified Commit**: <short-hash, supplied by the user>
+- **Sign-off**: Manual Review Passed (by the user)
 - **Deferred**: none | <list, with user confirmation date>
 ```
 

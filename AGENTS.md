@@ -23,8 +23,19 @@ No change to application code happens without an **active plan**.
 
 | Role | How to start it | Writes |
 | --- | --- | --- |
-| **architect** — plans with the user, reviews, signs off | `claude --agent architect` | only `.ai/`, `AGENTS.md`, `README.md` |
-| **builder** — executes one phase of the active plan, commits, stops | `claude --agent builder`, or delegated by the architect | code + its plan's progress sections |
+| **architect** — plans with the user, assists review, archives | `claude --agent architect` | only `.ai/`, `AGENTS.md`, `README.md` |
+| **builder** — executes one phase of the active plan, proposes commits, stops | `claude --agent builder`, or delegated by the architect | code + its plan's progress sections |
+
+**No agent ever stages, commits or pushes.** The user reviews and commits every change by hand. Each
+finished phase ends with proposed Conventional Commits messages for the user to review and run.
+
+Slash commands (`.claude/commands/`):
+
+| Command | Does |
+| --- | --- |
+| `/create-plan <requirement>` | architect drafts a plan into `.ai/plans/pending/` |
+| `/implement-step [Phase N \| Task N.M]` | builder implements one task or phase of the active plan |
+| `/create-commit-message` | one Conventional Commits line for what you staged (user-invoked only) |
 
 Agent definitions: `.claude/agents/`. Plan lifecycle and the evidence standard: `.ai/rules/plans.md`.
 Plan template: `.ai/templates/plan.md`.
