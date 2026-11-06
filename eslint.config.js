@@ -38,5 +38,15 @@ export default tseslint.config(
       },
     },
   },
+  {
+    // The E2E suite runs in Node and drives the browsers through Mocha.
+    files: ['e2e/**/*.ts', 'wdio.conf.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.mocha,
+      },
+    },
+  },
   prettier,
 );

@@ -12,6 +12,9 @@ brand/
 coverage/
 public/icon/
 
+# End-to-end artefacts: generated screenshots, diffs and logs
+e2e/.artifacts/
+
 # Fixtures are byte-for-byte copies of what the official site served: never reformatted.
 tests/fixtures/
 
