@@ -23,13 +23,13 @@ No change to application code happens without an **active plan**.
 
 | Role | How to start it | Writes |
 | --- | --- | --- |
-| **architect** — plans with the user, assists review, archives | `claude --agent architect` | only `.ai/`, `AGENTS.md`, `README.md` |
-| **builder** — executes one phase of the active plan, proposes commits, stops | `claude --agent builder`, or delegated by the architect | code + its plan's progress sections |
+| **architect** — plans with the user, assists review, archives | `claude --agent architect`; Copilot: pick the **Architect** agent | only `.ai/`, `AGENTS.md`, `README.md` |
+| **builder** — executes one phase of the active plan, proposes commits, stops | `claude --agent builder` or delegated by the architect; Copilot: **Builder** agent or the handoff | code + its plan's progress sections |
 
 **No agent ever stages, commits or pushes.** The user reviews and commits every change by hand. Each
 finished phase ends with proposed Conventional Commits messages for the user to review and run.
 
-Slash commands (`.claude/commands/`):
+Slash commands (same names in Claude Code and Copilot Chat):
 
 | Command | Does |
 | --- | --- |
@@ -37,8 +37,25 @@ Slash commands (`.claude/commands/`):
 | `/implement-step [Phase N \| Task N.M]` | builder implements one task or phase of the active plan |
 | `/create-commit-message` | one Conventional Commits line for what you staged (user-invoked only) |
 
-Agent definitions: `.claude/agents/`. Plan lifecycle and the evidence standard: `.ai/rules/plans.md`.
-Plan template: `.ai/templates/plan.md`.
+Plan lifecycle and the evidence standard: `.ai/rules/plans.md`. Plan template: `.ai/templates/plan.md`.
+
+### Where the instructions live — one source, thin wrappers per tool
+
+This repo is used from Claude Code (CLI and VS Code extension) and from GitHub Copilot Chat in VS Code
+(with any model, e.g. DeepSeek via its Copilot provider). The **canonical** texts are tool-neutral and live
+in `.ai/`; each tool only gets a thin wrapper that points to them. **Edit the canonical file, never a
+wrapper.**
+
+| Canonical | Claude Code wrapper | Copilot Chat wrapper |
+| --- | --- | --- |
+| `AGENTS.md` (this file) | `CLAUDE.md` (`@AGENTS.md`) | read natively (`chat.useAgentsMdFile`) + `.github/copilot-instructions.md` |
+| `.ai/agents/architect.md`, `builder.md` | `.claude/agents/*.md` | `.github/agents/*.agent.md` |
+| `.ai/prompts/*.md` | `.claude/commands/*.md` | `.github/prompts/*.prompt.md` |
+| `.ai/rules/plans.md` | read via `AGENTS.md` | `.github/instructions/plans.instructions.md` (`applyTo: .ai/plans/**`) |
+
+Guard rails differ by tool: Claude Code **blocks** `git add/commit/push` (`.claude/settings.json`) and
+architect writes outside `.ai/` (hook). Copilot can only **require confirmation** for those git commands
+(`.vscode/settings.json`); the rest relies on the instructions.
 
 Plans are **local only**: `.ai/plans/` is git-ignored (except the `.gitkeep` placeholders).
 
@@ -59,7 +76,15 @@ raise it with the user rather than silently reverting it.
 
 | Decision | Rationale | Plan |
 | --- | --- | --- |
-| _none yet_ | | |
+| **Browser extension, WXT + TypeScript, Chrome and Firefox (desktop + Android).** | One MV3 codebase covers PC and mobile (Firefox for Android supports extensions); no server needed. | 2026-11-06-status-tracker-extension |
+| **The human solves the reCAPTCHA; never bypass, solve or outsource it.** | Solving services send personal data to third parties and break the site's terms. The extension autofills, shows only the captcha, and submits after the user solves it. | 2026-11-06-status-tracker-extension |
+| **Captcha runs in a compact window on the real page, not in the popup.** | The sede sends `X-Frame-Options: SAMEORIGIN` and the reCAPTCHA key is bound to its domain, so it cannot render inside extension pages. Stripping headers is rejected. | 2026-11-06-status-tracker-extension |
+| **All data local: `storage.local` / `storage.session` only, no network requests, no telemetry.** | Personal tool handling NIE and birth date; `storage.sync` uploads to Google/Mozilla. Enforced by `npm run check:privacy`. | 2026-11-06-status-tracker-extension |
+| **Encryption of identifying fields is optional, user's choice.** | Trade-off between privacy at rest and friction on every check; the user decides. | 2026-11-06-status-tracker-extension |
+| **Publish listed on Chrome Web Store and AMO only; no unlisted/self-hosted releases.** | Store installs are the trusted path, and AMO listing enables Firefox for Android. | 2026-11-06-status-tracker-extension |
+| **Public pages on a `vgr.cat` subdomain via Cloudflare Workers static assets, explicit custom domain.** | The org's Free GitHub plan cannot serve Pages from a private repo; the user already runs `vgr.cat` on Workers. No wildcard routes. | 2026-11-06-status-tracker-extension |
+| **Repo private until the first public release, then public for good.** | The whole git history becomes public, so personal data must never be committed; history is audited before the switch. | 2026-11-06-status-tracker-extension |
+| **Implementation plans are not tracked by git.** | User decision: plans are local working documents; this table is the tracked record. | — |
 
 ## Verification culture
 

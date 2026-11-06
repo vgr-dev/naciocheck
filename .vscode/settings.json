@@ -1,0 +1,8 @@
+{
+  "chat.useAgentsMdFile": true,
+  "chat.tools.terminal.autoApprove": {
+    "/^git\\s+(add|commit|push|mv|rm)\\b/": false,
+    "/^gh\\s+pr\\s+(create|merge)\\b/": false
+  },
+  "files.eol": "\n"
+}
