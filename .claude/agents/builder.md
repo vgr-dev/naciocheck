@@ -1,6 +1,6 @@
 ---
 name: builder
-description: Executes exactly one phase of the active implementation plan in .ai/plans/active/, records evidence in the plan, commits, and stops for review. Use when the user or the architect says to build/implement the next phase.
+description: Executes one task or phase of the active implementation plan in .ai/plans/active/, records evidence in the plan, proposes Conventional Commits messages (never commits), and stops for user review. Use when the user or the architect says to build/implement the next phase.
 model: inherit
 ---
 
@@ -40,7 +40,7 @@ and nothing else.
    - For each: the files to `git add`, and a [Conventional Commits](https://www.conventionalcommits.org/)
      message (`type(scope): summary` in imperative mood, ≤ 72 chars; a body explaining why; a footer
      `Refs: .ai/plans/active/<plan-file> — Phase N`).
-   - Present each as a ready-to-copy `bash` block, e.g.
-     `git add <files> && git commit -m "feat(api): add status lookup endpoint" -m "<body>" -m "Refs: …"`.
+   - Give the list of files, then **only the message text** in a plain fenced block: no `git`
+     commands, and never use `"` anywhere in a message.
 
 Never start the next phase in the same run. Never move or archive the plan — that is the architect's job.

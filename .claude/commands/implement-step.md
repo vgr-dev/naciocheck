@@ -24,5 +24,5 @@ Scope to implement: $ARGUMENTS
 - Tests and checks run, with their real result, plus what was _not_ verified.
 - Deviations, if any.
 - The phase status (`Complete — awaiting review` once every task and acceptance criterion of the phase is done).
-- **Proposed commits**: logical groups of files, each with a Conventional Commits message, as ready-to-copy `bash` blocks for the user to review and run.
+- **Proposed commits**: logical groups of files, each with a Conventional Commits message for the user to review and commit. Message text only, in a plain fenced block: no `git` commands, no `"` characters.
 - The next unchecked step.

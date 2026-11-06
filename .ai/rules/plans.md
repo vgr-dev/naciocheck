@@ -17,7 +17,8 @@ Move plans with plain `mv`; git detects the rename when the user commits.
 
 No agent ever runs `git add`, `git commit` or `git push`. The user reviews every change and commits it
 manually. At the end of a finished phase (builder) or a plan-file change (architect), the agent proposes
-[Conventional Commits](https://www.conventionalcommits.org/) messages as ready-to-copy commands.
+[Conventional Commits](https://www.conventionalcommits.org/) messages: the message text only (no `git`
+commands), never containing `"`.
 `.claude/settings.json` denies these commands as a backstop.
 
 ## Status values

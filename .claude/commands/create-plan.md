@@ -23,4 +23,4 @@ Requirement: $ARGUMENTS
 
 - Only write inside `.ai/`. Never stage, commit or push.
 - Do not promote the plan to `active/`; that happens only when the user approves and asks.
-- End with a **Proposed commits** section: a Conventional Commits message (e.g. `docs(plans): add plan for <short-name>`) as a ready-to-copy `bash` block for the user to run.
+- End with a **Proposed commits** section: a Conventional Commits message (e.g. `docs(plans): add plan for <short-name>`) as message text only in a plain fenced block: no `git` commands, no `"` characters.
