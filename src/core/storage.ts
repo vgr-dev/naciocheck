@@ -49,6 +49,11 @@ export interface Check {
   statusKey: ResolvedStatusKey;
   /** The status text exactly as the page showed it. */
   raw: string;
+  /**
+   * The sentence the page prints under the status, which is where the real progress of
+   * *Abierto - En tramitación* lives; `null` when the page printed none.
+   */
+  subStatus: string | null;
   acknowledged: boolean;
 }
 
@@ -154,6 +159,7 @@ export async function appendCheck(input: {
   outcome: CheckOutcome;
   statusKey: ResolvedStatusKey;
   raw: string;
+  subStatus: string | null;
 }): Promise<Check> {
   const store = await readStore();
   const known = store.applications.some((application) => application.id === input.applicationId);
@@ -167,6 +173,7 @@ export async function appendCheck(input: {
     outcome: input.outcome,
     statusKey: input.statusKey,
     raw: input.raw,
+    subStatus: input.subStatus,
     acknowledged: false,
   };
   await writeStore({ ...store, checks: [...store.checks, check] });

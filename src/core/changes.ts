@@ -28,6 +28,9 @@ export function evaluateChange(previous: Check | null, current: Check): Change {
   if (comparable === null) {
     return { kind: 'first', previous: null, current };
   }
-  const unchanged = normaliseText(comparable.raw) === normaliseText(current.raw);
+  const sameStatus = normaliseText(comparable.raw) === normaliseText(current.raw);
+  const sameSubStatus =
+    normaliseText(comparable.subStatus ?? '') === normaliseText(current.subStatus ?? '');
+  const unchanged = sameStatus && sameSubStatus;
   return { kind: unchanged ? 'unchanged' : 'changed', previous: comparable, current };
 }

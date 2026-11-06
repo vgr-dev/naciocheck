@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
+import { parseCheckPage } from '../src/core/parser';
 import {
   acknowledgeCheck,
   addApplication,
@@ -81,6 +85,7 @@ describe('checks', () => {
       outcome: 'status',
       statusKey: 'abierto-registrado',
       raw: 'Abierto - Registrado.',
+      subStatus: 'Su expediente ha sido registrado correctamente.',
     });
 
     expect(check).toMatchObject({
@@ -88,10 +93,59 @@ describe('checks', () => {
       outcome: 'status',
       statusKey: 'abierto-registrado',
       raw: 'Abierto - Registrado.',
+      subStatus: 'Su expediente ha sido registrado correctamente.',
       acknowledged: false,
     });
     expect(check.id).toEqual(expect.any(String));
     expect(check.at).toEqual(expect.any(String));
+  });
+
+  it('round-trips the sub-status, including its absence', async () => {
+    const applicationId = await addTestApplication('Primera');
+    await appendCheck({
+      applicationId,
+      outcome: 'status',
+      statusKey: 'abierto-en-tramitacion',
+      raw: 'Abierto - En tramitación.',
+      subStatus: 'Pendiente recepción de informes preceptivos oficiales',
+    });
+    await appendCheck({
+      applicationId,
+      outcome: 'status',
+      statusKey: 'abierto-registrado',
+      raw: 'Abierto - Registrado.',
+      subStatus: null,
+    });
+
+    await expect(listChecks(applicationId)).resolves.toMatchObject([
+      { subStatus: 'Pendiente recepción de informes preceptivos oficiales' },
+      { subStatus: null },
+    ]);
+  });
+
+  it('stores a check straight from the parser output', async () => {
+    const fixture = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'result-format.htm');
+    const html = readFileSync(fixture, 'utf8')
+      .replaceAll('{status}', 'Abierto - En tramitación.')
+      .replaceAll('{subStatus}', 'Pendiente recepción de informes preceptivos oficiales');
+    const parsed = parseCheckPage(new DOMParser().parseFromString(html, 'text/html'));
+    if (parsed.kind !== 'status') throw new Error(`expected a status, got ${parsed.kind}`);
+    const applicationId = await addTestApplication('Primera');
+
+    const stored = await appendCheck({
+      applicationId,
+      outcome: 'status',
+      statusKey: parsed.key,
+      raw: parsed.raw,
+      subStatus: parsed.subStatus,
+    });
+
+    await expect(latestCheck(applicationId)).resolves.toMatchObject({
+      id: stored.id,
+      statusKey: 'abierto-en-tramitacion',
+      raw: 'Abierto - En tramitación.',
+      subStatus: 'Pendiente recepción de informes preceptivos oficiales',
+    });
   });
 
   it('refuses to record a check for an application that does not exist', async () => {
@@ -101,6 +155,7 @@ describe('checks', () => {
         outcome: 'status',
         statusKey: 'unknown',
         raw: 'Algo',
+        subStatus: null,
       }),
     ).rejects.toThrow(/unknown application/i);
   });
@@ -113,7 +168,13 @@ describe('checks', () => {
       'Abierto - En tramitación.',
       'Abierto - En calificación.',
     ]) {
-      await appendCheck({ applicationId, outcome: 'status', statusKey: 'unknown', raw });
+      await appendCheck({
+        applicationId,
+        outcome: 'status',
+        statusKey: 'unknown',
+        raw,
+        subStatus: null,
+      });
     }
 
     const checks = await listChecks(applicationId);
@@ -126,12 +187,19 @@ describe('checks', () => {
 
   it('reports the latest check of an application', async () => {
     const applicationId = await addTestApplication('Primera');
-    await appendCheck({ applicationId, outcome: 'status', statusKey: 'unknown', raw: 'Primero' });
+    await appendCheck({
+      applicationId,
+      outcome: 'status',
+      statusKey: 'unknown',
+      raw: 'Primero',
+      subStatus: null,
+    });
     const second = await appendCheck({
       applicationId,
       outcome: 'error',
       statusKey: 'unknown',
       raw: 'Error',
+      subStatus: null,
     });
 
     await expect(latestCheck(applicationId)).resolves.toMatchObject({ id: second.id });
@@ -146,8 +214,20 @@ describe('checks', () => {
   it('deletes the checks of a deleted application and leaves the others alone', async () => {
     const first = await addTestApplication('Primera');
     const second = await addTestApplication('Segunda');
-    await appendCheck({ applicationId: first, outcome: 'status', statusKey: 'unknown', raw: 'A' });
-    await appendCheck({ applicationId: second, outcome: 'status', statusKey: 'unknown', raw: 'B' });
+    await appendCheck({
+      applicationId: first,
+      outcome: 'status',
+      statusKey: 'unknown',
+      raw: 'A',
+      subStatus: null,
+    });
+    await appendCheck({
+      applicationId: second,
+      outcome: 'status',
+      statusKey: 'unknown',
+      raw: 'B',
+      subStatus: null,
+    });
 
     await deleteApplication(first);
 
@@ -162,6 +242,7 @@ describe('checks', () => {
       outcome: 'status',
       statusKey: 'abierto-registrado',
       raw: 'Abierto - Registrado.',
+      subStatus: null,
     });
 
     await acknowledgeCheck(check.id);

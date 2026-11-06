@@ -10,13 +10,19 @@ function check(overrides: Partial<Check> = {}): Check {
     outcome: 'status',
     statusKey: 'unknown',
     raw: 'Abierto - Registrado.',
+    subStatus: null,
     acknowledged: false,
     ...overrides,
   };
 }
 
-function checkWith(outcome: CheckOutcome, raw: string, at: string): Check {
-  return check({ id: `check-${at}`, at, outcome, raw });
+function checkWith(
+  outcome: CheckOutcome,
+  raw: string,
+  at: string,
+  subStatus: string | null = null,
+): Check {
+  return check({ id: `check-${at}`, at, outcome, raw, subStatus });
 }
 
 describe('evaluateChange', () => {
@@ -47,6 +53,74 @@ describe('evaluateChange', () => {
   it('reports a change between two statuses the catalogue does not know', () => {
     const previous = checkWith('status', 'Estado raro uno', '2026-11-05T10:00:00.000Z');
     const current = checkWith('status', 'Estado raro dos', '2026-11-06T10:00:00.000Z');
+
+    expect(evaluateChange(previous, current)).toMatchObject({ kind: 'changed' });
+  });
+
+  it('reports a change when only the sub-status moves', () => {
+    const previous = checkWith(
+      'status',
+      'Abierto - En tramitación.',
+      '2026-11-05T10:00:00.000Z',
+      'Su expediente se encuentra en tramitación.',
+    );
+    const current = checkWith(
+      'status',
+      'Abierto - En tramitación.',
+      '2026-11-06T10:00:00.000Z',
+      'Pendiente recepción de informes preceptivos oficiales',
+    );
+
+    expect(evaluateChange(previous, current)).toMatchObject({ kind: 'changed', previous, current });
+  });
+
+  it('reports no change when status and sub-status match modulo typography', () => {
+    const previous = checkWith(
+      'status',
+      'Abierto - En tramitación.',
+      '2026-11-05T10:00:00.000Z',
+      'Pendiente recepción de informes preceptivos oficiales',
+    );
+    const current = checkWith(
+      'status',
+      'ABIERTO – EN TRAMITACIÓN',
+      '2026-11-06T10:00:00.000Z',
+      'pendiente  recepción de informes preceptivos oficiales. ',
+    );
+
+    expect(evaluateChange(previous, current)).toMatchObject({ kind: 'unchanged' });
+  });
+
+  it('reports a change when a sub-status appears', () => {
+    const previous = checkWith(
+      'status',
+      'Abierto - En tramitación.',
+      '2026-11-05T10:00:00.000Z',
+      null,
+    );
+    const current = checkWith(
+      'status',
+      'Abierto - En tramitación.',
+      '2026-11-06T10:00:00.000Z',
+      'Su expediente se encuentra en tramitación.',
+    );
+
+    expect(evaluateChange(previous, current)).toMatchObject({ kind: 'changed' });
+  });
+
+  it('reports a change when the sub-status disappears', () => {
+    const previous = checkWith(
+      'status',
+      'Abierto - En tramitación.',
+      '2026-11-05T10:00:00.000Z',
+      'Su expediente se encuentra en tramitación.',
+    );
+    const current = checkWith(
+      'status',
+      'Abierto - En tramitación.',
+      '2026-11-06T10:00:00.000Z',
+      null,
+    );
 
     expect(evaluateChange(previous, current)).toMatchObject({ kind: 'changed' });
   });
