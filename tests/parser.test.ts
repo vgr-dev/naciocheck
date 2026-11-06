@@ -94,7 +94,27 @@ describe('parseCheckPage — form page', () => {
 });
 
 describe('parseCheckPage — error page', () => {
-  it('reports the site error block as an error outcome', () => {
+  it('reads the messages of the real rejected submission', () => {
+    const page = loadFixture('fixtures/result-error-captcha.htm');
+
+    expect(parseCheckPage(page)).toEqual({
+      kind: 'error',
+      messages: [
+        'El campo "NIE" no se corresponde con un número de NIE correcto',
+        'Error en la verificación del captcha',
+      ],
+      raw: 'El campo "NIE" no se corresponde con un número de NIE correcto Error en la verificación del captcha',
+    });
+  });
+
+  it('prefers the error over the form that comes back with it', () => {
+    const page = loadFixture('fixtures/result-error-captcha.htm');
+
+    expect(page.querySelector('form#idFormuNac')).not.toBeNull();
+    expect(parseCheckPage(page).kind).toBe('error');
+  });
+
+  it('reports a lone error block as an error outcome', () => {
     const page = parseHtml(
       '<html><body><form id="idFormuNac">' +
         '<div class="textoBloqueError">Los datos introducidos no son correctos</div>' +
@@ -103,6 +123,7 @@ describe('parseCheckPage — error page', () => {
 
     expect(parseCheckPage(page)).toEqual({
       kind: 'error',
+      messages: ['Los datos introducidos no son correctos'],
       raw: 'Los datos introducidos no son correctos',
     });
   });
@@ -114,7 +135,25 @@ describe('parseCheckPage — error page', () => {
         '</div></body></html>',
     );
 
-    expect(parseCheckPage(page)).toEqual({ kind: 'error', raw: 'Servicio no disponible' });
+    expect(parseCheckPage(page)).toEqual({
+      kind: 'error',
+      messages: ['Servicio no disponible'],
+      raw: 'Servicio no disponible',
+    });
+  });
+
+  it('lists each message once, even when the page repeats it', () => {
+    const page = parseHtml(
+      '<html><body><div id="mensaje"><div class="bloqueInformativoRojo">' +
+        '<ul class="errorMessage"><li><span>Error uno</span></li><li><span>Error dos</span></li></ul>' +
+        '<ul class="listaErrores"><li>Error dos</li></ul>' +
+        '</div></div></body></html>',
+    );
+
+    expect(parseCheckPage(page)).toMatchObject({
+      kind: 'error',
+      messages: ['Error uno', 'Error dos'],
+    });
   });
 
   it('ignores empty error markers', () => {

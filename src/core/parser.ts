@@ -15,9 +15,11 @@ export interface ParsedStatus {
 export interface ParsedError {
   kind: 'error';
   /**
-   * Text of the error block. The page's own inline script treats `.textoBloqueError` as the error
-   * step; telling "wrong data" from "captcha failed" from "service down" needs a real capture.
+   * Every message the page lists under "Se han producido los siguientes errores", verbatim. The page does not
+   * say which one was decisive: a wrong NIE + número + año combination also reports the captcha message.
    */
+  messages: string[];
+  /** The messages joined — what the UI shows under the page's own wording. */
   raw: string;
 }
 
@@ -43,17 +45,31 @@ const STATUS_ANCHOR = /se encuentra en el siguiente estado/i;
  */
 const ERROR_SELECTOR = '.textoBloqueError, .bloqueInformativoRojo';
 
+/** The page lists its errors as items of these two lists inside `#mensaje`. */
+const ERROR_MESSAGE_SELECTOR = '#mensaje .errorMessage li, #mensaje .listaErrores li';
+
 const FORM_SELECTOR = 'form#idFormuNac';
 
 function textOf(element: Element | null | undefined): string {
   return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
-/** First error block that actually says something: the form carries an always-empty red span. */
-function readError(page: ParentNode): string | null {
-  for (const element of page.querySelectorAll(ERROR_SELECTOR)) {
-    const text = textOf(element);
-    if (text) return text;
+/**
+ * Reads the error the page reports: first its own list of messages, then the red block's text as a fallback
+ * for a shape we have not seen.
+ */
+function readError(page: ParentNode): ParsedError | null {
+  const listed = [...page.querySelectorAll(ERROR_MESSAGE_SELECTOR)]
+    .map((item) => textOf(item))
+    .filter((text) => text !== '');
+  const messages = [...new Set(listed)];
+  if (messages.length > 0) {
+    return { kind: 'error', messages, raw: messages.join(' ') };
+  }
+
+  for (const block of page.querySelectorAll(ERROR_SELECTOR)) {
+    const text = textOf(block.querySelector('.bloqueCampoTextoInformativo')) || textOf(block);
+    if (text) return { kind: 'error', messages: [text], raw: text };
   }
   return null;
 }
@@ -97,7 +113,7 @@ export function isResultPage(page: ParentNode): boolean {
  */
 export function parseCheckPage(page: ParentNode): ParseOutcome {
   const error = readError(page);
-  if (error) return { kind: 'error', raw: error };
+  if (error) return error;
 
   const status = readStatus(page);
   if (status) return status;

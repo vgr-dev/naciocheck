@@ -1,0 +1,585 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE HTML>
+
+<html xml:lang="es" lang="es" xmlns="http://www.w3.org/1999/xhtml">
+	
+	<script src="https://sede.mjusticia.gob.es/eConsultas/static/js/jquery-3.7.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="https://sede.mjusticia.gob.es/eConsultas/static/js/adasede.js"></script>
+
+	
+
+
+	﻿	<head><title>Consulta telem&aacute;tica de expedientes de nacionalidad espa&ntilde;ola por residencia  - Tr&aacute;mites - Sede Electr&oacute;nica</title>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>	
+	<meta content="no-cache" http-equiv="Cache-Control"/>
+	<meta content="0" http-equiv="expires"/>
+
+	<meta name="description" content="Portal Web con un nivel superior de precisi&oacute;n y seguridad en los contenidos y tr&aacute;mites electr&oacute;nicos que usted puede realizar con el Ministerio de Justicia" />		
+	<meta name="keywords" content="Sede Electr&oacute;nica, Ministerio de Justicia, Tr&#38;aacute;mites, Consulta telem&aacute;tica de expedientes de nacionalidad espa&ntilde;ola por residencia" />	
+	
+	<link rel="index" href="https://sede.mjusticia.gob.es/es" title="Home" />		
+	<link rel="icon" href="https://sede.mjusticia.gob.es/estatico/cs/sede/img/favicon.ico" type="image/x-icon" />		
+	<link rel="shortcut icon" href="https://sede.mjusticia.gob.es/estatico/cs/sede/img/favicon.ico" type="image/x-icon" />	
+
+	<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/css/general.css" type="text/css" media="screen" />
+	<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/css/estilosImprimir.css" type="text/css" media="print" />
+	<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/css/form_html5.css"  type="text/css" media="screen" />
+	<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/css/jquery-ui.min.css"  type="text/css" media="screen" />		
+	<!--[if lt IE 10]> <link href="https://sede.mjusticia.gob.es/estatico/cs/sede/css/explorer.css" type="text/css" rel="stylesheet" media="screen"/><![endif]-->
+
+	<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/js/jquery-1.11.1.min.js"></script>
+	<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/js/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/js/modernizr_min.js"></script>
+	<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/js/funciones_html5.js" ></script>
+	<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/js/funciones.js" ></script>
+	<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/js/jquery.cookie.js" ></script>
+
+	<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/js/econsultas/econsultas.js" ></script>
+				
+				
+				</head>
+
+
+	<body>
+		
+
+
+
+
+
+<head>
+<title>cabecerahtml.title</title>
+
+
+	<header>
+		<div id="cabecera">
+			<div id="cabeceraIzq">
+	
+	<a href="http://www.mjusticia.gob.es" class="enlaceAviso" title="Atención, va a salir de esta Sede Electrónica"><img class="logomj" src="https://sede.mjusticia.gob.es/estatico/cs/sede/img/logo-ministerio-mjprc.jpg" alt="Acceso al portal Ministerio de la Presidencia, Justicia y Relaciones con las Cortes" style="width:256px"/></a>
+				<h1 class="oculto">Sede Electrónica del Ministerio de Justicia</h1>
+	<a href="https://sede.mjusticia.gob.es" accesskey="1"><img class="logosede" src="https://sede.mjusticia.gob.es/estatico/cs/sede/img/logo_sede.png" alt="Sede Electrónica del Ministerio de Justicia"/></a>
+			</div><!--  cabeceraIzq -->
+			
+			<div id="cabeceraDer">
+				<div id="cabeceraDerSup">
+				<nav id="menuIdiomas" class="menuIdiomas">
+					<ul>
+						<li><strong>Castellano</strong></li>
+						<li><a href="https://sede.mjusticia.gob.es/ca" lang="ca" xml:lang="ca" hreflang="ca">Català</a></li>
+						<li><a href="https://sede.mjusticia.gob.es/eu" lang="eu" xml:lang="eu" hreflang="eu">Euskara</a></li>
+						<li><a href="https://sede.mjusticia.gob.es/gl" lang="gl" xml:lang="gl" hreflang="gl">Galego</a></li>
+						<li><a href="https://sede.mjusticia.gob.es/va" lang="ca-valencia" xml:lang="ca-valencia" hreflang="ca-valencia">Valencià</a></li>
+						<li class="ultimo"><a href="https://sede.mjusticia.gob.es/en" lang="en" xml:lang="en" hreflang="en">English</a></li>
+					</ul>
+				</nav><!-- menuIdiomas --> 
+				</div>
+				<div id="cabeceraDerinf">								
+				
+				<script src="https://sede.mjusticia.gob.es/estatico/cs/sede/js/date_hours.js" type="text/javascript"></script>				
+				
+				<div id="bloqueFechaHora">
+									
+					<span id="fechaOficial"></span>
+					<span id='horaOficial'></span>
+					<span class="ayudaTextoMostrar"><a href="https://sede.mjusticia.gob.es/es/informacion-ayuda/preguntas-frecuentes#id_1288775048470"><span class="oculto">Hora oficial</span></a></span>
+					<div class="ayudaTexto oculto">
+                                                <strong>Advertencia:</strong> La información de fecha y hora que se muestra corresponde a la hora oficial de la Sede Electrónica. Es importante tener en cuenta que puede no reflejar la hora exacta debido a posibles desfases provocados por los medios telemáticos utilizados hasta su recepción. 
+                                                <p>Por lo tanto, esta información tiene un <strong>carácter meramente informativo</strong> y no debe considerarse como certificación horaria.</p>
+                                                                                                                                                                                                                                                 </div>
+					
+				</div>
+				</div><!-- cabeceraDerinf -->
+			</div><!--cabeceraDer-->
+		</div><!-- cabecera -->
+	</header>
+
+
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+
+<meta content="no-cache" http-equiv="Cache-Control"/>
+<meta content="0" http-equiv="expires"/>        
+        
+<meta name="description" content="Portal Web con un nivel superior de precisión y seguridad en los contenidos y trámites electrónicos que usted puede realizar con el Ministerio de Justicia"/>        
+<meta name="keywords" content="cabecerahtml.keywords Arquetipo de Desarrollo de Aplicaciones para la Sede-e"/>
+
+<link rel="index" href="" title="Home"/>           
+<link rel="icon" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/img/favicon.ico" type="image/x-icon"/>        
+<link rel="shortcut icon" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/img/favicon.ico" type="image/x-icon"/>
+
+
+
+
+
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans|Roboto:300,400">
+<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/fontawesome/css/all.css">
+<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/css/gijgo.css">
+<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/css/tablesaw.css">
+<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/css/select2.css">
+<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/css/estilo.css">
+<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/css/generales.css">
+<link rel="stylesheet" href="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/css/datepickerYYMMstyle.css">
+<link rel="stylesheet" href="https://sede.mjusticia.gob.es/eConsultas/static/css/styles.css">
+<link rel="stylesheet" type="text/css" href="https://sede.mjusticia.gob.es/eConsultas/static/css/app.css">
+ 
+
+
+
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/eConsultas/static/js/jquery-3.7.1.min.js"></script>
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/select2.js"></script>
+
+
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/bootstrap.bundle.js"></script>
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/gijgo.js"></script>
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/messages.es-es.js"></script>
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/clockpicker.js"></script>
+
+
+
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/modernizr_min.js"></script> 
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/funciones.js"></script> 
+
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/datepickerYYMM.js"></script>
+
+<script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/forms_scripts.js"></script>
+
+</head>
+		
+
+
+
+
+		<h2 class="oculto" id="ocultoMenuPrincipal">Men&uacute; principal</h2>
+	<nav id="menuPrincipal">
+		<div id="menuPrincipalBloqueInterior">
+			<ul id="menuPrincipalInterior" class="menu">
+				<li class="menuPrincipalSeccion"><a href="https://sede.mjusticia.gob.es/es" class="menuPrincipalSeccionTitulo">Inicio</a></li>
+				<li class="menuPrincipalSeccion seleccionado"><a href="https://sede.mjusticia.gob.es/es/tramites" class="menuPrincipalSeccionTitulo">Tr&aacute;mites</a></li>
+				<li class="menuPrincipalSeccion"><a href="https://sede.mjusticia.gob.es/es/informacion-ayuda" class="menuPrincipalSeccionTitulo">Informaci&oacute;n y ayuda</a></li>
+			</ul>
+		</div>
+	</nav>
+	
+	<div id="contenidoSeccion">
+	
+	<div id="contenidoInterior">
+
+
+		
+		
+
+
+
+	<script type='text/javascript'>
+
+var tramite=''; 
+
+$(function(){ 	
+
+	// check si estamos en paso 01
+	if($('#codigoNieCompleto').length){
+		tramite="nacionalidad_paso_01";	}
+
+	// check si estamos en paso 02
+	if($('#capaNacionalidad').length){
+		tramite="nacionalidad_paso_02";	}
+
+	// check si estamos en paso 01
+	if($('.textoBloqueError').length){
+		tramite="nacionalidad_paso_01_error";	}
+		
+});
+
+
+</script>
+
+
+
+
+
+<div id="bloqueMigas">
+	<nav id="navegacion">
+		<ol class="navegacion">
+			<li><a href="https://sede.mjusticia.gob.es/es">Inicio</a></li>
+			<li><a href="https://sede.mjusticia.gob.es/es/tramites">Tr&aacute;mites</a></li>
+			<li class="ultimo">Consulta telem&aacute;tica de expedientes de nacionalidad espa&ntilde;ola por residencia</li>
+		</ol>
+	</nav>						
+</div>
+
+
+
+
+
+				<div class="contenedorCentro grande">	
+					
+
+
+
+ 
+ 
+
+<script type="text/javascript"
+    src="/eConsultas/struts/utils.js"></script>
+
+<script type="text/javascript">
+    var tramite_categoria = 'nacionalidad';
+    var tramite_tipo = 'nacionalidad_española_residencia';
+    var tramite_nombre = 'consulta_telematica_expedientes_nacionalidad_española_residencia';
+    var tramite_paso = 'paso_01';
+    var crypto = window.crypto || window.msCrypto;
+    var randomValuesArray = new Int32Array(3);
+</script>
+
+
+<div class="titulo">
+    <h2>
+        Consulta telemática de expedientes de nacionalidad española por residencia
+    </h2>
+</div>
+
+
+<div
+    id='consulta_telematica_expedientes_nacionalidad_española_residencia'
+    data-nombre='consulta_telematica_expedientes_nacionalidad_española_residencia'
+    data-paso='paso_01' data-tipo='nacionalidad_española_residencia'
+    data-categoria='nacionalidad'>
+
+
+    <div id="contenido">
+
+
+        <form id="idFormuNac" method="post">
+
+            <fieldset>
+                <!-- Bloque de mensajes -->
+                
+                
+
+	<div id="mensaje">
+	
+
+			
+			
+			<div class="bloqueInformativo bloqueInformativoRojo"> 
+                <div class="bloqueCampoIntro">  Se han producido los siguientes errores</div>
+                <div class="bloqueCampoTextoInformativo">
+               		        <ul class="errorMessage">
+                    <li><span>El campo "NIE" no se corresponde con un número de NIE correcto</span></li>
+                    <li><span>Error en la verificación del captcha</span></li>
+        </ul>
+	
+				    	    
+                    	 <ul class="listaErrores">
+                    </ul>
+                </div>
+			</div>
+			
+	</div>
+
+                <div class="bloque_form">
+
+                    <div class="bloque_form_titulo">
+                        <legend>
+                            Datos de la solicitud
+                        </legend>
+                    </div>
+      
+                    <div class="bloque_form_campos">
+
+                        <div class="bloque_campo">
+                            <div class="campo_label">
+                                <label for="codigoNieCompleto">NIE</label>
+                            </div>
+                            <div class="campo_control">
+                                <input type="text"
+                                    name="formuNac.codigoNieCompleto"
+                                    maxlength="9" value=""
+                                    id="codigoNieCompleto"
+                                    class="input_10 campotrim autofocus"
+                                    title="NIE" required="true"
+                                    aria-required="true"
+                                    rel="Se debe rellenar el NIE">
+                            </div>
+                        </div>
+
+                        <div class="bloque_campo">
+                            <div class="campo_label">
+                                <label for="numero">Número</label>
+                            </div>
+                            <div class="campo_control">
+                                <input type="text"
+                                    name="formuNac.numero"
+                                    maxlength="20" value="R" id="numero"
+                                    class="input_10 campotrim"
+                                    title="Ejemplo de Número: R00009"
+                                    required="true" aria-required="true"
+                                    rel="Se debe rellenar el N�mero correctamente">
+                                <span class="campo_ayuda"> Ejemplo: R<strong class="destacado">500001</strong>/2015
+                                </span>
+                            </div>
+                        </div>
+                        <!--bloque_campo-->
+
+                        <div class="bloque_campo">
+                            <div class="campo_label">
+                                <label for="yearSolicitud">Año</label>
+                            </div>
+                            <div class="campo_control">
+                                <input type="text"
+                                    name="formuNac.yearSolicitud"
+                                    maxlength="4" id="yearSolicitud"
+                                    class="input_4 campotrim"
+                                    title="Ejemplo de Año: 2016"
+                                    required="true" aria-required="true"
+                                    rel="Se debe rellenar el Año correctamente"
+                                    pattern="[0-9]{4}" value="">
+                                <span class="campo_ayuda">
+                                    Ejemplo: R500001/<strong
+                                    class='destacado'>2015</strong>
+                                </span>
+                            </div>
+                        </div>
+                        <!--bloque_campo-->
+
+						
+						<div class="bloque_campo">
+							<div class="campo_label">
+								<label for="fechaNacimiento">Fecha nacimiento</label>
+							</div>
+							<div class="campo_control">
+								<input type="date" name="formuNac.fechaNacimiento"
+									maxlength="12" value="" id="codigoNieCompleto"
+									class="campotrim autofocus" title="fecha de nacimiento"
+									required="true" aria-required="true"
+									rel="Se debe rellenar la fecha de nacimiento">
+							</div>
+						</div>
+						
+                        <!--bloque_campo-->
+
+
+						
+						<div id="captchaTramite">
+							
+								<div class="separacionCaptcha">
+									
+<script src='https://www.recaptcha.net/recaptcha/api.js'></script>
+
+<style>
+.text-xs-center {
+	text-align: center;
+}
+
+.g-recaptcha {
+	display: inline-block;
+	margin-left: -4%;
+	margin-top: 2em;
+}
+</style>
+<script type="text/javascript">
+    $(function() {$(".captcha").attr("disabled", "disabled"); });
+      function capcha_filled () {
+            $(".captcha").removeAttr("disabled", "disabled"); 
+        }
+      
+      function capcha_expired () {
+            $(".captcha").attr("disabled", "disabled");
+       }
+      </script>
+
+<input type="hidden" name="gRecaptchaResponse" value="" id="g-recaptcha-response"/>
+<span class="msg-error error bloqueInformativoRojo"></span>
+<div class="text-xs-center">
+	<div class="g-recaptcha" data-sitekey="6Lc78IQrAAAAAA3XMXYgzv8DSe7FzBkVPlc352_v"
+		data-expired-callback="capcha_expired" data-callback="capcha_filled"></div>
+</div>
+								</div>
+							
+						</div>
+						
+
+					</div>
+                    <!--bloque_form_campos-->
+                </div>
+                <!--bloque_form-->
+            </fieldset>
+
+            <div class="bloque_botones">
+                <div class="bloque_botones_primarios">
+                    <input type="submit" id="submitNac"
+                        name="action:enviarDatosNacionalidad"
+                        key="nacionalidad.consultar" class="boton_submit">
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+    <!-- id contenido -->
+</div>		
+
+				</div>
+				
+			
+
+
+			</div><!-- contenidoInterior -->
+		</div><!-- contenidoSeccion  -->
+
+	      <footer>
+                                        <div id="pie" role="contentinfo">
+                                            <div id="pieSup">
+                                                <div id="pieSup1">
+                                                    <div class="bloqueHomeContenidoTitulo">
+                                                        <h2>
+                                                            <span class="oculto secciones">
+                                                               <!--MS:<SharePoint:EncodedLiteral runat="server" text="&#60;%$Resources: MJPP_Sede,SeccionesInteres%&#62;" EncodeMethod="HtmlEncode"/>-->
+
+                                                                </span>
+                                                            </h2>
+                                                        </div>
+                                                      <!--SPM:<WebPartPages:ClientSideWebPart runat="server" ClientSideWebPartId="ac515af1-4490-4c7b-8191-d49b41b26c5e" ClientSideWebPartData="&#60;div data-sp-webpartdata=&#34;&#38;#123;&#38;quot;id&#38;quot;&#38;#58;&#38;quot;ac515af1-4490-4c7b-8191-d49b41b26c5e&#38;quot;,&#38;quot;instanceId&#38;quot;&#38;#58;&#38;quot;g_ff2ee1b6_c21a_47c8_87a0_28fc70939560&#38;quot;,&#38;quot;title&#38;quot;&#38;#58;&#38;quot;React Content Query WebPart&#38;quot;,&#38;quot;description&#38;quot;&#38;#58;&#38;quot;A react content by query WebPart for querying items within a site and easily displaying them using a simple yet powerfull HandleBars templating engine.&#38;quot;,&#38;quot;dataVersion&#38;quot;&#38;#58;&#38;quot;1.0.11&#38;quot;,&#38;quot;properties&#38;quot;&#38;#58;&#38;#123;&#38;quot;description&#38;quot;&#38;#58;&#38;quot;React Content Query WebPart&#38;quot;,&#38;quot;webUrl&#38;quot;&#38;#58;&#38;quot;/es&#38;quot;,&#38;quot;siteUrl&#38;quot;&#38;#58;&#38;quot;&#38;quot;,&#38;quot;listId&#38;quot;&#38;#58;&#38;quot;Enlaces Destacados&#38;quot;,&#38;quot;cacheDurationSec&#38;quot;&#38;#58;&#38;quot;300&#38;quot;,&#38;quot;orderBy&#38;quot;&#38;#58;&#38;quot;CommonColOrder&#38;quot;,&#38;quot;filters&#38;quot;&#38;#58;[&#38;#123;&#38;quot;index&#38;quot;&#38;#58;0,&#38;quot;field&#38;quot;&#38;#58;&#38;#123;&#38;quot;internalName&#38;quot;&#38;#58;&#38;quot;CommonColVisible&#38;quot;,&#38;quot;displayName&#38;quot;&#38;#58;&#38;quot;Resources&#38;#58; MJPP_Admin, CommonColVisibleDisplayName&#38;quot;,&#38;quot;type&#38;quot;&#38;#58;1&#38;#125;,&#38;quot;operator&#38;quot;&#38;#58;1,&#38;quot;join&#38;quot;&#38;#58;2,&#38;quot;value&#38;quot;&#38;#58;&#38;quot;true&#38;quot;,&#38;quot;me&#38;quot;&#38;#58;false,&#38;quot;includeTime&#38;quot;&#38;#58;false,&#38;quot;expression&#38;quot;&#38;#58;null&#38;#125;],&#38;quot;viewFields&#38;quot;&#38;#58;[&#38;quot;CommonColImageAlt&#38;quot;,&#38;quot;CommonColImageUrl&#38;quot;,&#38;quot;CommonColImageTitle&#38;quot;,&#38;quot;CommonColUrl&#38;quot;,&#38;quot;Title&#38;quot;],&#38;quot;itemLimit&#38;quot;&#38;#58;&#38;quot;&#38;quot;,&#38;quot;templateUrl&#38;quot;&#38;#58;&#38;quot;/SiteAssets/Handlebars/SedeRelevantLinksWP.html&#38;quot;,&#38;quot;templateText&#38;quot;&#38;#58;&#38;quot;&#38;lt;style type=\&#38;quot;text/css\&#38;quot;&#38;gt;\n    .dynamic-template .dynamic-items .dynamic-item &#38;#123;\n        background&#38;#58; #ffffff;\n        box-shadow&#38;#58; 0px 0px 6px #bfbebe;\n        margin-bottom&#38;#58; 15px;\n    &#38;#125;\n    .dynamic-template .dynamic-items .dynamic-item h3 &#38;#123;\n        background&#38;#58; #47b4de;\n        color&#38;#58; #fff;\n        padding&#38;#58; 5px 5px 7px 10px;\n        margin&#38;#58; 0px;\n    &#38;#125;\n    .dynamic-template .dynamic-items .dynamic-item .dynamic-item-fields &#38;#123;\n        padding&#38;#58; 10px;\n    &#38;#125;\n    .dynamic-template .dynamic-items .dynamic-item .dynamic-item-fields span &#38;#123;\n        display&#38;#58; block;\n        font-size&#38;#58; 12px;\n    &#38;#125;\n&#38;lt;/style&#38;gt;\n\n&#38;lt;div class=\&#38;quot;dynamic-template\&#38;quot;&#38;gt;\n    &#38;lt;h2&#38;gt;Dynamically generated template&#38;lt;/h2&#38;gt;\n    &#38;lt;div class=\&#38;quot;dynamic-items\&#38;quot;&#38;gt;\n        &#38;#123;&#38;#123;#each items&#38;#125;&#38;#125;\n            &#38;lt;div class=\&#38;quot;dynamic-item\&#38;quot;&#38;gt;\n                &#38;lt;h3&#38;gt;Result #&#38;#123;&#38;#123;@index&#38;#125;&#38;#125;&#38;lt;/h3&#38;gt;\n                &#38;lt;div class=\&#38;quot;dynamic-item-fields\&#38;quot;&#38;gt;\n                    &#38;lt;span&#38;gt;&#38;lt;b&#38;gt;CommonColImageAlt &#38;#58; &#38;lt;/b&#38;gt;&#38;#123;&#38;#123;CommonColImageAlt.textValue&#38;#125;&#38;#125;&#38;lt;/span&#38;gt;\n                    &#38;lt;span&#38;gt;&#38;lt;b&#38;gt;CommonColImageUrl &#38;#58; &#38;lt;/b&#38;gt;&#38;#123;&#38;#123;CommonColImageUrl.textValue&#38;#125;&#38;#125;&#38;lt;/span&#38;gt;\n                    &#38;lt;span&#38;gt;&#38;lt;b&#38;gt;CommonColImageTitle &#38;#58; &#38;lt;/b&#38;gt;&#38;#123;&#38;#123;CommonColImageTitle.textValue&#38;#125;&#38;#125;&#38;lt;/span&#38;gt;\n                    &#38;lt;span&#38;gt;&#38;lt;b&#38;gt;CommonColUrl &#38;#58; &#38;lt;/b&#38;gt;&#38;#123;&#38;#123;CommonColUrl.textValue&#38;#125;&#38;#125;&#38;lt;/span&#38;gt;\n                    &#38;lt;span&#38;gt;&#38;lt;b&#38;gt;Title &#38;#58; &#38;lt;/b&#38;gt;&#38;#123;&#38;#123;Title.textValue&#38;#125;&#38;#125;&#38;lt;/span&#38;gt;\n                &#38;lt;/div&#38;gt;\n            &#38;lt;/div&#38;gt;\n        &#38;#123;&#38;#123;/each&#38;#125;&#38;#125;\n    &#38;lt;/div&#38;gt;\n&#38;lt;/div&#38;gt;&#38;quot;,&#38;quot;externalScripts&#38;quot;&#38;#58;&#38;quot;&#38;quot;&#38;#125;&#38;#125;&#34; data-sp-webpartdataversion=1.0 data-sp-webpart=&#34;&#34;&#62;&#60;div data-sp-componentid=&#34;&#34;&#62;ac515af1-4490-4c7b-8191-d49b41b26c5e&#60;/div&#62;&#60;div data-sp-htmlproperties=&#34;&#34;&#62;&#60;/div&#62;&#60;/div&#62;"  Title="SedeRelevantLinks" FrameType="None" SuppressWebPartChrome="False" Description="A react content by query WebPart for querying items within a site and easily displaying them using a simple yet powerfull HandleBars templating engine." IsIncluded="True" ZoneID="Top" PartOrder="2" FrameState="Normal" AllowRemove="True" AllowZoneChange="True" AllowMinimize="True" AllowConnect="True" AllowEdit="True" AllowHide="True" IsVisible="True" DetailLink="" HelpLink="" HelpMode="Modeless" Dir="Default" PartImageSmall="" MissingAssembly="Cannot Import WebPart" ImportErrorMessage="Cannot Import WebPart" PartImageLarge="" IsIncludedFilter="" ExportControlledProperties="True" ConnectionID="00000000-0000-0000-0000-000000000000" ID="g_40dd2c4f_6dab_4c48_8125_651446da5f71" ChromeType="None" ExportMode="All" __MarkupType="vsattributemarkup" __WebPartId="{40DD2C4F-6DAB-4C48-8125-651446DA5F71}" WebPart="true" Height="" Width=""/>-->
+
+                                                    </div>
+                                                    <div id="pieSup2">
+                                                        <a href="https://www.mjusticia.gob.es/es" class="enlaceAviso" title="Atención, va a salir de la Sede Electrónica del Ministerio de Justicia">
+                                                            <img class="logomj" src="https://sede.mjusticia.gob.es/documents/d/guest/logo_ministerio_presidencia" alt="Acceso al portal del Ministerio de Justicia">
+                                                        </a>
+														 <a href="https://sede.mjusticia.gob.es/es" class="enlaceAviso" title="Atención, va a salir de la Sede Electrónica del Ministerio de Justicia">
+                                                        <img class="logosede" src="https://sede.mjusticia.gob.es/image/layout_set_logo?img_id=125522&t=1760367095645" alt="Sede Electrónica del Ministerio de Justicia">
+														</a>
+                                                    </div>
+                                                </div>
+											</div>
+<div class="footer-n">
+    <div class="footer-n__wrapper">
+      <div class="footer-n__top">
+        <nav class="footer-n__nav">
+          <ul class="footer-n__nav__list">
+            <li class="footer-n__nav__item">
+               <a href="https://sede.mjusticia.gob.es/es/contacto" class="footer-n__nav__link" alt="Contacto" title="Contacto">Contacto
+                </a>
+            </li>
+             <li class="footer-n__nav__item">
+				<a href="https://sede.mjusticia.gob.es/es/guia-navegacion" class="footer-n__nav__link" alt="Gu&iacute;a de Navegaci&oacute;n" title="Gu&iacute;a de Navegaci&oacute;n">Gu&iacute;a de Navegaci&oacute;n
+				</a>
+           </li>
+         
+          
+           <li class="footer-n__nav__item">
+                <a href="https://sede.mjusticia.gob.es/es/mapa-web" class="footer-n__nav__link" alt="Mapa Web" title="Mapa Web">Mapa Web
+                </a>
+           </li>        
+            <li class="footer-n__nav__item">
+              <a href="https://sede.mjusticia.gob.es/es/comunicacion-informacion-infracciones"  class="footer-n__nav__link" alt="Canal Interno de Informaci&oacute;n" title="Canal Interno de Informaci&oacute;n">Canal Interno de Informaci&oacute;n
+              </a>
+           </li>
+           
+  </ul>
+        </nav><!-- end of footer__nav -->
+
+        <!-- <ul class="footer__rrss">
+          <li class="footer__rrss__item">
+            <a href="#" class="footer__rrss__link">
+              <i class="icon-mj_twitter"></i>
+            </a>
+          </li>
+
+          <li class="footer__rrss__item">
+            <a href="#" class="footer__rrss__link">
+              <i class="icon-mj_facebook"></i>
+            </a>
+          </li>
+
+          <li class="footer__rrss__item">
+            <a href="#" class="footer__rrss__link">
+              <i class="icon-mj_youtube"></i>
+            </a>
+          </li>
+
+          <li class="footer__rrss__item">
+            <a href="#" class="footer__rrss__link">
+              <i class="icon-mj_rrss"></i>
+            </a>
+          </li>
+        </ul> -->
+      </div><!-- end of footer__top -->
+
+      <!-- <div class="footer__bottom">
+        <ul class="footer__logos">
+          <li class="footer__logos__item footer__logo">
+            <img src="../SiteAssets/img/logo-ministerio-footer.svg" alt="Ministerio de Justicia" class="footer__logo__img">
+          </li>
+
+          <li class="footer__logos__item">
+            <div class="footer__logos__title">
+              <i class="icon-mj_mouse"></i>
+              <h3>Sede electrónica</h3>
+            </div>
+          </li>
+        </ul>
+      </div> -->
+      <!-- end of footer__bottom -->
+
+      <div class="footer-n__last">
+        <nav class="footer-n__nav">
+          <ul class="footer-n__nav__list">
+                      <li class="footer-n__nav__item">
+                <a href="https://sede.mjusticia.gob.es/es/aviso-legal" class="footer-n__nav__link" alt="Aviso Legal" title="Aviso Legal">Aviso Legal
+                </a>
+            </li>        
+           <li class="footer-n__nav__item">
+                <a href="https://sede.mjusticia.gob.es/es/politica-cookies" class="footer-n__nav__link" alt="Pol&iacute;tica de cookies" title="Pol&iacute;tica de cookies">Pol&iacute;tica de cookies
+               </a>
+           </li>
+           <li class="footer-n__nav__item">
+               <a href="https://sede.mjusticia.gob.es/es/politica-privacidad"  class="footer-n__nav__link" alt="Pol&iacute;tica de privacidad" title="Pol&iacute;tica de privacidad">Pol&iacute;tica de privacidad
+               </a>
+           </li>
+             <li class="footer-n__nav__item">
+				<a href="https://sede.mjusticia.gob.es/es/accesibilidad" class="footer-n__nav__link" alt="Accesibilidad" title="Accesibilidad">Accesibilidad
+                </a>
+            </li>
+          
+            <li class="footer-n__nav__item">
+                <a href="https://www.miteco.gob.eshttps://sede.mjusticia.gob.es/es/ministerio/servicios/informacion/informacion-ambiental.html" class="footer-n__nav__link"  alt="Informaci&oacute;n ambiental" title="Informaci&oacute;n ambiental">Informaci&oacute;n ambiental
+                 </a>
+           </li>
+             </ul>
+        </nav><!-- end of footer__nav -->
+      </div>
+    </div>
+</div>
+</footer>         
+
+	
+
+
+		
+
+	</body>
+
+    
+    <script type="text/javascript" src="https://sede.mjusticia.gob.es/estatico/cs/sede/Satellite/js/forms_scripts.js"></script>
+</html>
