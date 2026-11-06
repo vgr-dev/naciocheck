@@ -12,5 +12,8 @@ brand/
 coverage/
 public/icon/
 
+# Fixtures are byte-for-byte copies of what the official site served: never reformatted.
+tests/fixtures/
+
 # Generated lockfile
 package-lock.json
