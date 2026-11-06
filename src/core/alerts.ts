@@ -1,5 +1,6 @@
 import type { AnomalyNote } from './anomaly';
 import type { Change } from './changes';
+import { translate } from './i18n';
 import { type StatusEntry, findStatus } from './statuses';
 import type { Check } from './storage';
 
@@ -7,9 +8,10 @@ import type { Check } from './storage';
  * What the user sees after a check: which view, whether a notification and a badge appear, and the texts.
  *
  * Everything here is a pure function of the checks, so the alert rules are unit-tested instead of being
- * observed in a browser.
+ * observed in a browser. The locale is a parameter, never the global one, so a test can ask for both.
  */
 
+/** The language of the catalogue text; the pseudo-RTL dev locale reads the Spanish one. */
 export type Locale = 'es' | 'en';
 
 export interface BadgeState {
@@ -27,7 +29,7 @@ export interface AlertDecision {
 const RED = '#dc2626';
 
 /** Notifications carry the label and the status only — never the NIE or the birth date. */
-export function decideAlert(change: Change, label: string): AlertDecision {
+export function decideAlert(change: Change, label: string, locale: Locale = 'es'): AlertDecision {
   if (change.kind === 'error') {
     return { view: 'error', notification: null, badge: { text: '', color: null } };
   }
@@ -35,8 +37,8 @@ export function decideAlert(change: Change, label: string): AlertDecision {
     return {
       view: 'changed',
       notification: {
-        title: `NacioCheck · ${label}`,
-        message: `Nuevo estado: ${change.current.raw}`,
+        title: translate(locale, 'alert.notificationTitle', { label }),
+        message: translate(locale, 'alert.notificationMessage', { status: change.current.raw }),
       },
       badge: { text: '!', color: RED },
     };
@@ -72,16 +74,6 @@ function formatDate(iso: string, locale: Locale): string {
   }).format(new Date(iso));
 }
 
-const TEXTS = {
-  first: { es: 'Primera comprobación.', en: 'First check.' },
-  unchanged: { es: 'Sin cambios desde el', en: 'Unchanged since' },
-  changedLine: { es: 'Antes:', en: 'Before:' },
-  retry: {
-    es: 'Comprueba que el NIE, el número y el año coinciden con la solicitud y vuelve a intentarlo.',
-    en: 'Check that the NIE, the number and the year match the application, then try again.',
-  },
-} as const;
-
 export function buildErrorView(input: {
   label: string;
   messages: readonly string[];
@@ -95,7 +87,7 @@ export function buildErrorView(input: {
     previous: null,
     versionLine: '',
     explanation: null,
-    whatYouCanDo: TEXTS.retry[locale],
+    whatYouCanDo: translate(locale, 'alert.retryHint'),
     sources: [],
     errorMessages: [...input.messages],
     anomaly: null,
@@ -148,12 +140,12 @@ export function buildResultView(input: {
 function previousSummary(change: Change, locale: Locale): { text: string; at: string } | null {
   const previous = change.kind === 'changed' ? change.previous : null;
   if (previous === null) return null;
-  return { text: `${TEXTS.changedLine[locale]} ${previous.raw}`, at: previous.at };
+  return { text: translate(locale, 'alert.before', { status: previous.raw }), at: previous.at };
 }
 
 function versionLine(change: Change, locale: Locale): string {
-  if (change.kind === 'first') return TEXTS.first[locale];
+  if (change.kind === 'first') return translate(locale, 'alert.firstCheck');
   const previous: Check | null = change.previous;
-  if (previous === null) return TEXTS.first[locale];
-  return `${TEXTS.unchanged[locale]} ${formatDate(previous.at, locale)}`;
+  if (previous === null) return translate(locale, 'alert.firstCheck');
+  return translate(locale, 'alert.unchangedSince', { date: formatDate(previous.at, locale) });
 }

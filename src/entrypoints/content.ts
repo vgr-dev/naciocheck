@@ -8,7 +8,8 @@ import {
 } from '../core/autofill';
 import { type FillPayload, type PageOutcomeMessage } from '../core/messages';
 import { parseCheckPage, type ParseOutcome } from '../core/parser';
-import { listApplications } from '../core/storage';
+import { getSettings, listApplications } from '../core/storage';
+import { resolveLocaleCode, setLocale, t } from '../core/i18n';
 
 /**
  * Runs on every page of the official check.
@@ -34,6 +35,10 @@ export default defineContentScript({
 });
 
 async function start(): Promise<void> {
+  // The hints are ours, on somebody else's page: set the language, but never the document's `dir`.
+  const { language } = await getSettings();
+  setLocale(resolveLocaleCode(language, browser.i18n.getUILanguage()));
+
   const outcome = parseCheckPage(document);
   if (outcome.kind !== 'form') {
     await reportOutcome(outcome);
@@ -72,13 +77,11 @@ async function prepareCheck(fill: FillPayload): Promise<void> {
     // Fallback: the page is not the shape we know (or the debug switch is on). Leave it whole, fields filled,
     // and say what to do.
     injectStyle(HINT_STYLE_ID, buildHintCss());
-    showHint(`Revisa los datos de «${fill.label}» y envía la consulta a mano.`);
+    showHint(t('content.fallbackHint', { label: fill.label }));
     return;
   }
   injectStyle(CAPTCHA_ONLY_STYLE_ID, buildCaptchaOnlyCss());
-  showHint(
-    `Marca la casilla del captcha. La consulta de «${fill.label}» se envía sola cuando lo resuelvas.`,
-  );
+  showHint(t('content.captchaHint', { label: fill.label }));
   watchCaptcha();
 }
 
@@ -116,7 +119,7 @@ async function showPicker(): Promise<void> {
 
   const title = document.createElement('p');
   title.className = 'naciocheck-picker-title';
-  title.textContent = 'NacioCheck: ¿qué solicitud quieres consultar?';
+  title.textContent = t('content.pickerTitle');
   panel.append(title);
 
   for (const application of applications) {
@@ -125,7 +128,7 @@ async function showPicker(): Promise<void> {
     button.textContent = application.label;
     if (application.identity.kind !== 'plain') {
       button.disabled = true;
-      button.title = 'Solicitud cifrada: desbloquéala en las opciones.';
+      button.title = t('content.pickerEncrypted');
     } else {
       const identity = application.identity;
       button.addEventListener('click', () => {

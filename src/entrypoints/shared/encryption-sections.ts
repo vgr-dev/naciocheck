@@ -6,6 +6,7 @@ import {
   parseBackup,
 } from '../../core/backup';
 import { encryptIdentity, decryptIdentity } from '../../core/crypto';
+import { t } from '../../core/i18n';
 import { readStore, replaceStore, updateIdentity } from '../../core/storage';
 import { button, el, type ExtensionPage } from './ui';
 
@@ -20,17 +21,15 @@ export async function renderEncryption(
     (application) => application.identity.kind === 'encrypted',
   );
 
-  view.append(el('h2', 'section', 'Cifrado'));
-  view.append(
-    el(
-      'p',
-      'hint',
-      'Cifrar guarda el NIE y la fecha de nacimiento con una contraseña tuya, en este navegador. Si la olvidas no se pueden recuperar: el historial se queda, pero tendrás que volver a escribir las solicitudes.',
-    ),
-  );
+  view.append(el('h2', 'section', t('encryption.title')));
+  view.append(el('p', 'hint', t('encryption.hint')));
 
   const field = el('div', 'field');
-  const label = el('label', '', encrypted.length > 0 ? 'Contraseña actual' : 'Contraseña');
+  const label = el(
+    'label',
+    '',
+    encrypted.length > 0 ? t('encryption.currentPassphrase') : t('encryption.passphrase'),
+  );
   const passphrase = el('input');
   passphrase.type = 'password';
   passphrase.id = 'passphrase';
@@ -39,7 +38,7 @@ export async function renderEncryption(
   field.append(label, passphrase);
 
   const confirmation = el('div', 'field');
-  const confirmationLabel = el('label', '', 'Repite la contraseña');
+  const confirmationLabel = el('label', '', t('encryption.repeat'));
   const repeated = el('input');
   repeated.type = 'password';
   repeated.id = 'passphrase-repeat';
@@ -53,15 +52,15 @@ export async function renderEncryption(
   if (encrypted.length === 0) {
     actions.append(
       button(
-        'Cifrar los datos',
+        t('encryption.enable'),
         () => {
           void (async () => {
             if (passphrase.value.length < 8) {
-              message.textContent = 'Usa una contraseña de al menos 8 caracteres.';
+              message.textContent = t('encryption.tooShort');
               return;
             }
             if (passphrase.value !== repeated.value) {
-              message.textContent = 'Las dos contraseñas no coinciden.';
+              message.textContent = t('encryption.mismatch');
               return;
             }
             for (const application of store.applications) {
@@ -76,7 +75,7 @@ export async function renderEncryption(
               type: 'naciocheck:unlock',
               passphrase: passphrase.value,
             });
-            message.textContent = 'Datos cifrados. Guarda la contraseña en un sitio seguro.';
+            message.textContent = t('encryption.done');
             await redraw();
           })();
         },
@@ -86,7 +85,7 @@ export async function renderEncryption(
   } else {
     actions.append(
       button(
-        'Quitar el cifrado',
+        t('encryption.disable'),
         () => {
           void (async () => {
             try {
@@ -96,25 +95,25 @@ export async function renderEncryption(
                 await updateIdentity(application.id, plain);
               }
             } catch {
-              message.textContent = 'No se ha podido descifrar: ¿está bien la contraseña?';
+              message.textContent = t('encryption.decryptFailed');
               return;
             }
             await browser.runtime.sendMessage({ type: 'naciocheck:lock' });
-            message.textContent = 'Cifrado desactivado.';
+            message.textContent = t('encryption.disabled');
             await redraw();
           })();
         },
         'button danger',
       ),
-      button('Desbloquear para esta sesión', () => {
+      button(t('encryption.unlockSession'), () => {
         void (async () => {
           const response: unknown = await browser.runtime.sendMessage({
             type: 'naciocheck:unlock',
             passphrase: passphrase.value,
           });
           message.textContent = isUnlocked(response)
-            ? 'Desbloqueado hasta que cierres el navegador.'
-            : 'No se ha podido desbloquear.';
+            ? t('encryption.unlocked')
+            : t('encryption.unlockFailed');
         })();
       }),
     );
@@ -124,22 +123,16 @@ export async function renderEncryption(
 }
 
 export async function renderBackup(view: HTMLElement): Promise<void> {
-  view.append(el('h2', 'section', 'Copia de seguridad'));
-  view.append(
-    el(
-      'p',
-      'hint',
-      'Exporta todo a un archivo para guardarlo o moverlo a otro navegador. El archivo se queda en tu equipo: nada sale de aquí.',
-    ),
-  );
+  view.append(el('h2', 'section', t('backup.title')));
+  view.append(el('p', 'hint', t('backup.hint')));
 
   const message = el('p', 'hint');
   const store = await readStore();
 
-  const exportButton = button('Exportar', () => {
-    if (hasPlainIdentities(store) && !window.confirm(plainWarning())) return;
-    download('naciocheck-copia.json', exportStore(store));
-    message.textContent = 'Copia exportada.';
+  const exportButton = button(t('backup.export'), () => {
+    if (hasPlainIdentities(store) && !window.confirm(t('backup.plainWarning'))) return;
+    download(t('backup.filename'), exportStore(store));
+    message.textContent = t('backup.exported');
   });
 
   const input = el('input');
@@ -147,39 +140,31 @@ export async function renderBackup(view: HTMLElement): Promise<void> {
   input.accept = 'application/json,.json';
   input.id = 'import-file';
 
-  const importButton = button('Importar el archivo elegido', () => {
+  const importButton = button(t('backup.import'), () => {
     void (async () => {
       const file = input.files?.[0];
       if (file === undefined) {
-        message.textContent = 'Elige antes un archivo.';
+        message.textContent = t('backup.chooseFirst');
         return;
       }
       try {
         const imported = parseBackup(await file.text());
-        const merge = window.confirm(
-          'Aceptar = añadir lo que falte a lo que ya tienes. Cancelar = reemplazar todo por el archivo.',
-        );
+        const merge = window.confirm(t('backup.mergeQuestion'));
         const current = await readStore();
         await replaceStore(merge ? mergeStores(current, imported) : imported);
-        message.textContent = merge
-          ? 'Importado y combinado.'
-          : 'Importado, reemplazando lo anterior.';
+        message.textContent = merge ? t('backup.merged') : t('backup.replaced');
       } catch (error) {
-        message.textContent = `No se ha podido importar: ${String(error)}`;
+        message.textContent = t('backup.importFailed', { error: String(error) });
       }
     })();
   });
 
   const fileField = el('div', 'field');
-  const fileLabel = el('label', '', 'Archivo de copia');
+  const fileLabel = el('label', '', t('backup.fileLabel'));
   fileLabel.htmlFor = 'import-file';
   fileField.append(fileLabel, input);
 
   view.append(el('div', 'row', ''), exportButton, fileField, importButton, message);
-}
-
-function plainWarning(): string {
-  return 'La copia incluirá el NIE y la fecha de nacimiento sin cifrar. ¿Continuar?';
 }
 
 function isUnlocked(value: unknown): boolean {

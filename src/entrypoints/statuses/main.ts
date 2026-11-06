@@ -1,4 +1,6 @@
+import { currentLocale, t } from '../../core/i18n';
 import { STATUS_CATALOG, STATUS_DISCLAIMER } from '../../core/statuses';
+import { initPageLocale } from '../shared/locale';
 import { el, root } from '../shared/ui';
 
 /**
@@ -6,19 +8,22 @@ import { el, root } from '../shared/ui';
  * explanation comes from. Nothing here is official — the disclaimer says so.
  */
 
-function main(): void {
+async function main(): Promise<void> {
   const view = root();
-  view.append(el('h1', 'title', 'Qué significa cada estado'));
-  view.append(el('p', 'subtitle', STATUS_DISCLAIMER.es));
+  await initPageLocale();
+  document.title = t('statuses.pageTitle');
+  const content = currentLocale().content;
+  view.append(el('h1', 'title', t('statuses.title')));
+  view.append(el('p', 'subtitle', STATUS_DISCLAIMER[content]));
 
   for (const entry of [...STATUS_CATALOG].sort((a, b) => a.stage - b.stage)) {
     const card = el('div', 'card');
-    card.append(el('h3', '', entry.es.title));
-    card.append(el('p', '', entry.es.explanation));
-    card.append(el('p', '', `Qué puedes hacer: ${entry.es.whatYouCanDo}`));
+    card.append(el('h3', '', entry[content].title));
+    card.append(el('p', '', entry[content].explanation));
+    card.append(el('p', '', t('statuses.whatYouCanDo', { text: entry[content].whatYouCanDo })));
 
     if (entry.officialDefinition === 'none') {
-      card.append(el('p', 'hint', 'Sin definición oficial: las fuentes no coinciden.'));
+      card.append(el('p', 'hint', t('statuses.noOfficialDefinition')));
     }
 
     const sources = el('ul', 'sources');
@@ -35,4 +40,4 @@ function main(): void {
   }
 }
 
-main();
+void main();

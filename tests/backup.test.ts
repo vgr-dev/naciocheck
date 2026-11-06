@@ -37,7 +37,10 @@ const PLAIN_STORE: Store = {
       acknowledged: false,
     },
   ],
-  settings: { reminders: { enabled: true, weekdays: [1, 2, 3], time: '09:30' } },
+  settings: {
+    reminders: { enabled: true, weekdays: [1, 2, 3], time: '09:30' },
+    language: 'auto',
+  },
 };
 
 const ENCRYPTED_STORE: Store = {
@@ -118,9 +121,10 @@ describe('mergeStores', () => {
   it('keeps the current reminder rather than the imported one', () => {
     const merged = mergeStores(PLAIN_STORE, {
       ...PLAIN_STORE,
-      settings: { reminders: DEFAULT_REMINDER },
+      settings: { reminders: DEFAULT_REMINDER, language: 'en' },
     });
 
     expect(merged.settings.reminders).toEqual(PLAIN_STORE.settings.reminders);
+    expect(merged.settings.language).toBe(PLAIN_STORE.settings.language);
   });
 });

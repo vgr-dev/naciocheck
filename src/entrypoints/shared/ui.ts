@@ -1,7 +1,10 @@
 import { browser } from 'wxt/browser';
+import { formatDate } from '../../core/i18n';
 import './pages.css';
 
 /** Tiny helpers shared by the extension's own pages: no framework, no remote assets. */
+
+export { formatDate };
 
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -18,13 +21,6 @@ export function root(): HTMLElement {
   const element = document.getElementById('app');
   if (element === null) throw new Error('Missing #app');
   return element;
-}
-
-export function formatDate(iso: string | null): string {
-  if (iso === null) return 'nunca';
-  return new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(iso),
-  );
 }
 
 /** One of the extension's own pages, as WXT types them from the entrypoints on disk. */

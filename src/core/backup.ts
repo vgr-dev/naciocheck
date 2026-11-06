@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import { type Store, migrateStore } from './storage';
 
 /**
@@ -30,14 +31,14 @@ export function parseBackup(text: string): Store {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('El archivo no es un JSON válido.');
+    throw new Error(t('backup.errorJson'));
   }
   if (typeof parsed !== 'object' || parsed === null) {
-    throw new Error('El archivo no tiene el formato de una copia de NacioCheck.');
+    throw new Error(t('backup.errorShape'));
   }
   const { format, store } = parsed as { format?: unknown; store?: unknown };
   if (format !== BACKUP_FORMAT) {
-    throw new Error('El archivo no es una copia de NacioCheck.');
+    throw new Error(t('backup.errorFormat'));
   }
   return migrateStore(store);
 }

@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import type { PlainIdentity } from './storage';
 
 /**
@@ -18,16 +19,16 @@ export function validateIdentity(identity: Omit<PlainIdentity, 'kind'>): Identit
   const errors: IdentityErrors = {};
 
   if (!NIE.test(identity.nie.trim().toUpperCase())) {
-    errors.nie = 'Escribe el NIE con letra final, por ejemplo X1234567L.';
+    errors.nie = t('validation.nie');
   }
   if (!NUMERO.test(identity.numero.trim().toUpperCase())) {
-    errors.numero = 'El número empieza por una letra y sigue con dígitos, por ejemplo R500001.';
+    errors.numero = t('validation.numero');
   }
   if (!YEAR.test(identity.year.trim())) {
-    errors.year = 'El año son cuatro dígitos, por ejemplo 2015.';
+    errors.year = t('validation.year');
   }
   if (!DATE.test(identity.birthDate.trim()) || Number.isNaN(Date.parse(identity.birthDate))) {
-    errors.birthDate = 'La fecha de nacimiento va como AAAA-MM-DD.';
+    errors.birthDate = t('validation.birthDate');
   }
 
   return errors;

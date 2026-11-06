@@ -148,11 +148,16 @@ form.fields {
   font-weight: 600;
 }
 
-.field input {
+.field input,
+.field select {
   padding: 7px 9px;
   border: 1px solid var(--gray-200);
   border-radius: 8px;
   font: inherit;
+}
+
+.field select {
+  background: #ffffff;
 }
 
 .field input[aria-invalid='true'] {

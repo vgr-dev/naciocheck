@@ -1,5 +1,7 @@
 import { browser } from 'wxt/browser';
 import type { ResultView } from '../../core/alerts';
+import { t } from '../../core/i18n';
+import { initPageLocale } from '../shared/locale';
 
 /**
  * The result view: what the last check found, whether it changed, and — when it did — the full-screen alert
@@ -25,6 +27,8 @@ function isResultPayload(value: unknown): value is ResultPayload {
 
 async function main(): Promise<void> {
   if (app === null) return;
+  await initPageLocale();
+  document.title = t('app.title');
   const response: unknown = await browser.runtime.sendMessage({
     type: 'naciocheck:result-request',
   });
@@ -38,7 +42,7 @@ async function main(): Promise<void> {
 function renderEmpty(): void {
   if (app === null) return;
   app.className = 'app';
-  app.replaceChildren(element('p', 'empty', 'No hay ninguna comprobación que mostrar.'));
+  app.replaceChildren(element('p', 'empty', t('result.empty')));
 }
 
 function render(payload: ResultPayload): void {
@@ -103,7 +107,7 @@ function render(payload: ResultPayload): void {
     app.append(sources);
   }
 
-  app.append(element('p', 'disclaimer', DISCLAIMER));
+  app.append(element('p', 'disclaimer', t('result.disclaimer')));
   app.append(buildActions(payload));
 }
 
@@ -117,9 +121,9 @@ function buildBanner(view: ResultView): HTMLElement {
     icon.width = 96;
     icon.height = 96;
     banner.append(icon);
-    banner.append(element('h1', 'banner-title', 'EL ESTADO HA CAMBIADO'));
+    banner.append(element('h1', 'banner-title', t('result.changedTitle')));
   } else {
-    banner.append(element('h1', 'banner-title', 'No se ha podido completar la comprobación'));
+    banner.append(element('h1', 'banner-title', t('result.errorTitle')));
   }
   return banner;
 }
@@ -129,7 +133,7 @@ function buildActions(payload: ResultPayload): HTMLElement {
   actions.className = 'actions';
 
   if (payload.view.view === 'changed' && !payload.acknowledged && payload.checkId !== null) {
-    const acknowledge = element('button', 'primary', 'Entendido');
+    const acknowledge = element('button', 'primary', t('result.acknowledge'));
     acknowledge.addEventListener('click', () => {
       void acknowledgeChange(payload);
     });
@@ -137,7 +141,7 @@ function buildActions(payload: ResultPayload): HTMLElement {
   }
 
   if (payload.view.view === 'error') {
-    const retry = element('button', 'primary', 'Volver a intentarlo');
+    const retry = element('button', 'primary', t('result.retry'));
     retry.addEventListener('click', () => {
       void retryCheck(payload);
     });
@@ -145,7 +149,7 @@ function buildActions(payload: ResultPayload): HTMLElement {
   }
 
   if (payload.hasNext) {
-    const next = element('button', 'primary', 'Continuar con la siguiente solicitud');
+    const next = element('button', 'primary', t('result.next'));
     next.addEventListener('click', () => {
       void browser.runtime.sendMessage({ type: 'naciocheck:continue' });
     });
@@ -170,9 +174,6 @@ async function retryCheck(payload: ResultPayload): Promise<void> {
     applicationId: payload.applicationId,
   });
 }
-
-const DISCLAIMER =
-  'Información orientativa, no es asesoramiento jurídico. La resolución oficial llega por DEHú. NacioCheck no es una herramienta oficial del Ministerio de Justicia.';
 
 function element(tag: string, className: string, text: string): HTMLElement {
   const node = document.createElement(tag);

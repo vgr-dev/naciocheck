@@ -3,6 +3,7 @@ import { buildErrorView, buildResultView, decideAlert } from '../core/alerts';
 import { detectAnomaly } from '../core/anomaly';
 import { evaluateChange } from '../core/changes';
 import { decryptIdentity } from '../core/crypto';
+import { currentLocale, resolveLocaleCode, setLocale, t } from '../core/i18n';
 import { isExtensionMessage } from '../core/messages';
 import type { ParseOutcome } from '../core/parser';
 import { nextRunWhen } from '../core/schedule';
@@ -55,6 +56,8 @@ interface ResultPayload {
 }
 
 export default defineBackground(() => {
+  void applyStoredLocale();
+
   browser.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
     void respond(message, sender.tab?.id).then(sendResponse);
     return true;
@@ -83,13 +86,20 @@ async function handleInstalled(reason: string): Promise<void> {
   }
 }
 
+/** The background prints notifications and result views, so it needs the locale in force before it builds them. */
+async function applyStoredLocale(): Promise<void> {
+  const { language } = await getSettings();
+  setLocale(resolveLocaleCode(language, browser.i18n.getUILanguage()));
+}
+
 async function handleAlarm(name: string): Promise<void> {
   if (name !== REMINDER_ALARM) return;
+  await applyStoredLocale();
   await browser.notifications.create(REMINDER_NOTIFICATION, {
     type: 'basic',
     iconUrl: browser.runtime.getURL('/icon/128.png'),
-    title: 'NacioCheck',
-    message: 'Es la hora de comprobar el estado de tu solicitud. Solo hace falta el captcha.',
+    title: t('notify.reminderTitle'),
+    message: t('notify.reminderMessage'),
     priority: 2,
   });
   await rescheduleReminder();
@@ -255,11 +265,13 @@ async function resolveIdentity(identity: Application['identity']): Promise<Plain
 }
 
 async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void> {
+  await applyStoredLocale();
+  const locale = currentLocale().content;
   const applicationId = await releaseFill(tabId);
   if (applicationId === undefined) return;
 
   const application = await getApplication(applicationId);
-  const label = application?.label ?? 'Solicitud';
+  const label = application?.label ?? t('background.defaultLabel');
   const hasNext = (await getRun()).queue.length > 1;
 
   if (outcome.kind === 'status') {
@@ -272,7 +284,12 @@ async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void
       subStatus: outcome.subStatus,
     });
     const change = evaluateChange(previous, check);
-    const view = buildResultView({ label, change, anomaly: detectAnomaly(previous, check) });
+    const view = buildResultView({
+      label,
+      change,
+      anomaly: detectAnomaly(previous, check),
+      locale,
+    });
     await storeResult(tabId, {
       view,
       applicationId,
@@ -280,7 +297,7 @@ async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void
       acknowledged: false,
       hasNext,
     });
-    await applyAlert(view.view === 'changed', decideAlert(change, label), check.id);
+    await applyAlert(view.view === 'changed', decideAlert(change, label, locale), check.id);
   } else if (outcome.kind === 'error') {
     // D12: the page does not say why, so neither do we — the message is stored and shown verbatim.
     const check = await appendCheck({
@@ -291,7 +308,7 @@ async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void
       subStatus: null,
     });
     await storeResult(tabId, {
-      view: buildErrorView({ label, messages: outcome.messages }),
+      view: buildErrorView({ label, messages: outcome.messages, locale }),
       applicationId,
       checkId: check.id,
       acknowledged: false,
@@ -302,7 +319,8 @@ async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void
     await storeResult(tabId, {
       view: buildErrorView({
         label,
-        messages: ['La página no se ha reconocido y no se ha guardado nada.'],
+        messages: [t('background.unknownPage')],
+        locale,
       }),
       applicationId,
       checkId: null,

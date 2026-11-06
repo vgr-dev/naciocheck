@@ -1,4 +1,6 @@
+import { t } from '../../core/i18n';
 import { listApplications } from '../../core/storage';
+import { initPageLocale } from '../shared/locale';
 import { button, el, root } from '../shared/ui';
 
 /**
@@ -10,23 +12,19 @@ import { button, el, root } from '../shared/ui';
 
 async function main(): Promise<void> {
   const view = root();
-  view.append(el('h1', 'title', 'Desbloquear'));
-  view.append(
-    el(
-      'p',
-      'hint',
-      'Escribe la contraseña con la que cifraste los datos. Si la has olvidado, no hay forma de recuperarla: puedes volver a guardar las solicitudes.',
-    ),
-  );
+  await initPageLocale();
+  document.title = t('unlock.pageTitle');
+  view.append(el('h1', 'title', t('unlock.title')));
+  view.append(el('p', 'hint', t('unlock.hint')));
 
   const applications = await listApplications();
   if (!applications.some((application) => application.identity.kind === 'encrypted')) {
-    finish('No hay nada cifrado. Puedes cerrar esta pestaña.');
+    finish(t('unlock.nothingEncrypted'));
     return;
   }
 
   const field = el('div', 'field');
-  const label = el('label', '', 'Contraseña');
+  const label = el('label', '', t('unlock.passphrase'));
   const input = el('input');
   input.type = 'password';
   input.id = 'passphrase';
@@ -37,7 +35,7 @@ async function main(): Promise<void> {
   const message = el('p', 'hint');
 
   const submit = button(
-    'Desbloquear y empezar',
+    t('unlock.submit'),
     () => {
       void (async () => {
         const response: unknown = await browser.runtime.sendMessage({
@@ -46,7 +44,7 @@ async function main(): Promise<void> {
         });
 
         if (!isUnlocked(response)) {
-          message.textContent = 'No se ha podido desbloquear. ¿Está bien la contraseña?';
+          message.textContent = t('unlock.failed');
           return;
         }
         // The background now finds the passphrase in session and opens the check window itself.

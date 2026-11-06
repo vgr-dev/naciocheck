@@ -1,4 +1,5 @@
 import { evaluateChange } from '../../core/changes';
+import { t } from '../../core/i18n';
 import {
   type Application,
   type Check,
@@ -6,6 +7,7 @@ import {
   listApplications,
   listChecks,
 } from '../../core/storage';
+import { initPageLocale } from '../shared/locale';
 import { button, el, formatDate, link, openPage, root } from '../shared/ui';
 
 /**
@@ -15,15 +17,17 @@ import { button, el, formatDate, link, openPage, root } from '../shared/ui';
 
 async function main(): Promise<void> {
   const view = root();
+  await initPageLocale();
+  document.title = t('app.title');
   const applications = await listApplications();
 
-  view.append(el('h1', 'title', 'NacioCheck'));
+  view.append(el('h1', 'title', t('app.title')));
 
   if (applications.length === 0) {
     view.append(
-      el('p', 'hint', 'Todavía no hay ninguna solicitud guardada.'),
+      el('p', 'hint', t('popup.noApplications')),
       button(
-        'Añadir una solicitud',
+        t('popup.addApplication'),
         () => {
           openPage('/options.html');
         },
@@ -42,16 +46,16 @@ async function main(): Promise<void> {
   const row = el('div', 'row');
   row.append(
     button(
-      'Comprobar todo',
+      t('popup.checkAll'),
       () => {
         void startRun();
       },
       'button primary',
     ),
-    link('Opciones', () => {
+    link(t('popup.options'), () => {
       openPage('/options.html');
     }),
-    link('Qué significa cada estado', () => {
+    link(t('popup.whatMeans'), () => {
       openPage('/statuses.html');
     }),
   );
@@ -67,22 +71,22 @@ async function buildCard(application: Application): Promise<HTMLElement> {
   const previous = latest === undefined ? null : latestStatusBefore(checks, latest);
 
   if (latest === undefined) {
-    card.append(el('p', 'status', 'Sin comprobaciones todavía'));
+    card.append(el('p', 'status', t('popup.noChecks')));
   } else {
     const change = evaluateChange(previous, latest);
     const status = el(
       'p',
       'status',
-      latest.outcome === 'status' ? latest.raw : 'Última comprobación con error',
+      latest.outcome === 'status' ? latest.raw : t('popup.lastError'),
     );
     if (change.kind === 'changed' && !latest.acknowledged) {
-      status.append(el('span', 'marker', 'CAMBIÓ'));
+      status.append(el('span', 'marker', t('popup.changed')));
     }
-    card.append(status, el('p', 'meta', `Comprobado el ${formatDate(latest.at)}`));
+    card.append(status, el('p', 'meta', t('popup.checkedOn', { date: formatDate(latest.at) })));
   }
 
   card.append(
-    button('Comprobar ahora', () => {
+    button(t('popup.checkNow'), () => {
       void startRun([application.id]);
     }),
   );

@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { DEFAULT_LANGUAGE, isLanguageSetting, type LanguageSetting } from './i18n';
 import { DEFAULT_REMINDER, isValidReminder, type ReminderConfig } from './schedule';
 import type { ResolvedStatusKey } from './statuses';
 
@@ -58,9 +59,11 @@ export interface Check {
   acknowledged: boolean;
 }
 
-/** Phase 8 adds the encryption flag next to the reminder. */
+/** The reminder and the language override; the encryption state lives in the identities themselves. */
 export interface Settings {
   reminders: ReminderConfig;
+  /** `auto` follows the browser; anything else is the user's choice in options. */
+  language: LanguageSetting;
 }
 
 export interface Store {
@@ -75,13 +78,20 @@ export function emptyStore(): Store {
     version: SCHEMA_VERSION,
     applications: [],
     checks: [],
-    settings: { reminders: DEFAULT_REMINDER },
+    settings: { reminders: DEFAULT_REMINDER, language: DEFAULT_LANGUAGE },
   };
 }
 
-/** Old snapshots predate the reminder; nothing has been released, so this is normalisation, not a migration. */
+/**
+ * Old snapshots predate the reminder and the language; nothing has been released, so this is normalisation, not
+ * a migration. An unknown language falls back to `auto` instead of failing the whole store.
+ */
 function normaliseSettings(raw: unknown): Settings {
   const value = typeof raw === 'object' && raw !== null ? raw : {};
+  const storedLanguage = (value as { language?: unknown }).language;
+  const language: LanguageSetting = isLanguageSetting(storedLanguage)
+    ? storedLanguage
+    : DEFAULT_LANGUAGE;
   const reminders = (value as { reminders?: unknown }).reminders;
   if (
     typeof reminders === 'object' &&
@@ -92,10 +102,10 @@ function normaliseSettings(raw: unknown): Settings {
   ) {
     const candidate = reminders as ReminderConfig;
     if (Array.isArray(candidate.weekdays) && isValidReminder(candidate)) {
-      return { reminders: { ...candidate, enabled: candidate.enabled === true } };
+      return { reminders: { ...candidate, enabled: candidate.enabled === true }, language };
     }
   }
-  return { reminders: DEFAULT_REMINDER };
+  return { reminders: DEFAULT_REMINDER, language };
 }
 
 function createId(): string {
@@ -161,6 +171,13 @@ export async function setReminder(config: ReminderConfig): Promise<void> {
   if (!isValidReminder(config)) throw new Error('Invalid reminder configuration');
   const store = await readStore();
   await writeStore({ ...store, settings: { ...store.settings, reminders: config } });
+}
+
+/** Stores the language override. Every page reads it on load, so no message is needed here. */
+export async function setLanguage(language: LanguageSetting): Promise<void> {
+  if (!isLanguageSetting(language)) throw new Error('Invalid language setting');
+  const store = await readStore();
+  await writeStore({ ...store, settings: { ...store.settings, language } });
 }
 
 export async function getApplication(id: string): Promise<Application | null> {

@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
+import { DEFAULT_LANGUAGE, type LanguageSetting } from '../src/core/i18n';
 import { parseCheckPage } from '../src/core/parser';
 import {
   acknowledgeCheck,
@@ -18,6 +19,7 @@ import {
   migrateStore,
   readStore,
   SCHEMA_VERSION,
+  setLanguage,
   setReminder,
   type PlainIdentity,
 } from '../src/core/storage';
@@ -260,7 +262,7 @@ describe('migrateStore', () => {
       version: SCHEMA_VERSION,
       applications: [],
       checks: [],
-      settings: { reminders: DEFAULT_REMINDER },
+      settings: { reminders: DEFAULT_REMINDER, language: DEFAULT_LANGUAGE },
     };
 
     expect(migrateStore(stored)).toEqual(stored);
@@ -282,13 +284,49 @@ describe('migrateStore', () => {
   it('defaults the settings when an old snapshot has none', () => {
     expect(migrateStore({ version: 1, applications: [], checks: [] }).settings).toEqual({
       reminders: DEFAULT_REMINDER,
+      language: DEFAULT_LANGUAGE,
     });
+  });
+
+  it('falls back to auto for an unknown language instead of failing the whole store', () => {
+    const migrated = migrateStore({
+      version: 1,
+      applications: [],
+      checks: [],
+      settings: { reminders: DEFAULT_REMINDER, language: 'klingon' },
+    });
+
+    expect(migrated.settings.language).toBe(DEFAULT_LANGUAGE);
+  });
+});
+
+describe('language setting', () => {
+  it('starts on auto', async () => {
+    const settings = await getSettings();
+
+    expect(settings.language).toBe(DEFAULT_LANGUAGE);
+  });
+
+  it('stores an override without touching the reminder', async () => {
+    const reminder = { enabled: true, weekdays: [1], time: '08:00' };
+    await setReminder(reminder);
+
+    await setLanguage('en');
+
+    await expect(getSettings()).resolves.toEqual({ reminders: reminder, language: 'en' });
+  });
+
+  it('refuses a language it does not ship', async () => {
+    await expect(setLanguage('klingon' as LanguageSetting)).rejects.toThrow(/invalid language/i);
   });
 });
 
 describe('reminder settings', () => {
   it('starts disabled, on workdays at 10:00', async () => {
-    await expect(getSettings()).resolves.toEqual({ reminders: DEFAULT_REMINDER });
+    await expect(getSettings()).resolves.toEqual({
+      reminders: DEFAULT_REMINDER,
+      language: DEFAULT_LANGUAGE,
+    });
     expect(DEFAULT_REMINDER.enabled).toBe(false);
   });
 
@@ -297,7 +335,10 @@ describe('reminder settings', () => {
 
     await setReminder(reminder);
 
-    await expect(getSettings()).resolves.toEqual({ reminders: reminder });
+    await expect(getSettings()).resolves.toEqual({
+      reminders: reminder,
+      language: DEFAULT_LANGUAGE,
+    });
   });
 
   it('refuses an impossible reminder', async () => {
