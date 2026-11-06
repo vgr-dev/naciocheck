@@ -1,16 +1,9 @@
 import { normaliseText } from './normalise';
-
-/**
- * Status keys arrive with the catalogue in Phase 3. Until then every status the parser meets is
- * reported verbatim and marked `unknown`, so nothing is ever dropped and nothing is guessed.
- */
-export const UNCLASSIFIED_STATUS_KEY = 'unknown';
-
-export type StatusKey = typeof UNCLASSIFIED_STATUS_KEY;
+import { statusKeyOf, type ResolvedStatusKey } from './statuses';
 
 export interface ParsedStatus {
   kind: 'status';
-  key: StatusKey;
+  key: ResolvedStatusKey;
   /** The status exactly as the page shows it, trimmed. */
   raw: string;
   /** `raw` folded for comparison. */
@@ -81,7 +74,7 @@ function readStatus(page: ParentNode): ParsedStatus | null {
 
   return {
     kind: 'status',
-    key: UNCLASSIFIED_STATUS_KEY,
+    key: statusKeyOf(raw),
     raw,
     normalised: normaliseText(raw),
     subStatus,

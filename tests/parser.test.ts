@@ -34,7 +34,7 @@ describe('parseCheckPage — result page', () => {
 
     expect(parseCheckPage(page)).toEqual({
       kind: 'status',
-      key: 'unknown',
+      key: 'abierto-registrado',
       raw: 'Abierto - Registrado.',
       normalised: 'abierto - registrado',
       subStatus: 'Su expediente ha sido registrado correctamente.',
@@ -51,7 +51,6 @@ describe('parseCheckPage — result page', () => {
       normalised: 'en tramitacion',
     });
   });
-
   it('trims the status without touching its text', () => {
     const page = loadFixture(RESULT_FIXTURE, {
       ...SYNTHETIC_VALUES,
@@ -61,13 +60,16 @@ describe('parseCheckPage — result page', () => {
     expect(parseCheckPage(page)).toMatchObject({ raw: 'Abierto - Registrado.' });
   });
 
-  it('never throws on a status it does not know', () => {
-    const page = loadFixture(RESULT_FIXTURE, { ...SYNTHETIC_VALUES, status: 'Doble calificación' });
+  it('never throws on a status the catalogue does not know', () => {
+    const page = loadFixture(RESULT_FIXTURE, {
+      ...SYNTHETIC_VALUES,
+      status: 'Estado sin catalogar',
+    });
 
     expect(parseCheckPage(page)).toMatchObject({
       kind: 'status',
       key: 'unknown',
-      raw: 'Doble calificación',
+      raw: 'Estado sin catalogar',
     });
   });
 
