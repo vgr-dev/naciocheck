@@ -1,0 +1,41 @@
+{
+  "name": "naciocheck",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "NacioCheck — a local-only browser extension that checks the status of Spanish nationality-by-residence applications. Not affiliated with the Ministerio de Justicia.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "npm run build:chrome",
+    "build:chrome": "wxt build -b chrome",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip -b chrome && wxt zip -b firefox",
+    "zip:sources": "wxt zip -b firefox --sources",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "check:privacy": "node scripts/check-privacy.mjs",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "sharp": "^0.35.5",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0",
+    "wxt": "^0.21.5"
+  }
+}

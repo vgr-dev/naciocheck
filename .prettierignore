@@ -1,0 +1,16 @@
+# Local plans, drafts and the tool-specific agent wrappers are hand-written: never reformatted.
+.ai/
+.claude/
+.github/
+
+# Brand sources are the architect's and are formatted when the store assets are produced (Phase 10).
+brand/
+
+# Build and tool output
+.output/
+.wxt/
+coverage/
+public/icon/
+
+# Generated lockfile
+package-lock.json
