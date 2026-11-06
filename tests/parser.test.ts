@@ -28,6 +28,21 @@ function loadFixture(name: string, values: Record<string, string> = {}): Documen
   return parseHtml(filled);
 }
 
+/**
+ * The site's result shape with the two lines the parser reads, and any extra paragraph after them. Synthetic
+ * on purpose: the page's own words for a denial or an archive have not been captured yet.
+ */
+function syntheticResultPage(status: string, subStatus: string, extra = ''): Document {
+  return parseHtml(
+    '<html><body><div data-paso="paso_02">' +
+      '<p class="desPro">La solicitud se encuentra en el siguiente estado:</p>' +
+      `<p class="desPro2"><b>${status}</b></p>` +
+      `<p class="desPro3"><b>${subStatus}</b></p>` +
+      extra +
+      '</div></body></html>',
+  );
+}
+
 describe('parseCheckPage — result page', () => {
   it('reads the status and the sub-status from the real result markup', () => {
     const page = loadFixture(RESULT_FIXTURE, SYNTHETIC_VALUES);
@@ -81,6 +96,48 @@ describe('parseCheckPage — result page', () => {
 
   it('recognises the result step', () => {
     expect(isResultPage(loadFixture(RESULT_FIXTURE, SYNTHETIC_VALUES))).toBe(true);
+  });
+});
+
+describe('parseCheckPage — final outcomes found by word search', () => {
+  it('recognises a denial when the status line has no exact match', () => {
+    const page = syntheticResultPage('Finalizado - Denegado. Notificado.', '');
+
+    expect(parseCheckPage(page)).toMatchObject({
+      kind: 'status',
+      key: 'resuelto-denegado',
+      raw: 'Finalizado - Denegado. Notificado.',
+    });
+  });
+
+  it('recognises an archive printed on the sub-status line', () => {
+    const page = syntheticResultPage('Cerrado', 'Su expediente ha sido archivado');
+
+    expect(parseCheckPage(page)).toMatchObject({ kind: 'status', key: 'archivado' });
+  });
+
+  it('lets an exact status match win over a denial word in the sub-status', () => {
+    const page = syntheticResultPage('Abierto - En tramitación.', 'La solicitud ha sido denegada');
+
+    expect(parseCheckPage(page)).toMatchObject({ kind: 'status', key: 'abierto-en-tramitacion' });
+  });
+
+  it('never guesses between a denial and an archive', () => {
+    const page = syntheticResultPage('Cerrado', 'Expediente archivado y resuelto denegado');
+
+    expect(parseCheckPage(page)).toMatchObject({ kind: 'status', key: 'unknown' });
+  });
+
+  it('does not search denial words elsewhere on the page', () => {
+    const page = syntheticResultPage('Cerrado', '', '<p class="desPro4"><b>Denegado</b></p>');
+
+    expect(parseCheckPage(page)).toMatchObject({ kind: 'status', key: 'unknown' });
+  });
+
+  it('matches whole words only', () => {
+    const page = syntheticResultPage('Cerrado', 'Su expediente ha sido desarchivado');
+
+    expect(parseCheckPage(page)).toMatchObject({ kind: 'status', key: 'unknown' });
   });
 });
 

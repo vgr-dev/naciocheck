@@ -465,22 +465,94 @@ export const STATUS_CATALOG: readonly StatusEntry[] = [
 ];
 
 /**
- * The sub-status line the page prints under the status. Observed for `abierto - en tramitacion`, in the
- * order the user sees them. **Data only**: the "usual path / out of the ordinary" judgement is not built yet
- * — see the plan's Phase 3 Recorded deviations.
+ * A meaning for the sentence the page prints under the status line.
+ *
+ * The same sentence can mean opposite things under two different statuses: `Su expediente se encuentra en
+ * calificación.` is the last step of *En tramitación* under one status and the opening of a side branch under
+ * the other. Entries are therefore keyed by the status **and** the sub-status.
+ *
+ * Every meaning here is observed on real files, never an official definition, and it is only shown in the
+ * extension's result view.
  */
+export interface SubStatusEntry {
+  /** The status the sentence is printed under. */
+  status: StatusKey;
+  /** Normalised sub-status text. Every string must already be normalised. */
+  match: string;
+  /** Position inside the status's usual sequence when the observations give one, `null` when they do not. */
+  progress: number | null;
+  es: string;
+  en: string;
+}
+
+export const SUB_STATUS_ENTRIES: readonly SubStatusEntry[] = [
+  {
+    status: 'abierto-en-tramitacion',
+    match: 'su expediente se encuentra en tramitacion',
+    progress: 1,
+    es: 'Tramitación en curso: es el primer paso de la secuencia observada, antes de que se pidan los informes preceptivos.',
+    en: 'Processing under way: the first step of the observed sequence, before the mandatory reports are requested.',
+  },
+  {
+    status: 'abierto-en-tramitacion',
+    match: 'pendiente solicitud informes preceptivos oficiales',
+    progress: 2,
+    es: 'Los informes preceptivos están pedidos y el expediente espera que lleguen.',
+    en: 'The mandatory reports have been requested and the file is waiting for them to arrive.',
+  },
+  {
+    status: 'abierto-en-tramitacion',
+    match: 'pendiente recepcion de informes preceptivos oficiales',
+    progress: 3,
+    es: 'Los informes preceptivos están pedidos y pendientes de recibirse: es el paso siguiente al de la solicitud.',
+    en: 'The mandatory reports have been requested and are pending arrival: the step after requesting them.',
+  },
+  {
+    status: 'abierto-en-tramitacion',
+    match: 'su expediente se encuentra en calificacion',
+    progress: 4,
+    es: 'En los expedientes observados, la resolución suele publicarse en días o semanas desde este punto.',
+    en: 'In the files observed so far, the decision is usually published within days or weeks from here.',
+  },
+  {
+    status: 'abierto-en-tramitacion',
+    match: 'su expediente se encuentra en estudio',
+    progress: null,
+    es: 'En los expedientes observados, a este subestado suele seguirle una petición de documentación.',
+    en: 'In the files observed so far, a request for documents usually follows this sub-status.',
+  },
+  {
+    status: 'abierto-en-calificacion',
+    match: 'su expediente se encuentra en calificacion',
+    progress: null,
+    es: 'En los expedientes observados, a este estado suele seguirle una petición de más documentos, una denegación directa, o una vuelta a «En tramitación» con «en estudio» y después una petición (la doble calificación).',
+    en: 'In the files observed so far, this state is usually followed by a request for more documents, a direct denial, or a return to "In progress" with "under study" and then a request (the double assessment).',
+  },
+];
+
+const SUB_STATUS_BY_PAIR = new Map<string, SubStatusEntry>(
+  SUB_STATUS_ENTRIES.map((entry) => [`${entry.status}\n${entry.match}`, entry] as const),
+);
+
+/** The meaning observed for a (status, sub-status) pair, or `null` when the observations have not seen it. */
+export function findSubStatus(status: StatusKey, rawSubStatus: string): SubStatusEntry | null {
+  return SUB_STATUS_BY_PAIR.get(`${status}\n${normaliseText(rawSubStatus)}`) ?? null;
+}
+
+/** The flat shape the anomaly detector still reads. Derived from the entries above, never duplicated. */
 export interface SubStatusSignal {
   match: string;
   /** 1 = first step of the usual progression. */
   progress: number;
 }
 
-export const SUB_STATUS_SIGNALS: readonly SubStatusSignal[] = [
-  { match: 'su expediente se encuentra en tramitacion', progress: 1 },
-  { match: 'pendiente solicitud informes preceptivos oficiales', progress: 2 },
-  { match: 'pendiente recepcion de informes preceptivos oficiales', progress: 3 },
-  { match: 'su expediente se encuentra en calificacion', progress: 4 },
-];
+/**
+ * @deprecated Temporary bridge for `anomaly.ts`, which still compares these progress numbers. The usual-paths
+ * plan replaces that judgement with the path table in `paths.ts`, and this export goes with it.
+ */
+export const SUB_STATUS_SIGNALS: readonly SubStatusSignal[] = SUB_STATUS_ENTRIES.flatMap((entry) =>
+  entry.progress === null ? [] : [{ match: entry.match, progress: entry.progress }],
+);
 
 const BY_MATCH = new Map<string, StatusEntry>(
   STATUS_CATALOG.flatMap((entry) => entry.match.map((text) => [text, entry] as const)),
@@ -491,7 +563,47 @@ export function findStatus(raw: string): StatusEntry | null {
   return BY_MATCH.get(normaliseText(raw)) ?? null;
 }
 
-/** The key used for a page text: a real one, or `unknown` — never a guess. */
-export function statusKeyOf(raw: string): ResolvedStatusKey {
-  return findStatus(raw)?.key ?? UNKNOWN_STATUS_KEY;
+/**
+ * The two final outcomes whose exact page wording has not been captured yet. They are recognised by whole-word
+ * search — and only on the two lines the parser already reads, never anywhere else on the page.
+ */
+const DENIED_WORDS = ['denegado', 'denegada', 'denegacion'] as const;
+const ARCHIVED_WORDS = ['archivado', 'archivada'] as const;
+
+/**
+ * Whole-word patterns for already-normalised text. `normaliseText` lowercases and strips accents, so ASCII
+ * letters and digits are the whole alphabet of these words: `desarchivado` does not match `archivado`.
+ */
+const DENIED_PATTERNS = DENIED_WORDS.map(
+  (word) => new RegExp(`(^|[^a-z0-9])${word}([^a-z0-9]|$)`, 'u'),
+);
+const ARCHIVED_PATTERNS = ARCHIVED_WORDS.map(
+  (word) => new RegExp(`(^|[^a-z0-9])${word}([^a-z0-9]|$)`, 'u'),
+);
+
+/**
+ * Searches the words of the two final outcomes in the lines given. Both kinds present → `unknown`: a denial
+ * and an archive are never guessed between.
+ */
+function searchFinalOutcomeWords(lines: readonly (string | null)[]): ResolvedStatusKey | null {
+  const normalised = lines.flatMap((line) => (line === null ? [] : [normaliseText(line)]));
+  const denied = normalised.some((line) => DENIED_PATTERNS.some((pattern) => pattern.test(line)));
+  const archived = normalised.some((line) =>
+    ARCHIVED_PATTERNS.some((pattern) => pattern.test(line)),
+  );
+
+  if (denied && archived) return UNKNOWN_STATUS_KEY;
+  if (denied) return 'resuelto-denegado';
+  if (archived) return 'archivado';
+  return null;
+}
+
+/**
+ * The key used for a page text: a real one, or `unknown` — never a guess.
+ *
+ * An exact catalogue match always wins. Only when the status line has none are the whole words of the two final
+ * outcomes searched, first on the status line and then on the sub-status line.
+ */
+export function statusKeyOf(raw: string, subStatus: string | null = null): ResolvedStatusKey {
+  return findStatus(raw)?.key ?? searchFinalOutcomeWords([raw, subStatus]) ?? UNKNOWN_STATUS_KEY;
 }

@@ -93,7 +93,9 @@ function readStatus(page: ParentNode): ParsedStatus | null {
 
   return {
     kind: 'status',
-    key: statusKeyOf(raw),
+    // The sub-status goes along so a final outcome word can be recognised when the status line has no exact
+    // match; nothing else on the page is ever searched.
+    key: statusKeyOf(raw, subStatus),
     raw,
     normalised: normaliseText(raw),
     subStatus,

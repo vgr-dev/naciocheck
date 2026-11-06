@@ -5,10 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { normaliseText } from '../src/core/normalise';
 import {
   findStatus,
+  findSubStatus,
   STATUS_CATALOG,
   STATUS_DISCLAIMER,
   statusKeyOf,
-  SUB_STATUS_SIGNALS,
+  SUB_STATUS_ENTRIES,
   UNKNOWN_STATUS_KEY,
   type StatusKey,
 } from '../src/core/statuses';
@@ -141,21 +142,92 @@ describe('resolving the page text', () => {
   });
 });
 
-describe('sub-status signals', () => {
-  it('keeps the observed order and normalised text', () => {
-    expect(SUB_STATUS_SIGNALS.map((signal) => signal.progress)).toEqual([1, 2, 3, 4]);
-    for (const signal of SUB_STATUS_SIGNALS) {
-      expect(normaliseText(signal.match)).toBe(signal.match);
+describe('sub-status entries', () => {
+  it('keeps every sub-status text normalised and every pair unique', () => {
+    for (const entry of SUB_STATUS_ENTRIES) {
+      expect(normaliseText(entry.match), `${entry.match} is not normalised`).toBe(entry.match);
+    }
+
+    const pairs = SUB_STATUS_ENTRIES.map((entry) => `${entry.status}|${entry.match}`);
+    expect(new Set(pairs).size).toBe(pairs.length);
+  });
+
+  it('gives every entry a meaning in both locales', () => {
+    for (const entry of SUB_STATUS_ENTRIES) {
+      expect(entry.es.trim(), `${entry.status} / ${entry.match} es`).not.toBe('');
+      expect(entry.en.trim(), `${entry.status} / ${entry.match} en`).not.toBe('');
     }
   });
 
-  it('matches the observed sub-status values', () => {
+  it('matches the observed sub-status values under the status they are printed under', () => {
     for (const value of OBSERVED_SUB_STATUSES) {
-      const normalised = normaliseText(value);
       expect(
-        SUB_STATUS_SIGNALS.some((signal) => signal.match === normalised),
+        findSubStatus('abierto-en-tramitacion', value),
         `${value} is not a known sub-status`,
-      ).toBe(true);
+      ).not.toBeNull();
     }
+
+    expect(
+      findSubStatus('abierto-en-calificacion', 'Su expediente se encuentra en calificación.'),
+    ).not.toBeNull();
+  });
+
+  it('records the observed order of the steps inside En tramitación', () => {
+    const progressOf = (value: string) =>
+      findSubStatus('abierto-en-tramitacion', value)?.progress ?? null;
+
+    expect(OBSERVED_SUB_STATUSES.map(progressOf)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('gives the same sentence a different meaning under En tramitación and En calificación', () => {
+    const sentence = 'Su expediente se encuentra en calificación.';
+    const underProcessing = findSubStatus('abierto-en-tramitacion', sentence);
+    const underAssessment = findSubStatus('abierto-en-calificacion', sentence);
+
+    expect(underProcessing).not.toBeNull();
+    expect(underAssessment).not.toBeNull();
+    expect(underProcessing?.es).not.toBe(underAssessment?.es);
+    expect(underProcessing?.en).not.toBe(underAssessment?.en);
+  });
+
+  it('knows nothing about a sentence it has not observed', () => {
+    expect(findSubStatus('abierto-en-tramitacion', 'Su expediente está en la nevera')).toBeNull();
+  });
+});
+
+describe('nothing the catalogue resolves today is lost', () => {
+  it('still resolves every match text of every entry', () => {
+    for (const entry of STATUS_CATALOG) {
+      for (const match of entry.match) {
+        expect(statusKeyOf(match), `${match}`).toBe(entry.key);
+      }
+    }
+  });
+});
+
+describe('final outcomes found by whole-word search', () => {
+  it('recognises a denial the catalogue has no exact text for', () => {
+    expect(statusKeyOf('Finalizado - Denegado. Notificado.')).toBe('resuelto-denegado');
+    expect(statusKeyOf('Denegación de la solicitud')).toBe('resuelto-denegado');
+  });
+
+  it('recognises an archive printed under the status', () => {
+    expect(statusKeyOf('Cerrado', 'Su expediente ha sido archivado')).toBe('archivado');
+  });
+
+  it('lets an exact status match win over a word in the sub-status', () => {
+    expect(statusKeyOf('Abierto - En tramitación.', 'La solicitud ha sido denegada')).toBe(
+      'abierto-en-tramitacion',
+    );
+  });
+
+  it('never guesses between a denial and an archive', () => {
+    expect(statusKeyOf('Cerrado', 'Expediente archivado y resuelto denegado')).toBe(
+      UNKNOWN_STATUS_KEY,
+    );
+  });
+
+  it('matches whole words only', () => {
+    expect(statusKeyOf('Cerrado', 'Su expediente ha sido desarchivado')).toBe(UNKNOWN_STATUS_KEY);
   });
 });
