@@ -143,6 +143,11 @@ async function writeStore(store: Store): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEY]: store });
 }
 
+/** Replaces the whole store, which is what an import does after the schema check. */
+export async function replaceStore(store: Store): Promise<void> {
+  await writeStore(migrateStore(store));
+}
+
 export async function listApplications(): Promise<Application[]> {
   return (await readStore()).applications;
 }
@@ -176,6 +181,15 @@ export async function addApplication(input: {
   };
   await writeStore({ ...store, applications: [...store.applications, application] });
   return application;
+}
+
+/** Rewrites one application's identity, which is how encryption is turned on or off. */
+export async function updateIdentity(applicationId: string, identity: Identity): Promise<void> {
+  const store = await readStore();
+  const applications = store.applications.map((application) =>
+    application.id === applicationId ? { ...application, identity } : application,
+  );
+  await writeStore({ ...store, applications });
 }
 
 /** Deletes the application and every check that belongs to it — no orphan history is left behind. */

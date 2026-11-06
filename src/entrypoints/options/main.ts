@@ -8,6 +8,7 @@ import {
   setReminder,
 } from '../../core/storage';
 import { buildApplicationForm } from '../shared/application-form';
+import { renderBackup, renderEncryption } from '../shared/encryption-sections';
 import { button, el, formatDate, link, openPage, root } from '../shared/ui';
 
 /**
@@ -30,6 +31,8 @@ async function main(): Promise<void> {
 
   await renderApplications(view);
   await renderReminder(view);
+  await renderEncryption(view, () => redraw(view));
+  await renderBackup(view);
   await renderHistory(view);
 
   view.append(

@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { buildErrorView, buildResultView, decideAlert } from '../core/alerts';
 import { detectAnomaly } from '../core/anomaly';
 import { evaluateChange } from '../core/changes';
+import { decryptIdentity } from '../core/crypto';
 import { isExtensionMessage } from '../core/messages';
 import type { ParseOutcome } from '../core/parser';
 import { nextRunWhen } from '../core/schedule';
@@ -9,10 +10,12 @@ import { statusKeyOf } from '../core/statuses';
 import {
   acknowledgeCheck,
   appendCheck,
+  type Application,
   getApplication,
   getSettings,
   latestCheck,
   listApplications,
+  type PlainIdentity,
 } from '../core/storage';
 
 /**
@@ -30,6 +33,8 @@ const NOTIFICATION_PREFIX = 'naciocheck:change:';
 const DEV_FLAG_KEY = 'naciocheck:dev:enabled';
 const REMINDER_ALARM = 'naciocheck:reminder';
 const REMINDER_NOTIFICATION = 'naciocheck:reminder';
+/** Session storage only: the passphrase never reaches disk and disappears when the browser closes. */
+const UNLOCK_KEY = 'naciocheck:unlock';
 
 const WINDOW_WIDTH = 520;
 const WINDOW_HEIGHT = 760;
@@ -136,6 +141,13 @@ async function respond(message: unknown, tabId: number | undefined): Promise<unk
     case 'naciocheck:reschedule':
       await rescheduleReminder();
       return { scheduled: true };
+    case 'naciocheck:unlock': {
+      const unlocked = await unlock(message.passphrase);
+      return { unlocked };
+    }
+    case 'naciocheck:lock':
+      await browser.storage.session.remove(UNLOCK_KEY);
+      return { locked: true };
     case 'naciocheck:dev:seed-check':
       if (!(await devModeEnabled())) return { seeded: false };
       await appendCheck({
@@ -158,17 +170,46 @@ async function devModeEnabled(): Promise<boolean> {
 }
 
 async function startCheckRun(applicationIds?: string[]): Promise<void> {
-  const all = await listApplications();
-  const queue = all
-    .filter(
-      (application) => applicationIds === undefined || applicationIds.includes(application.id),
-    )
-    .map((application) => application.id);
-  if (queue.length === 0) return;
+  const selected = (await listApplications()).filter(
+    (application) => applicationIds === undefined || applicationIds.includes(application.id),
+  );
+  if (selected.length === 0) return;
 
-  await setRun({ queue });
+  // Encrypted identities need the passphrase before a window is worth opening.
+  if (await needsUnlock(selected)) {
+    await browser.tabs.create({ url: browser.runtime.getURL('/unlock.html') });
+    return;
+  }
+
+  await setRun({ queue: selected.map((application) => application.id) });
   const tabId = await openCheckWindow();
   if (tabId !== undefined) await assignFill(tabId);
+}
+
+/** True when at least one selected application is encrypted and no passphrase is held in session. */
+async function needsUnlock(applications: readonly Application[]): Promise<boolean> {
+  if (!applications.some((application) => application.identity.kind === 'encrypted')) return false;
+  return (await getUnlockPassphrase()) === null;
+}
+
+async function getUnlockPassphrase(): Promise<string | null> {
+  const stored = await browser.storage.session.get(UNLOCK_KEY);
+  const value: unknown = stored[UNLOCK_KEY];
+  return typeof value === 'string' ? value : null;
+}
+
+/** Tries the passphrase against the encrypted identities; keeps it in session memory on success. */
+async function unlock(passphrase: string): Promise<boolean> {
+  const applications = await listApplications();
+  const encrypted = applications.find((application) => application.identity.kind === 'encrypted');
+  if (encrypted === undefined || encrypted.identity.kind !== 'encrypted') return false;
+  try {
+    await decryptIdentity(encrypted.identity, passphrase);
+  } catch {
+    return false;
+  }
+  await browser.storage.session.set({ [UNLOCK_KEY]: passphrase });
+  return true;
 }
 
 /** A compact popup window where the browser allows it (desktop), a plain tab otherwise (Firefox for Android). */
@@ -194,8 +235,23 @@ async function fillFor(tabId: number): Promise<unknown> {
   if (applicationId === undefined) return null;
 
   const application = await getApplication(applicationId);
-  if (application === null || application.identity.kind !== 'plain') return null;
-  return { applicationId, label: application.label, identity: application.identity };
+  if (application === null) return null;
+
+  const identity = await resolveIdentity(application.identity);
+  if (identity === null) return null;
+  return { applicationId, label: application.label, identity };
+}
+
+/** Plain identities pass through; encrypted ones need the passphrase held in session memory. */
+async function resolveIdentity(identity: Application['identity']): Promise<PlainIdentity | null> {
+  if (identity.kind === 'plain') return identity;
+  const passphrase = await getUnlockPassphrase();
+  if (passphrase === null) return null;
+  try {
+    return await decryptIdentity(identity, passphrase);
+  } catch {
+    return null;
+  }
 }
 
 async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void> {

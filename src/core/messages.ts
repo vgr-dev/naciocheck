@@ -52,6 +52,17 @@ export interface RescheduleMessage {
   type: 'naciocheck:reschedule';
 }
 
+/** Opens the encrypted identities with a passphrase; the background keeps it in session storage only. */
+export interface UnlockMessage {
+  type: 'naciocheck:unlock';
+  passphrase: string;
+}
+
+/** Lock again: forgets the passphrase held in session memory. */
+export interface LockMessage {
+  type: 'naciocheck:lock';
+}
+
 /** Dev-only, and only when `naciocheck:dev:enabled` is set. Seeds a previous check for the alert test. */
 export interface DevSeedCheckMessage {
   type: 'naciocheck:dev:seed-check';
@@ -69,6 +80,8 @@ export type ExtensionMessage =
   | RetryMessage
   | ContinueMessage
   | RescheduleMessage
+  | UnlockMessage
+  | LockMessage
   | DevSeedCheckMessage;
 
 export function isExtensionMessage(value: unknown): value is ExtensionMessage {
