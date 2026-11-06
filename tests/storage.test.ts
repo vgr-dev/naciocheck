@@ -11,14 +11,17 @@ import {
   deleteApplication,
   emptyStore,
   getApplication,
+  getSettings,
   latestCheck,
   listApplications,
   listChecks,
   migrateStore,
   readStore,
   SCHEMA_VERSION,
+  setReminder,
   type PlainIdentity,
 } from '../src/core/storage';
+import { DEFAULT_REMINDER } from '../src/core/schedule';
 
 /** Synthetic values only: nothing here is anybody's data. */
 const IDENTITY: PlainIdentity = {
@@ -257,7 +260,7 @@ describe('migrateStore', () => {
       version: SCHEMA_VERSION,
       applications: [],
       checks: [],
-      settings: {},
+      settings: { reminders: DEFAULT_REMINDER },
     };
 
     expect(migrateStore(stored)).toEqual(stored);
@@ -277,6 +280,29 @@ describe('migrateStore', () => {
   });
 
   it('defaults the settings when an old snapshot has none', () => {
-    expect(migrateStore({ version: 1, applications: [], checks: [] }).settings).toEqual({});
+    expect(migrateStore({ version: 1, applications: [], checks: [] }).settings).toEqual({
+      reminders: DEFAULT_REMINDER,
+    });
+  });
+});
+
+describe('reminder settings', () => {
+  it('starts disabled, on workdays at 10:00', async () => {
+    await expect(getSettings()).resolves.toEqual({ reminders: DEFAULT_REMINDER });
+    expect(DEFAULT_REMINDER.enabled).toBe(false);
+  });
+
+  it('stores a new reminder', async () => {
+    const reminder = { enabled: true, weekdays: [2, 4], time: '17:30' };
+
+    await setReminder(reminder);
+
+    await expect(getSettings()).resolves.toEqual({ reminders: reminder });
+  });
+
+  it('refuses an impossible reminder', async () => {
+    await expect(setReminder({ enabled: true, weekdays: [], time: '10:00' })).rejects.toThrow(
+      /invalid reminder/i,
+    );
   });
 });

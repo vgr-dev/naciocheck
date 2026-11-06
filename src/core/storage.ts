@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { DEFAULT_REMINDER, isValidReminder, type ReminderConfig } from './schedule';
 import type { ResolvedStatusKey } from './statuses';
 
 /**
@@ -57,11 +58,10 @@ export interface Check {
   acknowledged: boolean;
 }
 
-/**
- * Intentionally empty for now: Phase 7 adds the reminder settings and Phase 8 the encryption flag. Widening
- * this type is a schema change and needs a migration.
- */
-export type Settings = Record<string, never>;
+/** Phase 8 adds the encryption flag next to the reminder. */
+export interface Settings {
+  reminders: ReminderConfig;
+}
 
 export interface Store {
   version: number;
@@ -71,7 +71,31 @@ export interface Store {
 }
 
 export function emptyStore(): Store {
-  return { version: SCHEMA_VERSION, applications: [], checks: [], settings: {} };
+  return {
+    version: SCHEMA_VERSION,
+    applications: [],
+    checks: [],
+    settings: { reminders: DEFAULT_REMINDER },
+  };
+}
+
+/** Old snapshots predate the reminder; nothing has been released, so this is normalisation, not a migration. */
+function normaliseSettings(raw: unknown): Settings {
+  const value = typeof raw === 'object' && raw !== null ? raw : {};
+  const reminders = (value as { reminders?: unknown }).reminders;
+  if (
+    typeof reminders === 'object' &&
+    reminders !== null &&
+    'enabled' in reminders &&
+    'weekdays' in reminders &&
+    'time' in reminders
+  ) {
+    const candidate = reminders as ReminderConfig;
+    if (Array.isArray(candidate.weekdays) && isValidReminder(candidate)) {
+      return { reminders: { ...candidate, enabled: candidate.enabled === true } };
+    }
+  }
+  return { reminders: DEFAULT_REMINDER };
 }
 
 function createId(): string {
@@ -104,7 +128,7 @@ export function migrateStore(raw: unknown): Store {
     version: SCHEMA_VERSION,
     applications: candidate.applications,
     checks: candidate.checks,
-    settings: candidate.settings ?? {},
+    settings: normaliseSettings(candidate.settings),
   };
 }
 
@@ -121,6 +145,17 @@ async function writeStore(store: Store): Promise<void> {
 
 export async function listApplications(): Promise<Application[]> {
   return (await readStore()).applications;
+}
+
+export async function getSettings(): Promise<Settings> {
+  return (await readStore()).settings;
+}
+
+/** Replaces the reminder settings; the caller then asks the background to reschedule. */
+export async function setReminder(config: ReminderConfig): Promise<void> {
+  if (!isValidReminder(config)) throw new Error('Invalid reminder configuration');
+  const store = await readStore();
+  await writeStore({ ...store, settings: { ...store.settings, reminders: config } });
 }
 
 export async function getApplication(id: string): Promise<Application | null> {
@@ -190,6 +225,13 @@ export async function listChecks(applicationId: string): Promise<Check[]> {
 export async function latestCheck(applicationId: string): Promise<Check | null> {
   const checks = await listChecks(applicationId);
   return checks.at(-1) ?? null;
+}
+
+/** The last status check recorded before `check`, which is what a change is measured against. */
+export function latestStatusBefore(checks: readonly Check[], check: Check): Check | null {
+  const index = checks.findIndex((candidate) => candidate.id === check.id);
+  const before = index === -1 ? checks : checks.slice(0, index);
+  return [...before].reverse().find((candidate) => candidate.outcome === 'status') ?? null;
 }
 
 /** The only mutation a check allows: marking the change alert as seen. Its content never changes. */

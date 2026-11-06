@@ -4,11 +4,13 @@ import { detectAnomaly } from '../core/anomaly';
 import { evaluateChange } from '../core/changes';
 import { isExtensionMessage } from '../core/messages';
 import type { ParseOutcome } from '../core/parser';
+import { nextRunWhen } from '../core/schedule';
 import { statusKeyOf } from '../core/statuses';
 import {
   acknowledgeCheck,
   appendCheck,
   getApplication,
+  getSettings,
   latestCheck,
   listApplications,
 } from '../core/storage';
@@ -26,6 +28,8 @@ const FILLS_KEY = 'naciocheck:fills';
 const RESULT_KEY_PREFIX = 'naciocheck:result:';
 const NOTIFICATION_PREFIX = 'naciocheck:change:';
 const DEV_FLAG_KEY = 'naciocheck:dev:enabled';
+const REMINDER_ALARM = 'naciocheck:reminder';
+const REMINDER_NOTIFICATION = 'naciocheck:reminder';
 
 const WINDOW_WIDTH = 520;
 const WINDOW_HEIGHT = 760;
@@ -50,7 +54,58 @@ export default defineBackground(() => {
     void respond(message, sender.tab?.id).then(sendResponse);
     return true;
   });
+
+  browser.runtime.onInstalled.addListener((details) => {
+    void handleInstalled(details.reason);
+  });
+
+  browser.alarms.onAlarm.addListener((alarm) => {
+    void handleAlarm(alarm.name);
+  });
+
+  browser.notifications.onClicked.addListener((notificationId) => {
+    void handleNotificationClick(notificationId);
+  });
+
+  void rescheduleReminder();
 });
+
+/** First install opens the onboarding; every install reschedules the reminder. */
+async function handleInstalled(reason: string): Promise<void> {
+  await rescheduleReminder();
+  if (reason === 'install') {
+    await browser.tabs.create({ url: browser.runtime.getURL('/onboarding.html') });
+  }
+}
+
+async function handleAlarm(name: string): Promise<void> {
+  if (name !== REMINDER_ALARM) return;
+  await browser.notifications.create(REMINDER_NOTIFICATION, {
+    type: 'basic',
+    iconUrl: browser.runtime.getURL('/icon/128.png'),
+    title: 'NacioCheck',
+    message: 'Es la hora de comprobar el estado de tu solicitud. Solo hace falta el captcha.',
+    priority: 2,
+  });
+  await rescheduleReminder();
+}
+
+/** Clicking the reminder starts a run for every saved application. */
+async function handleNotificationClick(notificationId: string): Promise<void> {
+  if (notificationId !== REMINDER_NOTIFICATION) return;
+  await browser.notifications.clear(notificationId);
+  await startCheckRun();
+}
+
+/** Recomputes the single reminder alarm from the stored settings. */
+async function rescheduleReminder(): Promise<void> {
+  await browser.alarms.clear(REMINDER_ALARM);
+  const { reminders } = await getSettings();
+  const when = nextRunWhen(reminders, new Date());
+  if (when !== null) {
+    await browser.alarms.create(REMINDER_ALARM, { when });
+  }
+}
 
 async function respond(message: unknown, tabId: number | undefined): Promise<unknown> {
   if (!isExtensionMessage(message)) return null;
@@ -78,6 +133,9 @@ async function respond(message: unknown, tabId: number | undefined): Promise<unk
       if (tabId === undefined) return null;
       await continueRun(tabId);
       return { continued: true };
+    case 'naciocheck:reschedule':
+      await rescheduleReminder();
+      return { scheduled: true };
     case 'naciocheck:dev:seed-check':
       if (!(await devModeEnabled())) return { seeded: false };
       await appendCheck({

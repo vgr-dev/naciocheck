@@ -48,6 +48,10 @@ export interface ContinueMessage {
   type: 'naciocheck:continue';
 }
 
+export interface RescheduleMessage {
+  type: 'naciocheck:reschedule';
+}
+
 /** Dev-only, and only when `naciocheck:dev:enabled` is set. Seeds a previous check for the alert test. */
 export interface DevSeedCheckMessage {
   type: 'naciocheck:dev:seed-check';
@@ -64,6 +68,7 @@ export type ExtensionMessage =
   | AcknowledgeMessage
   | RetryMessage
   | ContinueMessage
+  | RescheduleMessage
   | DevSeedCheckMessage;
 
 export function isExtensionMessage(value: unknown): value is ExtensionMessage {
