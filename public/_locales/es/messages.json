@@ -1,0 +1,8 @@
+{
+  "extensionName": {
+    "message": "NacioCheck"
+  },
+  "extensionDescription": {
+    "message": "Comprueba el estado de tu solicitud de nacionalidad española por residencia. Todos los datos se quedan en tu dispositivo."
+  }
+}
