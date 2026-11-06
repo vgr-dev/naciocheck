@@ -539,21 +539,6 @@ export function findSubStatus(status: StatusKey, rawSubStatus: string): SubStatu
   return SUB_STATUS_BY_PAIR.get(`${status}\n${normaliseText(rawSubStatus)}`) ?? null;
 }
 
-/** The flat shape the anomaly detector still reads. Derived from the entries above, never duplicated. */
-export interface SubStatusSignal {
-  match: string;
-  /** 1 = first step of the usual progression. */
-  progress: number;
-}
-
-/**
- * @deprecated Temporary bridge for `anomaly.ts`, which still compares these progress numbers. The usual-paths
- * plan replaces that judgement with the path table in `paths.ts`, and this export goes with it.
- */
-export const SUB_STATUS_SIGNALS: readonly SubStatusSignal[] = SUB_STATUS_ENTRIES.flatMap((entry) =>
-  entry.progress === null ? [] : [{ match: entry.match, progress: entry.progress }],
-);
-
 const BY_MATCH = new Map<string, StatusEntry>(
   STATUS_CATALOG.flatMap((entry) => entry.match.map((text) => [text, entry] as const)),
 );

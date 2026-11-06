@@ -169,3 +169,57 @@ export const KNOWN_BRANCHES: readonly PathMove[] = [
   { from: 'QA', to: 'TE' },
   { from: 'QA', to: 'K' },
 ];
+
+/**
+ * How one check relates to the one before it. `no-judgement` is the answer whenever the data does not allow
+ * one at all.
+ */
+export type TransitionKind = 'main-path' | 'known-branch' | 'unusual' | 'no-judgement';
+
+const MAIN_PATH_POSITIONS = new Map<PathStateId, number>(
+  MAIN_PATH_STATES.map((id, index) => [id, index]),
+);
+
+/**
+ * A move along the usual path in its normal direction. Forward jumps count: checks are periodic, so steps can
+ * pass unseen between two checks — the interim reading of D3, recorded as a deviation until the user rules.
+ */
+function isMainPathMove(from: PathStateId, to: PathStateId): boolean {
+  const fromPosition = MAIN_PATH_POSITIONS.get(from);
+  const toPosition = MAIN_PATH_POSITIONS.get(to);
+  if (fromPosition === undefined || toPosition === undefined) return false;
+
+  return toPosition > fromPosition;
+}
+
+function isKnownBranch(from: PathStateId, to: PathStateId): boolean {
+  return KNOWN_BRANCHES.some((move) => move.from === from && move.to === to);
+}
+
+/**
+ * Classifies one check against the previous one, from the path table only — never from a status number, and
+ * never into a guess:
+ *
+ * - `no-judgement`: no previous check, an unknown status on either side, a sub-status the observations do not
+ *   place anywhere, or the very same state;
+ * - `known-branch`: a move the observations gave (a side branch, or the main path);
+ * - `main-path`: the usual path forwards;
+ * - `unusual`: everything else.
+ */
+export function classifyTransition(
+  previous: ResolvedPathState | null,
+  current: ResolvedPathState | null,
+): TransitionKind {
+  if (previous === null || current === null) return 'no-judgement';
+
+  const from = previous.id;
+  const to = current.id;
+
+  // An unlisted pair is a status we know with a sub-status we do not: it has no place on the path.
+  if (from === UNLISTED_PATH_STATE || to === UNLISTED_PATH_STATE) return 'no-judgement';
+  if (from === to) return 'no-judgement';
+  if (isKnownBranch(from, to)) return 'known-branch';
+  if (isMainPathMove(from, to)) return 'main-path';
+
+  return 'unusual';
+}

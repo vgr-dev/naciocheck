@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normaliseText } from '../src/core/normalise';
 import {
+  classifyTransition,
   KNOWN_BRANCHES,
   MAIN_PATH,
   MAIN_PATH_STATES,
@@ -8,6 +9,7 @@ import {
   resolvePathState,
   UNLISTED_PATH_STATE,
   type PathStateId,
+  type ResolvedPathState,
 } from '../src/core/paths';
 import { STATUS_CATALOG } from '../src/core/statuses';
 
@@ -37,7 +39,6 @@ describe('observing a check as a path state', () => {
   it.each(OBSERVED_STATES)('%s with %s is state %s', (status, subStatus, id) => {
     expect(resolvePathState(status, subStatus)?.id).toBe(id);
   });
-
   it('keeps the status key and the normalised sub-status', () => {
     expect(
       resolvePathState(
@@ -135,5 +136,71 @@ describe('path table', () => {
 
     const keys = moves.map((move) => `${move.from}>${move.to}`);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+/** A state resolved from the same literal page strings, so the classification meets what the parser produces. */
+function stateOf(id: PathStateId): ResolvedPathState {
+  const form = OBSERVED_STATES.find(([, , stateId]) => stateId === id);
+  if (form === undefined) throw new Error(`no page form recorded for ${id}`);
+
+  const state = resolvePathState(form[0], form[1]);
+  if (state === null) throw new Error(`${id} did not resolve`);
+
+  return state;
+}
+
+describe('classifying a move', () => {
+  it.each(MAIN_PATH)('$from → $to is main-path', ({ from, to }) => {
+    expect(classifyTransition(stateOf(from), stateOf(to))).toBe('main-path');
+  });
+
+  it.each(KNOWN_BRANCHES)('$from → $to is known-branch', ({ from, to }) => {
+    expect(classifyTransition(stateOf(from), stateOf(to))).toBe('known-branch');
+  });
+
+  const FORWARD_JUMPS: ReadonlyArray<readonly [PathStateId, PathStateId]> = [
+    ['T1', 'T4'],
+    ['R', 'C'],
+    ['T2', 'F'],
+  ];
+
+  it.each(FORWARD_JUMPS)('%s → %s is main-path even when a step was skipped', (from, to) => {
+    expect(classifyTransition(stateOf(from), stateOf(to))).toBe('main-path');
+  });
+
+  const UNUSUAL_MOVES: ReadonlyArray<readonly [PathStateId, PathStateId]> = [
+    ['T3', 'T1'],
+    ['R', 'K'],
+    ['F', 'T1'],
+    ['T2', 'A'],
+    ['K', 'T3'],
+    ['C', 'T3'],
+    ['Q', 'T1'],
+  ];
+
+  it.each(UNUSUAL_MOVES)('%s → %s is unusual', (from, to) => {
+    expect(classifyTransition(stateOf(from), stateOf(to))).toBe('unusual');
+  });
+
+  it('judges nothing without two known states', () => {
+    expect(classifyTransition(null, stateOf('T1'))).toBe('no-judgement');
+    expect(classifyTransition(stateOf('T1'), null)).toBe('no-judgement');
+    expect(classifyTransition(null, null)).toBe('no-judgement');
+  });
+
+  it('judges nothing when the state has not changed', () => {
+    expect(classifyTransition(stateOf('T1'), stateOf('T1'))).toBe('no-judgement');
+    expect(classifyTransition(stateOf('K'), stateOf('K'))).toBe('no-judgement');
+  });
+
+  it('judges nothing when a sub-status is not one the observations place', () => {
+    const unlisted = resolvePathState(
+      'Abierto - En tramitación.',
+      'Su expediente está en la nevera',
+    );
+
+    expect(classifyTransition(unlisted, stateOf('T1'))).toBe('no-judgement');
+    expect(classifyTransition(stateOf('R'), unlisted)).toBe('no-judgement');
   });
 });

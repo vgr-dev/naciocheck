@@ -118,7 +118,7 @@ describe('buildResultView — status', () => {
     const view = buildResultView({
       label: 'Primera',
       change: changeOf('changed'),
-      anomaly: { kind: 'stage-backwards', es: 'Nota en castellano.', en: 'Note.', source: null },
+      anomaly: { kind: 'unusual', es: 'Nota en castellano.', en: 'Note.', source: null },
     });
 
     expect(view.anomaly).toBe('Nota en castellano.');
