@@ -1,0 +1,11 @@
+{
+  "$comment": "Hosts the extension may reference in code. Every entry is shown to the user as a plain link or is the address of the page the user opens themselves; the extension never requests any of them. Keep entries as prefixes ending in a slash, so a lookalike domain such as https://lawfidence.com.example/ cannot slip through.",
+  "urlPrefixes": [
+    "https://sede.mjusticia.gob.es/",
+    "https://naciocheck.vgr.cat/",
+    "https://lawfidence.com/",
+    "https://machelindiaz.com/",
+    "https://cohenyaguirre.es/",
+    "https://www.parainmigrantes.info/"
+  ]
+}
