@@ -1,8 +1,17 @@
 import { browser } from 'wxt/browser';
-import { evaluateChange, type ChangeKind } from '../core/changes';
+import { buildErrorView, buildResultView, decideAlert } from '../core/alerts';
+import { detectAnomaly } from '../core/anomaly';
+import { evaluateChange } from '../core/changes';
 import { isExtensionMessage } from '../core/messages';
 import type { ParseOutcome } from '../core/parser';
-import { appendCheck, getApplication, latestCheck, listApplications } from '../core/storage';
+import { statusKeyOf } from '../core/statuses';
+import {
+  acknowledgeCheck,
+  appendCheck,
+  getApplication,
+  latestCheck,
+  listApplications,
+} from '../core/storage';
 
 /**
  * Orchestrates a "check run": a compact window per application, like the official flow but with only the
@@ -14,7 +23,9 @@ import { appendCheck, getApplication, latestCheck, listApplications } from '../c
 const SEDE_URL = 'https://sede.mjusticia.gob.es/eConsultas/inicioNacionalidad';
 const RUN_KEY = 'naciocheck:run';
 const FILLS_KEY = 'naciocheck:fills';
-const LAST_CHANGE_KEY = 'naciocheck:last-change';
+const RESULT_KEY_PREFIX = 'naciocheck:result:';
+const NOTIFICATION_PREFIX = 'naciocheck:change:';
+const DEV_FLAG_KEY = 'naciocheck:dev:enabled';
 
 const WINDOW_WIDTH = 520;
 const WINDOW_HEIGHT = 760;
@@ -26,10 +37,12 @@ interface RunState {
 
 type FillMap = Record<string, string>;
 
-interface LastChange {
+interface ResultPayload {
+  view: ReturnType<typeof buildResultView>;
   applicationId: string;
-  kind: ChangeKind;
-  at: string;
+  checkId: string | null;
+  acknowledged: boolean;
+  hasNext: boolean;
 }
 
 export default defineBackground(() => {
@@ -52,9 +65,38 @@ async function respond(message: unknown, tabId: number | undefined): Promise<unk
     case 'naciocheck:start-check-run':
       await startCheckRun(message.applicationIds);
       return { started: true };
+    case 'naciocheck:result-request':
+      return tabId === undefined ? null : resultFor(tabId);
+    case 'naciocheck:acknowledge':
+      await acknowledgeChange(message.checkId);
+      return { acknowledged: true };
+    case 'naciocheck:retry':
+      if (tabId === undefined) return null;
+      await retryApplication(message.applicationId, tabId);
+      return { retried: true };
+    case 'naciocheck:continue':
+      if (tabId === undefined) return null;
+      await continueRun(tabId);
+      return { continued: true };
+    case 'naciocheck:dev:seed-check':
+      if (!(await devModeEnabled())) return { seeded: false };
+      await appendCheck({
+        applicationId: message.applicationId,
+        outcome: 'status',
+        statusKey: statusKeyOf(message.raw),
+        raw: message.raw,
+        subStatus: message.subStatus ?? null,
+      });
+      return { seeded: true };
     default:
       return null;
   }
+}
+
+/** The dev helpers are inert unless someone sets this by hand in the extension's own devtools. */
+async function devModeEnabled(): Promise<boolean> {
+  const stored = await browser.storage.local.get(DEV_FLAG_KEY);
+  return stored[DEV_FLAG_KEY] === true;
 }
 
 async function startCheckRun(applicationIds?: string[]): Promise<void> {
@@ -102,6 +144,10 @@ async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void
   const applicationId = await releaseFill(tabId);
   if (applicationId === undefined) return;
 
+  const application = await getApplication(applicationId);
+  const label = application?.label ?? 'Solicitud';
+  const hasNext = (await getRun()).queue.length > 1;
+
   if (outcome.kind === 'status') {
     const previous = await latestCheck(applicationId);
     const check = await appendCheck({
@@ -112,35 +158,109 @@ async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void
       subStatus: outcome.subStatus,
     });
     const change = evaluateChange(previous, check);
-    const lastChange: LastChange = { applicationId, kind: change.kind, at: check.at };
-    await browser.storage.session.set({ [LAST_CHANGE_KEY]: lastChange });
+    const view = buildResultView({ label, change, anomaly: detectAnomaly(previous, check) });
+    await storeResult(tabId, {
+      view,
+      applicationId,
+      checkId: check.id,
+      acknowledged: false,
+      hasNext,
+    });
+    await applyAlert(view.view === 'changed', decideAlert(change, label), check.id);
   } else if (outcome.kind === 'error') {
-    // D12: the page does not say why, so neither do we — the message is stored verbatim.
-    await appendCheck({
+    // D12: the page does not say why, so neither do we — the message is stored and shown verbatim.
+    const check = await appendCheck({
       applicationId,
       outcome: 'error',
       statusKey: 'unknown',
       raw: outcome.raw,
       subStatus: null,
     });
+    await storeResult(tabId, {
+      view: buildErrorView({ label, messages: outcome.messages }),
+      applicationId,
+      checkId: check.id,
+      acknowledged: false,
+      hasNext,
+    });
+  } else {
+    // `unknown`: nothing is recorded, but the user still needs to be told.
+    await storeResult(tabId, {
+      view: buildErrorView({
+        label,
+        messages: ['La página no se ha reconocido y no se ha guardado nada.'],
+      }),
+      applicationId,
+      checkId: null,
+      acknowledged: false,
+      hasNext,
+    });
   }
-  // `unknown` pages are not recorded: there is nothing to store.
 
-  await advanceRun(tabId);
+  await openResult(tabId);
 }
 
-/** Moves to the next application in the same window; stops when the queue is empty. */
-async function advanceRun(tabId: number): Promise<void> {
+async function openResult(tabId: number): Promise<void> {
+  await browser.tabs.update(tabId, { url: browser.runtime.getURL('/result.html') });
+}
+
+/** Shifts the queue and takes the same window back to the form for the next application. */
+async function continueRun(tabId: number): Promise<void> {
   const run = await getRun();
   const [, ...rest] = run.queue;
   if (rest.length === 0) {
     await browser.storage.session.remove([RUN_KEY, FILLS_KEY]);
-    // Phase 6 navigates this window to the extension's result view; until then it stays on the page.
     return;
   }
   await setRun({ queue: rest });
   await assignFill(tabId);
   await browser.tabs.update(tabId, { url: SEDE_URL });
+}
+
+/** Points the same window back at the form for one application, without touching the queue. */
+async function retryApplication(applicationId: string, tabId: number): Promise<void> {
+  const fills = await getFills();
+  fills[String(tabId)] = applicationId;
+  await browser.storage.session.set({ [FILLS_KEY]: fills });
+  await browser.tabs.update(tabId, { url: SEDE_URL });
+}
+
+async function applyAlert(
+  changed: boolean,
+  decision: ReturnType<typeof decideAlert>,
+  checkId: string,
+): Promise<void> {
+  if (!changed || decision.notification === null) return;
+
+  if (decision.badge.text !== '') {
+    await browser.action.setBadgeText({ text: decision.badge.text });
+    if (decision.badge.color !== null) {
+      await browser.action.setBadgeBackgroundColor({ color: decision.badge.color });
+    }
+  }
+  await browser.notifications.create(`${NOTIFICATION_PREFIX}${checkId}`, {
+    type: 'basic',
+    iconUrl: browser.runtime.getURL('/icon/128.png'),
+    title: decision.notification.title,
+    message: decision.notification.message,
+    priority: 2,
+  });
+}
+
+async function acknowledgeChange(checkId: string): Promise<void> {
+  await acknowledgeCheck(checkId);
+  await browser.action.setBadgeText({ text: '' });
+  await browser.notifications.clear(`${NOTIFICATION_PREFIX}${checkId}`);
+}
+
+async function storeResult(tabId: number, payload: ResultPayload): Promise<void> {
+  await browser.storage.session.set({ [`${RESULT_KEY_PREFIX}${tabId}`]: payload });
+}
+
+async function resultFor(tabId: number): Promise<unknown> {
+  const key = `${RESULT_KEY_PREFIX}${tabId}`;
+  const stored = await browser.storage.session.get(key);
+  return stored[key] ?? null;
 }
 
 async function assignFill(tabId: number): Promise<void> {

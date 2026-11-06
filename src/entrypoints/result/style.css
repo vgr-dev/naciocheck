@@ -1,0 +1,147 @@
+:root {
+  color-scheme: light;
+  --teal-700: #0f766e;
+  --teal-600: #0d9488;
+  --teal-50: #f0fdfa;
+  --red-600: #dc2626;
+  --gray-900: #0f172a;
+  --gray-600: #4b5563;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: var(--gray-900);
+  font:
+    400 16px/1.55 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+.app {
+  max-inline-size: 44rem;
+  margin-inline: auto;
+  padding: 1.5rem 1.25rem 2.5rem;
+}
+
+.app.changed {
+  background: #ffffff;
+}
+
+.label {
+  margin: 0;
+  color: var(--gray-600);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.status {
+  margin: 0.15rem 0 0.5rem;
+  font-size: 1.6rem;
+  line-height: 1.25;
+  color: var(--teal-700);
+}
+
+.sub-status,
+.version,
+.previous {
+  margin: 0 0 0.5rem;
+  color: var(--gray-600);
+}
+
+.previous {
+  font-weight: 600;
+}
+
+.explanation,
+.action,
+.disclaimer {
+  margin: 1rem 0 0;
+}
+
+.action {
+  font-weight: 600;
+}
+
+.disclaimer {
+  color: var(--gray-600);
+  font-size: 0.8125rem;
+}
+
+.anomaly {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border-inline-start: 3px solid var(--teal-600);
+  background: var(--teal-50);
+  border-radius: 6px;
+  font-size: 0.9375rem;
+}
+
+.errors {
+  margin: 1rem 0 0;
+  padding-inline-start: 1.25rem;
+}
+
+.banner {
+  margin-block-end: 1.5rem;
+  padding: 1.25rem;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.banner.changed {
+  background: var(--red-600);
+  color: #ffffff;
+}
+
+.banner.error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.banner-title {
+  margin: 0.5rem 0 0;
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-block-start: 1.75rem;
+}
+
+button.primary {
+  padding: 0.7rem 1.25rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--teal-700);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button.primary:hover {
+  background: var(--teal-600);
+}
+
+.sources {
+  margin: 1rem 0 0;
+  padding-inline-start: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--gray-600);
+}
+
+.sources a {
+  color: var(--teal-700);
+}
+
+.empty {
+  color: var(--gray-600);
+}

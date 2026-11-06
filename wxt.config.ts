@@ -15,12 +15,21 @@ export const GECKO_ID = 'naciocheck@vgr.cat';
 export default defineConfig({
   srcDir: 'src',
   manifestVersion: 3,
+  // Vite's modulepreload polyfill injects a `fetch()` into every page bundle. Supported browsers have
+  // modulepreload natively, and the privacy gate forbids `fetch(` anywhere — correctly, so the polyfill goes.
+  vite: () => ({
+    build: {
+      modulePreload: { polyfill: false },
+    },
+  }),
   manifest: ({ browser }) => ({
     name: '__MSG_extensionName__',
     description: '__MSG_extensionDescription__',
     default_locale: 'es',
     permissions: ['storage', 'alarms', 'notifications'],
     host_permissions: [SEDE_HOST_PATTERN],
+    // Declared so the change alert can set a badge; the popup arrives in Phase 7.
+    action: {},
     icons: {
       16: 'icon/16.png',
       32: 'icon/32.png',

@@ -30,7 +30,41 @@ export interface StartCheckRunMessage {
   applicationIds?: string[];
 }
 
-export type ExtensionMessage = RequestFillMessage | PageOutcomeMessage | StartCheckRunMessage;
+export interface ResultRequestMessage {
+  type: 'naciocheck:result-request';
+}
+
+export interface AcknowledgeMessage {
+  type: 'naciocheck:acknowledge';
+  checkId: string;
+}
+
+export interface RetryMessage {
+  type: 'naciocheck:retry';
+  applicationId: string;
+}
+
+export interface ContinueMessage {
+  type: 'naciocheck:continue';
+}
+
+/** Dev-only, and only when `naciocheck:dev:enabled` is set. Seeds a previous check for the alert test. */
+export interface DevSeedCheckMessage {
+  type: 'naciocheck:dev:seed-check';
+  applicationId: string;
+  raw: string;
+  subStatus?: string | null;
+}
+
+export type ExtensionMessage =
+  | RequestFillMessage
+  | PageOutcomeMessage
+  | StartCheckRunMessage
+  | ResultRequestMessage
+  | AcknowledgeMessage
+  | RetryMessage
+  | ContinueMessage
+  | DevSeedCheckMessage;
 
 export function isExtensionMessage(value: unknown): value is ExtensionMessage {
   if (typeof value !== 'object' || value === null || !('type' in value)) return false;

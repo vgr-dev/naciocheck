@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import type { WxtModule, WxtModuleOptions } from 'wxt';
@@ -20,6 +20,8 @@ async function generateIcons(rootDir: string): Promise<void> {
       await writeFile(join(targetDir, `${size}.png`), png);
     }),
   );
+  // The animated icon is used by the status-changed view and onboarding; it ships as SVG, untouched.
+  await copyFile(join(rootDir, 'brand', 'icon-animated.svg'), join(targetDir, 'icon-animated.svg'));
 }
 
 /** WXT local module: keeps `public/icon/*.png` in sync with `brand/icon.svg`. */
