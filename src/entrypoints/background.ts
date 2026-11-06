@@ -37,7 +37,12 @@ const REMINDER_NOTIFICATION = 'naciocheck:reminder';
 /** Session storage only: the passphrase never reaches disk and disappears when the browser closes. */
 const UNLOCK_KEY = 'naciocheck:unlock';
 
-const WINDOW_WIDTH = 520;
+/**
+ * The check window. It has to hold reCAPTCHA's challenge panel, which does not shrink: at 520 px the challenge
+ * was clipped, and 700 px fits it on a 1440p screen without the window looking like a whole browser. Height
+ * leaves room for the hint strip plus a challenge of ~580 px.
+ */
+const WINDOW_WIDTH = 700;
 const WINDOW_HEIGHT = 760;
 
 interface RunState {

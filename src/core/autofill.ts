@@ -27,6 +27,13 @@ const CAPTCHA_TOKEN_NAME = 'gRecaptchaResponse';
 
 export const CAPTCHA_BLOCK_SELECTOR = '#captchaTramite';
 
+/**
+ * Where reCAPTCHA puts the challenge once the human clicks the checkbox: an overlay appended to `<body>`,
+ * outside `#captchaTramite`. Measured on the live page: `iframe < div < div < body < html`, so hiding
+ * `body *` and re-showing only the captcha block left the challenge invisible.
+ */
+export const CAPTCHA_CHALLENGE_SELECTOR = 'body > div:has(iframe[src*="/recaptcha/api2/bframe"])';
+
 export const SUBMIT_SELECTOR = 'input#submitNac';
 
 export interface AutofillResult {
@@ -129,6 +136,9 @@ export function buildHintCss(): string {
 /**
  * Hides everything except the captcha. `visibility` is used instead of `display` so the captcha does not have
  * to be moved out of its ancestors, and the block is then pinned to the middle of the window.
+ *
+ * The challenge is re-shown separately: reCAPTCHA appends it to `<body>`, so it is not inside the captcha
+ * block and `body *` would hide it — exactly the checkbox-clickable-but-challenge-invisible bug.
  */
 export function buildCaptchaOnlyCss(): string {
   return `
@@ -136,6 +146,20 @@ export function buildCaptchaOnlyCss(): string {
     html body * { visibility: hidden !important; }
     ${CAPTCHA_BLOCK_SELECTOR},
     ${CAPTCHA_BLOCK_SELECTOR} * { visibility: visible !important; }
+    ${CAPTCHA_CHALLENGE_SELECTOR},
+    ${CAPTCHA_CHALLENGE_SELECTOR} * { visibility: visible !important; }
+    ${CAPTCHA_CHALLENGE_SELECTOR} {
+      z-index: 2147483647 !important;
+    }
+    /* The bubble ships a full-viewport dimming layer (position: fixed; inset: 0; opacity: .05) that has no
+       pointer-events rule of its own. With the page hidden it dims nothing and only eats clicks, so every
+       part of the bubble except the challenge frame itself is transparent to the pointer. */
+    ${CAPTCHA_CHALLENGE_SELECTOR} > div {
+      pointer-events: none !important;
+    }
+    ${CAPTCHA_CHALLENGE_SELECTOR} iframe {
+      pointer-events: auto !important;
+    }
     ${CAPTCHA_BLOCK_SELECTOR} {
       position: fixed !important;
       inset: 0 !important;
@@ -143,7 +167,9 @@ export function buildCaptchaOnlyCss(): string {
       align-items: center;
       justify-content: center;
       background: #ffffff !important;
-      z-index: 2147483647;
+      /* Under the challenge overlay, which reCAPTCHA appends after this block and must paint on top of
+         the white backdrop. The page behind is hidden, so nothing needs to be below this. */
+      z-index: 2147483000;
     }
   `;
 }

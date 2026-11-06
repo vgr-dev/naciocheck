@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   autofillForm,
   buildCaptchaOnlyCss,
+  CAPTCHA_CHALLENGE_SELECTOR,
   hasCaptchaOnlyViewTargets,
   readCaptchaToken,
   submitIfCaptchaSolved,
@@ -147,4 +148,49 @@ describe('captcha-only view', () => {
     expect(css).toContain('#captchaTramite');
     expect(css).toContain('#naciocheck-hint');
   });
+
+  it('re-shows the challenge, which reCAPTCHA appends outside the captcha block', () => {
+    // Live page, measured with the challenge on screen: `iframe < div < div < body < html`.
+    // jsdom has no layout or cascade engine, so this asserts the rule exists for that selector;
+    // the real proof was the manual run on Firefox desktop.
+    const css = buildCaptchaOnlyCss();
+
+    expect(CAPTCHA_CHALLENGE_SELECTOR).toBe(
+      'body > div:has(iframe[src*="/recaptcha/api2/bframe"])',
+    );
+    expect(css).toContain(`${CAPTCHA_CHALLENGE_SELECTOR} * { visibility: visible !important; }`);
+  });
+
+  it('keeps the captcha block below the challenge overlay', () => {
+    // The block is a white full-screen panel: at the maximum z-index it painted over the challenge,
+    // which reCAPTCHA appends to <body> and therefore outside it.
+    const css = buildCaptchaOnlyCss();
+    const blockRule = /#captchaTramite \{[^}]*z-index: (\d+)/.exec(css);
+
+    expect(blockRule).not.toBeNull();
+    expect(Number(blockRule?.[1])).toBeLessThan(2147483647);
+  });
+
+  it('lets clicks reach the challenge through reCAPTCHA’s dimming layer', () => {
+    // The bubble’s children include a `position: fixed; inset: 0; opacity: .05` layer with no pointer-events
+    // rule of its own. Raised above the captcha block, it covered the viewport and swallowed every click.
+    const css = buildCaptchaOnlyCss();
+
+    expect(ruleOf(css, `${CAPTCHA_CHALLENGE_SELECTOR} > div`)).toContain(
+      'pointer-events: none !important',
+    );
+    expect(ruleOf(css, `${CAPTCHA_CHALLENGE_SELECTOR} iframe`)).toContain(
+      'pointer-events: auto !important',
+    );
+  });
 });
+
+/** The declarations of one rule of a generated stylesheet, by exact selector. */
+function ruleOf(css: string, selector: string): string | undefined {
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const chunk of withoutComments.split('}')) {
+    const [selectors, declarations] = chunk.split('{');
+    if (selectors?.trim() === selector) return declarations;
+  }
+  return undefined;
+}
