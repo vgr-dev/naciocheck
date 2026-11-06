@@ -4,38 +4,50 @@ Read this before changing anything.
 
 ## The project in one paragraph
 
-_TODO (architect, first session): what nationality-status is, who it is for, and what it must never do._
+**NacioCheck** is a personal browser extension for Chrome and Firefox (desktop + Firefox for Android) that
+makes checking a Spanish nationality-by-residence application a _reminder → captcha → result_ task: it
+autofills the official form, shows only the captcha, submits once the human has solved it, reads the status,
+stores every check locally and alerts loudly when the status changes. It is **not affiliated with the
+Ministerio de Justicia**. It must never bypass the captcha, never send personal data anywhere, and never
+present its status explanations as official.
 
 ## Stack and commands
 
-_TODO: language, framework, how to install, run, test, lint and build._
+TypeScript on **WXT** (Manifest V3 for Chrome and Firefox from one source tree), Vitest, ESLint (typed) and
+Prettier, Sharp for build-time icon rasterisation. Node LTS is pinned in `.nvmrc` (24).
 
-| Task | Command |
-| --- | --- |
-| Install | _TODO_ |
-| Test | _TODO_ |
-| Lint | _TODO_ |
-| Build | _TODO_ |
+| Task          | Command                                          |
+| ------------- | ------------------------------------------------ |
+| Install       | `npm ci` (runs `wxt prepare`)                    |
+| Dev (Chrome)  | `npm run dev`                                    |
+| Dev (Firefox) | `npm run dev:firefox`                            |
+| Build         | `npm run build:chrome` / `npm run build:firefox` |
+| Test          | `npm test`                                       |
+| Lint          | `npm run lint`                                   |
+| Type check    | `npm run typecheck`                              |
+| Format        | `npm run format` (check: `npm run format:check`) |
+| Privacy gate  | `npm run check:privacy` (needs a build first)    |
+| Packages      | `npm run zip`, `npm run zip:sources`             |
 
 ## How work happens here: spec-driven, two agents
 
 No change to application code happens without an **active plan**.
 
-| Role | How to start it | Writes |
-| --- | --- | --- |
-| **architect** — plans with the user, assists review, archives | `claude --agent architect`; Copilot: pick the **Architect** agent | only `.ai/`, `AGENTS.md`, `README.md` |
-| **builder** — executes one phase of the active plan, proposes commits, stops | `claude --agent builder` or delegated by the architect; Copilot: **Builder** agent or the handoff | code + its plan's progress sections |
+| Role                                                                         | How to start it                                                                                   | Writes                                |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **architect** — plans with the user, assists review, archives                | `claude --agent architect`; Copilot: pick the **Architect** agent                                 | only `.ai/`, `AGENTS.md`, `README.md` |
+| **builder** — executes one phase of the active plan, proposes commits, stops | `claude --agent builder` or delegated by the architect; Copilot: **Builder** agent or the handoff | code + its plan's progress sections   |
 
 **No agent ever stages, commits or pushes.** The user reviews and commits every change by hand. Each
 finished phase ends with proposed Conventional Commits messages for the user to review and run.
 
 Slash commands (same names in Claude Code and Copilot Chat):
 
-| Command | Does |
-| --- | --- |
-| `/create-plan <requirement>` | architect drafts a plan into `.ai/plans/pending/` |
-| `/implement-step [Phase N \| Task N.M]` | builder implements one task or phase of the active plan |
-| `/create-commit-message` | one Conventional Commits line for what you staged (user-invoked only) |
+| Command                                 | Does                                                                  |
+| --------------------------------------- | --------------------------------------------------------------------- |
+| `/create-plan <requirement>`            | architect drafts a plan into `.ai/plans/pending/`                     |
+| `/implement-step [Phase N \| Task N.M]` | builder implements one task or phase of the active plan               |
+| `/create-commit-message`                | one Conventional Commits line for what you staged (user-invoked only) |
 
 Plan lifecycle and the evidence standard: `.ai/rules/plans.md`. Plan template: `.ai/templates/plan.md`.
 
@@ -46,12 +58,12 @@ This repo is used from Claude Code (CLI and VS Code extension) and from GitHub C
 in `.ai/`; each tool only gets a thin wrapper that points to them. **Edit the canonical file, never a
 wrapper.**
 
-| Canonical | Claude Code wrapper | Copilot Chat wrapper |
-| --- | --- | --- |
-| `AGENTS.md` (this file) | `CLAUDE.md` (`@AGENTS.md`) | read natively (`chat.useAgentsMdFile`) + `.github/copilot-instructions.md` |
-| `.ai/agents/architect.md`, `builder.md` | `.claude/agents/*.md` | `.github/agents/*.agent.md` |
-| `.ai/prompts/*.md` | `.claude/commands/*.md` | `.github/prompts/*.prompt.md` |
-| `.ai/rules/plans.md` | read via `AGENTS.md` | `.github/instructions/plans.instructions.md` (`applyTo: .ai/plans/**`) |
+| Canonical                               | Claude Code wrapper        | Copilot Chat wrapper                                                       |
+| --------------------------------------- | -------------------------- | -------------------------------------------------------------------------- |
+| `AGENTS.md` (this file)                 | `CLAUDE.md` (`@AGENTS.md`) | read natively (`chat.useAgentsMdFile`) + `.github/copilot-instructions.md` |
+| `.ai/agents/architect.md`, `builder.md` | `.claude/agents/*.md`      | `.github/agents/*.agent.md`                                                |
+| `.ai/prompts/*.md`                      | `.claude/commands/*.md`    | `.github/prompts/*.prompt.md`                                              |
+| `.ai/rules/plans.md`                    | read via `AGENTS.md`       | `.github/instructions/plans.instructions.md` (`applyTo: .ai/plans/**`)     |
 
 Guard rails differ by tool: Claude Code **blocks** `git add/commit/push` (`.claude/settings.json`) and
 architect writes outside `.ai/` (hook). Copilot can only **require confirmation** for those git commands
@@ -74,19 +86,19 @@ Each was decided deliberately. Plans are local-only, so this table is the **trac
 rationale here, self-contained (the plan name is only a local pointer). If you think one is wrong,
 raise it with the user rather than silently reverting it.
 
-| Decision | Rationale | Plan |
-| --- | --- | --- |
-| **Browser extension, WXT + TypeScript, Chrome and Firefox (desktop + Android).** | One MV3 codebase covers PC and mobile (Firefox for Android supports extensions); no server needed. | 2026-11-06-status-tracker-extension |
-| **The human solves the reCAPTCHA; never bypass, solve or outsource it.** | Solving services send personal data to third parties and break the site's terms. The extension autofills, shows only the captcha, and submits after the user solves it. | 2026-11-06-status-tracker-extension |
-| **Captcha runs in a compact window on the real page, not in the popup.** | The sede sends `X-Frame-Options: SAMEORIGIN` and the reCAPTCHA key is bound to its domain, so it cannot render inside extension pages. Stripping headers is rejected. | 2026-11-06-status-tracker-extension |
-| **All data local: `storage.local` / `storage.session` only, no network requests, no telemetry.** | Personal tool handling NIE and birth date; `storage.sync` uploads to Google/Mozilla. Enforced by `npm run check:privacy`. | 2026-11-06-status-tracker-extension |
-| **Encryption of identifying fields is optional, user's choice.** | Trade-off between privacy at rest and friction on every check; the user decides. | 2026-11-06-status-tracker-extension |
-| **Publish listed on Chrome Web Store and AMO only; no unlisted/self-hosted releases.** | Store installs are the trusted path, and AMO listing enables Firefox for Android. | 2026-11-06-status-tracker-extension |
-| **Public pages on a `vgr.cat` subdomain via Cloudflare Workers static assets, explicit custom domain.** | The org's Free GitHub plan cannot serve Pages from a private repo; the user already runs `vgr.cat` on Workers. No wildcard routes. | 2026-11-06-status-tracker-extension |
-| **Repo private until the first public release, then public for good.** | The whole git history becomes public, so personal data must never be committed; history is audited before the switch. | 2026-11-06-status-tracker-extension |
-| **Product name: NacioCheck** (slug `naciocheck`, `naciocheck.vgr.cat`, gecko id `naciocheck@vgr.cat`). | Clearest in Spanish and English (*Nacio* = nacionalidad / nation; *check* is a common anglicism in Spain) and does not suggest an official tool. The gecko id can never change after the first AMO upload. | 2026-11-06-status-tracker-extension |
+| Decision                                                                                                                        | Rationale                                                                                                                                                                                                                                                                  | Plan                                |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **Browser extension, WXT + TypeScript, Chrome and Firefox (desktop + Android).**                                                | One MV3 codebase covers PC and mobile (Firefox for Android supports extensions); no server needed.                                                                                                                                                                         | 2026-11-06-status-tracker-extension |
+| **The human solves the reCAPTCHA; never bypass, solve or outsource it.**                                                        | Solving services send personal data to third parties and break the site's terms. The extension autofills, shows only the captcha, and submits after the user solves it.                                                                                                    | 2026-11-06-status-tracker-extension |
+| **Captcha runs in a compact window on the real page, not in the popup.**                                                        | The sede sends `X-Frame-Options: SAMEORIGIN` and the reCAPTCHA key is bound to its domain, so it cannot render inside extension pages. Stripping headers is rejected.                                                                                                      | 2026-11-06-status-tracker-extension |
+| **All data local: `storage.local` / `storage.session` only, no network requests, no telemetry.**                                | Personal tool handling NIE and birth date; `storage.sync` uploads to Google/Mozilla. Enforced by `npm run check:privacy`.                                                                                                                                                  | 2026-11-06-status-tracker-extension |
+| **Encryption of identifying fields is optional, user's choice.**                                                                | Trade-off between privacy at rest and friction on every check; the user decides.                                                                                                                                                                                           | 2026-11-06-status-tracker-extension |
+| **Publish listed on Chrome Web Store and AMO only; no unlisted/self-hosted releases.**                                          | Store installs are the trusted path, and AMO listing enables Firefox for Android.                                                                                                                                                                                          | 2026-11-06-status-tracker-extension |
+| **Public pages on a `vgr.cat` subdomain via Cloudflare Workers static assets, explicit custom domain.**                         | The org's Free GitHub plan cannot serve Pages from a private repo; the user already runs `vgr.cat` on Workers. No wildcard routes.                                                                                                                                         | 2026-11-06-status-tracker-extension |
+| **Repo private until the first public release, then public for good.**                                                          | The whole git history becomes public, so personal data must never be committed; history is audited before the switch.                                                                                                                                                      | 2026-11-06-status-tracker-extension |
+| **Product name: NacioCheck** (slug `naciocheck`, `naciocheck.vgr.cat`, gecko id `naciocheck@vgr.cat`).                          | Clearest in Spanish and English (_Nacio_ = nacionalidad / nation; _check_ is a common anglicism in Spain) and does not suggest an official tool. The gecko id can never change after the first AMO upload.                                                                 | 2026-11-06-status-tracker-extension |
 | **Icon: symmetric N-check on a white badge; logo: icon + "NacioCheck" in Nunito 800 + tagline.** Full guide: `brand/README.md`. | Chosen after five rounds. The N's last strokes form a check (mirror angles, check from the diagonal midpoint at 1:2). Colours: teal `#0F766E` with accent `#14B8A6` / `#0D9488`; no red/yellow or official symbols. Logotype ships as outlined paths, never a remote font. | 2026-11-06-status-tracker-extension |
-| **Implementation plans are not tracked by git.** | User decision: plans are local working documents; this table is the tracked record. | — |
+| **Implementation plans are not tracked by git.**                                                                                | User decision: plans are local working documents; this table is the tracked record.                                                                                                                                                                                        | —                                   |
 
 ## Verification culture
 
