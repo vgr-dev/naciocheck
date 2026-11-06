@@ -40,6 +40,8 @@ Slash commands (`.claude/commands/`):
 Agent definitions: `.claude/agents/`. Plan lifecycle and the evidence standard: `.ai/rules/plans.md`.
 Plan template: `.ai/templates/plan.md`.
 
+Plans are **local only**: `.ai/plans/` is git-ignored (except the `.gitkeep` placeholders).
+
 ```
 .ai/plans/pending/   → drafts and approved plans in the queue
 .ai/plans/active/    → the one plan being built (at most one)
@@ -51,7 +53,8 @@ and if a request is not covered by the active plan, say so and propose drafting 
 
 ## Settled decisions — do not undo these
 
-Each was decided deliberately and is documented in `.ai/plans/finished/`. If you think one is wrong,
+Each was decided deliberately. Plans are local-only, so this table is the **tracked** record: keep the
+rationale here, self-contained (the plan name is only a local pointer). If you think one is wrong,
 raise it with the user rather than silently reverting it.
 
 | Decision | Rationale | Plan |

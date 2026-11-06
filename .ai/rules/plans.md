@@ -8,7 +8,10 @@
 | `.ai/plans/active/` | **At most one** plan, being built | architect, on user request |
 | `.ai/plans/finished/` | Signed-off plans with the Archive Metadata footer | architect, after review |
 
-Each folder keeps a `.gitkeep`. **Do not delete it** — git does not track empty directories.
+**Plans are not tracked by git.** `.gitignore` ignores everything under `.ai/plans/` except each folder's
+`.gitkeep`, which keeps the skeleton in a fresh clone — **do not delete it**. Plans live only in the local
+working copy, so never propose committing them, and never reference a plan's content as if it were in git
+history. Commit messages may still cite a plan by file name and phase.
 
 File names: `YYYY-MM-DD-<short-slug>.md`, dated on creation. Template: `.ai/templates/plan.md`.
 Move plans with plain `mv`; git detects the rename when the user commits.

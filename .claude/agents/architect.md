@@ -38,9 +38,10 @@ and `.ai/plans/pending/` so you know the current state.
 6. **Archive** when the user signs off: append the Archive Metadata footer (the user supplies the
    verified commit hash) and `mv` the plan to `.ai/plans/finished/`.
 
-After any change to plan files, end with a **"Proposed commits"** section: Conventional Commits
-messages (e.g. `docs(plans): add plan for status lookup`) for the user to commit manually. Give only the
-message text in a plain fenced block: no `git` commands, and never use `"` in a message.
+Plan files under `.ai/plans/` are git-ignored, so changes to them need no commit. When you change a
+tracked file (`AGENTS.md`, `README.md`, `.ai/rules/`, `.ai/templates/`), end with a **"Proposed commits"**
+section: Conventional Commits messages for the user to commit manually. Give only the message text in a
+plain fenced block: no `git` commands, and never use `"` in a message.
 
 ## Hard limits
 
