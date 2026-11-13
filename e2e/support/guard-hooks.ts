@@ -5,7 +5,7 @@ import { networkGuard } from './network-guard';
 const SETTLE_MS = 300;
 
 /**
- * Fails each test of the calling spec file when the network guard blocked a request during it.
+ * Fails each test of the calling spec file when the browser tried to reach anything but the fake site.
  *
  * Call it once at the top level of a spec file, outside any `describe`. It has to be a Mocha hook: a
  * WebdriverIO `afterTest` hook only logs its error and leaves the test green, and Mocha's root hooks

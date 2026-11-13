@@ -48,5 +48,14 @@ export default tseslint.config(
       },
     },
   },
+  {
+    // The captcha stub is served to a page and runs in it, not in Node.
+    files: ['e2e/stubs/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
   prettier,
 );

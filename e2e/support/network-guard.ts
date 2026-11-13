@@ -1,84 +1,114 @@
 import { browser } from '@wdio/globals';
 
-/** What `browser.mock()` hands back, derived from the API so no global namespace is needed. */
-type Mock = Awaited<ReturnType<typeof browser.mock>>;
-
 /**
  * Schemes that stay on the machine: the extension itself, and what the browser opens by itself.
  * Everything else — every `http:` and `https:` request a page makes — is a privacy violation in this
- * project, so the guard blocks it and fails the test that provoked it.
+ * project.
  */
 const LOCAL_PREFIXES = ['chrome-extension://', 'moz-extension://', 'about:', 'data:', 'blob:'];
 
+/** The part of a WebDriver BiDi request event the guard reads. */
+interface BeforeRequestSent {
+  readonly request: { readonly url: string };
+}
+
 /**
- * Blocks every network request the suite did not ask for, and reports what it blocked.
+ * Watches every request the browser makes and fails the test that provoked one outside the fake site.
  *
- * The suite runs against fake pages served at the real URLs, so anything that escapes the mocks would
- * reach the official site or reCAPTCHA. `afterTest` calls `assertClean()`, which turns any escape into a
- * test failure instead of a silent request.
- *
- * Requests are recorded from the mocks' own `request` event: an aborted request never completes, so
- * `mock.calls` — which only collects completed responses — would not see it.
+ * The suite intercepts nothing: Chrome is started with `--host-resolver-rules`, which points the three hosts
+ * the captured pages use at a local server and resolves every other host to `NOTFOUND`, so no request can
+ * leave the machine. This guard is the evidence for that (D10). It is an observer on WebDriver BiDi's
+ * `network.beforeRequestSent`, and a request that is not local and not on a mapped host fails the test.
  */
 export class NetworkGuard {
-  #mocks: Mock[] = [];
-  #requested = new Set<string>();
-  #exempt: string[] = [];
+  #allowedHosts: string[] = [];
+  #unexpected: string[] = [];
+  #listening = false;
+  /** Totals for the whole run: `reset()` clears a test, never the run. */
+  #seen = 0;
+  #served = 0;
+  #outside = 0;
 
   /**
-   * Declare a URL prefix the test answers itself (the fake sede, the captcha stub).
+   * Starts watching. Called once per session, once the fake site is listening.
    *
-   * The test's own mock has to be registered *before* `install()`: WebdriverIO's arbiter prefers the
-   * mock registered first, so the catch-all must be the newest intercept of the session.
+   * `allowedHosts` are the only hosts the browser may reach; anything else is reported to the test that asked
+   * for it.
    */
-  exempt(urlPrefix: string): void {
-    this.#exempt.push(urlPrefix);
+  async attach(allowedHosts: readonly string[]): Promise<void> {
+    this.#allowedHosts = [...allowedHosts];
+    if (this.#listening) return;
+    this.#listening = true;
+    await browser.sessionSubscribe({ events: ['network.beforeRequestSent'] });
+    browser.on('network.beforeRequestSent', (event: BeforeRequestSent) => {
+      this.#observe(event.request.url);
+    });
   }
 
-  /** Block every remaining `http(s)` request of this session. */
-  async install(): Promise<void> {
-    await this.restore();
-    for (const scheme of ['http', 'https'] as const) {
-      const mock = await browser.mock(`${scheme}://*`);
-      mock.on('request', (request) => {
-        this.#requested.add(request.request.url);
-      });
-      mock.abort();
-      this.#mocks.push(mock);
-    }
+  /** Clears what the current test saw; the run totals stay. */
+  reset(): void {
+    this.#unexpected = [];
   }
 
-  /** Every URL requested during the test, without the local schemes and the exemptions. */
-  requested(): string[] {
-    return [...this.#requested].filter((url) => !this.#isAllowed(url));
+  /** Records a request the fake site refused, so it is reported exactly like a host outside it. */
+  noteUnexpected(url: string): void {
+    this.#seen += 1;
+    this.#outside += 1;
+    this.#unexpected.push(url);
   }
 
-  /** Fails when anything left the machine during the test. */
+  /**
+   * Returns the requests of the current test that went outside the fake site, and forgets them.
+   *
+   * A test that expects one — the leak probe — takes it, checks it and passes; the run summary keeps counting
+   * only what no test accounted for.
+   */
+  takeUnexpected(): string[] {
+    const urls = this.#unexpected;
+    this.#unexpected = [];
+    this.#outside -= urls.length;
+    return urls;
+  }
+
+  /** Fails the current test when a request went anywhere but the fake site. */
   assertClean(): void {
-    const urls = this.requested();
-    if (urls.length > 0) {
+    if (this.#unexpected.length > 0) {
       throw new Error(
-        `Network guard: ${urls.length} unexpected request(s) left the machine: ${urls.join(', ')}`,
+        `Network guard: ${this.#unexpected.length} request(s) went outside the fake site: ${this.#unexpected.join(', ')}`,
       );
     }
   }
 
-  /** Drops the mocks so the next test starts from a clean session. */
-  async restore(): Promise<void> {
-    for (const mock of this.#mocks) await mock.restore();
-    this.#mocks = [];
-    this.#requested = new Set();
-    this.#exempt = [];
+  /** One line for the run, printed by the config once every test is over. */
+  summary(): string {
+    return `Network guard: seen ${this.#seen}, answered by the fake site ${this.#served}, outside it ${this.#outside}`;
   }
 
-  #isAllowed(url: string): boolean {
-    const prefixes = [...LOCAL_PREFIXES, ...this.#exempt];
-    return prefixes.some((prefix) => url.startsWith(prefix));
+  #observe(url: string): void {
+    if (LOCAL_PREFIXES.some((prefix) => url.startsWith(prefix))) return;
+    this.#seen += 1;
+
+    const host = hostOf(url);
+    if (host !== null && this.#allowedHosts.includes(host)) {
+      this.#served += 1;
+      return;
+    }
+    this.#outside += 1;
+    this.#unexpected.push(url);
+  }
+}
+
+/** The host of a URL, or `null` when it cannot be parsed (which is reported as outside the fake site). */
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
   }
 }
 
 /**
- * The one guard of a worker process: the WDIO config installs it, the Mocha hooks assert it.
+ * The one guard of a worker process: the WDIO config attaches it, the Mocha hooks assert it.
  *
  * It lives on `globalThis` because WDIO loads the config and Mocha loads the spec files through different
  * module registries, so a module-scoped singleton would be two objects that never see each other.

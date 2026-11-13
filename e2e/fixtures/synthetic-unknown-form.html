@@ -1,0 +1,22 @@
+<!doctype html>
+<!--
+  SYNTHETIC — not captured from the official site.
+
+  A page with the form's id and one of its fields but neither the shape nor the captcha block the extension
+  knows. It exists to exercise the fallback: the extension must leave such a page whole, with a hint, instead
+  of hiding it and submitting. Never replace this with a captured page.
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Consulta telemática de expedientes (forma desconocida)</title>
+  </head>
+  <body>
+    <h2>Consulta telemática de expedientes de nacionalidad española por residencia</h2>
+    <form id="idFormuNac" method="post">
+      <label for="codigoNieCompleto">NIE</label>
+      <input type="text" name="formuNac.codigoNieCompleto" id="codigoNieCompleto" value="" />
+      <input type="submit" id="submitNac" name="action:enviarDatosNacionalidad" value="Consultar" />
+    </form>
+  </body>
+</html>
