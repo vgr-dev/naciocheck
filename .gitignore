@@ -11,6 +11,9 @@ node_modules/
 coverage/
 .wrangler/
 
+# Downloaded once by scripts/outline-logo.mjs (Nunito) and never shipped
+.cache/
+
 # Generated from brand/icon.svg at build time (see modules/icons.ts)
 public/icon/
 

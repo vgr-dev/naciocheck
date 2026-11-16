@@ -28,6 +28,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json",
     "check:privacy": "node scripts/check-privacy.mjs",
     "check:site": "node scripts/check-site.mjs",
+    "logo:outline": "node scripts/outline-logo.mjs",
+    "store:images": "node scripts/store-images.mjs",
     "deploy:site": "wrangler deploy",
     "postinstall": "wxt prepare"
   },
@@ -41,6 +43,7 @@
     "@wdio/visual-service": "^11.1.0",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
+    "fontkit": "^3.0.0",
     "globals": "^17.14.0",
     "jsdom": "^31.0.0",
     "prettier": "^3.9.10",
