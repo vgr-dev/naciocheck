@@ -72,6 +72,22 @@ export function syntheticPage(name: string): FakePage {
   return { path: join(SYNTHETIC_DIR, name), values: {} };
 }
 
+/** The placeholders of the captured result page: only fake values ever go into them. */
+export const RESULT_VALUES = {
+  expendiente: 'R500001',
+  year: '2015',
+  NIE: 'X0000000X',
+  names: 'NOMBRE',
+  surname: 'APELLIDO',
+  status: 'Abierto - Registrado.',
+  subStatus: 'Su expediente ha sido registrado correctamente.',
+};
+
+/** The captured result page, with the personal values filled in and any of them overridden per test. */
+export function capturedResultPage(values: Record<string, string> = {}): FakePage {
+  return capturedPage('result-format.htm', { ...RESULT_VALUES, ...values });
+}
+
 export interface FakeSedeOptions {
   /** The GET answer of the form. The captured form unless a test needs an unknown shape. */
   readonly form?: FakePage;

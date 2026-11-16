@@ -234,6 +234,44 @@ export async function readStoredStoreText(): Promise<string> {
 }
 
 /**
+ * Puts every stored date at a fixed moment.
+ *
+ * The pages print when an application was added and when it was checked, and the app stamps those with the
+ * clock. A screenshot of one would differ on every run, so the screenshot suite calls this after seeding and
+ * gets images that only change when the interface does.
+ */
+export async function freezeStoredDates(): Promise<void> {
+  const context = await openExtensionPage('options.html');
+  await context.execute(async () => {
+    const api = (globalThis as { chrome?: ExtensionApi }).chrome;
+    if (api === undefined) throw new Error('This page has no extension API: it is not one of ours');
+
+    const stored = await api.storage.local.get('naciocheck');
+    const store = stored.naciocheck as
+      | {
+          applications: Array<{ createdAt: string; editedAt?: string }>;
+          checks: Array<{ at: string }>;
+        }
+      | undefined;
+    if (store === undefined) throw new Error('The extension has no store to freeze');
+
+    const day = (index: number): string => String(index + 1).padStart(2, '0');
+    store.applications = store.applications.map((application, index) => ({
+      ...application,
+      createdAt: `2026-01-${day(index)}T09:00:00.000Z`,
+      ...(application.editedAt === undefined
+        ? {}
+        : { editedAt: `2026-01-${day(index)}T10:00:00.000Z` }),
+    }));
+    store.checks = store.checks.map((check, index) => ({
+      ...check,
+      at: `2026-02-${day(index)}T09:30:00.000Z`,
+    }));
+    await api.storage.local.set({ naciocheck: store });
+  });
+}
+
+/**
  * Stores a language choice and reloads nothing: the caller refreshes the page it is on.
  *
  * For `qps`, the pseudo-RTL locale that exists only to prove the layout survives a right-to-left direction and

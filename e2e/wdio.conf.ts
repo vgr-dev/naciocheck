@@ -19,6 +19,7 @@ import {
   stopFakeSede,
 } from './support/fake-sede';
 import { networkGuard } from './support/network-guard';
+import { createVisualFolders, visualServiceOptions } from './support/visual';
 
 /**
  * WebdriverIO drives both browsers, headless by default, against the real production build. A headed run
@@ -33,8 +34,21 @@ const headed = process.env.E2E_HEADED === '1';
 /** Restrict the run to one browser (`E2E_BROWSER=chrome|firefox`); the npm scripts set this. */
 const onlyBrowser = process.env.E2E_BROWSER;
 
-/** Chrome runs the whole suite. */
-const CHROME_SPECS = [resolve(import.meta.dirname, 'specs/**/*.e2e.ts')];
+/**
+ * Restrict the Chrome run to one spec (`E2E_SPEC=visual` → `specs/visual.e2e.ts`).
+ *
+ * `npm run test:e2e:update-baselines` needs the visual spec alone: regenerating baselines while the other specs
+ * run would only make the same run slower.
+ */
+const onlySpec = process.env.E2E_SPEC;
+
+/** Chrome runs the whole suite, or the one spec `E2E_SPEC` names. */
+const CHROME_SPECS = [
+  resolve(
+    import.meta.dirname,
+    onlySpec === undefined ? 'specs/**/*.e2e.ts' : `specs/${onlySpec}.e2e.ts`,
+  ),
+];
 
 /** Firefox keeps the smoke spec: Marionette refuses to navigate to `moz-extension://` pages (D1). */
 const FIREFOX_SPECS = [resolve(import.meta.dirname, 'specs/smoke.e2e.ts')];
@@ -145,6 +159,8 @@ export const config: WebdriverIO.Config = {
   specs: [resolve(import.meta.dirname, 'specs/**/*.e2e.ts')],
   maxInstances: 1,
   capabilities: capabilitiesForRun(),
+  /** The visual service: screenshots, baselines and diffs, with its folders in `support/visual.ts`. */
+  services: [['visual', visualServiceOptions()]],
   logLevel: 'warn',
   waitforTimeout: 15_000,
   connectionRetryTimeout: 120_000,
@@ -160,6 +176,7 @@ export const config: WebdriverIO.Config = {
   onPrepare() {
     buildExtension();
     writeCertificate();
+    createVisualFolders();
   },
 
   async before() {
