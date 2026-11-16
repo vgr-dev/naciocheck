@@ -9,6 +9,7 @@ node_modules/
 .output/
 .wxt/
 coverage/
+.wrangler/
 
 # Generated from brand/icon.svg at build time (see modules/icons.ts)
 public/icon/

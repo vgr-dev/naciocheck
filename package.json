@@ -27,6 +27,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json",
     "check:privacy": "node scripts/check-privacy.mjs",
+    "check:site": "node scripts/check-site.mjs",
+    "deploy:site": "wrangler deploy",
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
@@ -48,6 +50,7 @@
     "vite": "^8.3.6",
     "vitest": "^5.1.0",
     "webdriverio": "^10.2.0",
+    "wrangler": "^4.163.0",
     "wxt": "^0.21.5"
   }
 }

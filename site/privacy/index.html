@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NacioCheck — privacidad</title>
+    <meta
+      name="description"
+      content="Qué guarda NacioCheck, dónde lo guarda y qué no envía nunca. Nada sale de tu navegador."
+    />
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 2.5rem 1.25rem 4rem;
+        font:
+          400 17px/1.6 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.9rem;
+        line-height: 1.2;
+        color: #0f766e;
+      }
+      h2 {
+        margin: 2.25rem 0 0.5rem;
+        font-size: 1.15rem;
+        color: #0f766e;
+      }
+      p,
+      li {
+        margin: 0.5rem 0;
+      }
+      .lead,
+      footer {
+        color: #4b5563;
+      }
+      .lead {
+        font-size: 1.05rem;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+      }
+      a {
+        color: #0d9488;
+      }
+      .card {
+        padding: 1rem 1.25rem;
+        background: #ffffff;
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+      }
+      code {
+        padding: 0.1em 0.35em;
+        font:
+          500 0.95em/1.4 ui-monospace,
+          monospace;
+        background: #f0fdfa;
+        border-radius: 4px;
+      }
+      footer {
+        margin-top: 3rem;
+        padding-top: 1rem;
+        font-size: 0.9rem;
+        border-top: 1px solid #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Política de privacidad de NacioCheck</h1>
+      <p class="lead">
+        Se aplica a la extensión NacioCheck 0.1.0 y posteriores. Última revisión: 16 de noviembre de
+        2026.
+      </p>
+
+      <nav>
+        <a href="#resumen">Resumen</a>
+        <a href="#datos">Qué se guarda y dónde</a>
+        <a href="#no">Qué no hace</a>
+        <a href="#borrar">Exportar y borrar</a>
+        <a href="/en/privacy/">English</a>
+        <a href="/">Inicio</a>
+      </nav>
+
+      <h2 id="resumen">Resumen</h2>
+      <div class="card">
+        <p>
+          NacioCheck guarda tus solicitudes y el historial de comprobaciones
+          <strong>solo en tu navegador</strong>. No hay cuentas, ni servidores propios, ni
+          analítica, ni publicidad. La extensión no envía tus datos a ningún sitio.
+        </p>
+      </div>
+
+      <h2 id="datos">Qué se guarda y dónde</h2>
+      <p>
+        Todo se guarda con la API de almacenamiento del navegador, dentro del perfil de la
+        extensión:
+      </p>
+      <ul>
+        <li>
+          <strong>Almacenamiento local</strong> (<code>storage.local</code>, clave
+          <code>naciocheck</code>): las solicitudes que das de alta (el nombre con el que las
+          reconoces y el NIE, el número de expediente, el año y la fecha de nacimiento, o esos
+          mismos datos cifrados), el historial de comprobaciones (fecha, resultado, el texto del
+          estado que devolvió la web y si ya lo has visto) y los ajustes (recordatorio e idioma).
+        </li>
+        <li>
+          <strong>Almacenamiento de sesión</strong> (<code>storage.session</code>): la contraseña
+          del cifrado, mientras el navegador está abierto. El navegador vacía ese almacenamiento al
+          cerrarse y la contraseña nunca se escribe en el disco.
+        </li>
+      </ul>
+      <p>
+        El historial se queda en el perfil del navegador: si cierras sesión en el navegador o borras
+        sus datos, puedes perderlo. La copia de seguridad existe para eso.
+      </p>
+
+      <h2 id="no">Qué no hace</h2>
+      <ul>
+        <li>No crea cuentas y no tiene servidores propios.</li>
+        <li>
+          No envía tus datos a ningún sitio: no hay analítica, ni telemetría, ni publicidad, ni
+          rastreo.
+        </li>
+        <li>
+          No usa el almacenamiento sincronizado del navegador, así que tus datos no viajan a Google
+          ni a Mozilla.
+        </li>
+        <li>
+          No resuelve el captcha ni lo manda a ningún servicio: lo marcas tú. La web oficial carga
+          reCAPTCHA de Google en su propia página, y eso ocurre en esa página, no en la extensión.
+        </li>
+        <li>
+          Cuando lanzas una comprobación, tu navegador envía el formulario a la sede electrónica
+          (sede.mjusticia.gob.es) exactamente igual que si lo rellenaras a mano. Eso es la consulta
+          que tú pides, y va a la web oficial, no a nosotros.
+        </li>
+      </ul>
+
+      <h2 id="cifrado">Cifrado opcional</h2>
+      <p>
+        Puedes proteger el NIE, el número de expediente, el año y la fecha de nacimiento con una
+        contraseña tuya, desde Opciones. Se cifran con AES-GCM y una clave derivada de tu contraseña
+        con PBKDF2-HMAC-SHA-256 (600 000 iteraciones). La contraseña no se guarda en el disco: sin
+        ella, esos datos no se pueden leer.
+      </p>
+      <p>
+        <strong>Si olvidas la contraseña, no se pueden recuperar.</strong> El historial de
+        comprobaciones se queda, pero tendrás que volver a escribir las solicitudes. Nadie, tampoco
+        quien mantiene el proyecto, puede descifrarlas.
+      </p>
+
+      <h2 id="borrar">Copia de seguridad, exportar y borrar</h2>
+      <ul>
+        <li>
+          <strong>Exportar</strong> (Opciones → Copia de seguridad): descarga un archivo JSON con lo
+          que tengas guardado. Si los datos no están cifrados, la extensión te avisa antes. Ese
+          archivo lo guardas tú donde quieras, y es lo único que puede sacar tus datos del
+          navegador.
+        </li>
+        <li>
+          <strong>Importar</strong>: lee un archivo de copia y lo combina con lo que ya tengas.
+        </li>
+        <li>
+          <strong>Borrar una solicitud</strong> (Opciones → Borrar): elimina la solicitud y sus
+          comprobaciones.
+        </li>
+        <li>
+          <strong>Borrarlo todo</strong>: desinstala la extensión, o borra sus datos desde el
+          navegador (chrome://extensions → NacioCheck → Quitar; about:addons → NacioCheck → Quitar
+          en Firefox). Al desinstalarla, el navegador elimina el almacenamiento de la extensión.
+        </li>
+      </ul>
+
+      <h2 id="menores">Menores y terceros</h2>
+      <p>
+        NacioCheck no está pensada para menores de edad y no recoge datos de nadie: no hay a quién
+        cederlos ni con quién compartirlos. No se venden ni se transfieren datos a terceros, porque
+        no se recogen.
+      </p>
+
+      <h2 id="cambios">Cambios en esta política</h2>
+      <p>
+        Si cambia lo que guarda o lo que envía la extensión, esta página cambia antes de publicar
+        esa versión, y la fecha de revisión de arriba lo dirá. El historial del proyecto está en el
+        repositorio.
+      </p>
+
+      <h2 id="contacto">Contacto</h2>
+      <p>
+        Para preguntas sobre privacidad, escribe en la ficha de la extensión en la Chrome Web Store
+        o en addons.mozilla.org, o abre una incidencia en el repositorio del proyecto
+        (github.com/vgr-dev/naciocheck).
+      </p>
+
+      <h2 id="afiliacion">Aviso de no afiliación</h2>
+      <p>
+        NacioCheck es un proyecto personal e independiente. No está afiliada al Ministerio de
+        Justicia, ni al Gobierno de España, ni a ningún organismo público, y no representa a ninguno
+        de ellos. «NacioCheck» no es una herramienta oficial y su información no sustituye a la
+        resolución oficial de tu expediente.
+      </p>
+
+      <footer>
+        <p>
+          <a href="/">NacioCheck</a> · <a href="/en/privacy/">Privacy policy in English</a> · Última
+          revisión: 16 de noviembre de 2026
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

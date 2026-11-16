@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NacioCheck — privacy</title>
+    <meta
+      name="description"
+      content="What NacioCheck stores, where it stores it, and what it never sends. Nothing leaves your browser."
+    />
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 2.5rem 1.25rem 4rem;
+        font:
+          400 17px/1.6 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.9rem;
+        line-height: 1.2;
+        color: #0f766e;
+      }
+      h2 {
+        margin: 2.25rem 0 0.5rem;
+        font-size: 1.15rem;
+        color: #0f766e;
+      }
+      p,
+      li {
+        margin: 0.5rem 0;
+      }
+      .lead,
+      footer {
+        color: #4b5563;
+      }
+      .lead {
+        font-size: 1.05rem;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+      }
+      a {
+        color: #0d9488;
+      }
+      .card {
+        padding: 1rem 1.25rem;
+        background: #ffffff;
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+      }
+      code {
+        padding: 0.1em 0.35em;
+        font:
+          500 0.95em/1.4 ui-monospace,
+          monospace;
+        background: #f0fdfa;
+        border-radius: 4px;
+      }
+      footer {
+        margin-top: 3rem;
+        padding-top: 1rem;
+        font-size: 0.9rem;
+        border-top: 1px solid #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>NacioCheck privacy policy</h1>
+      <p class="lead">
+        Applies to the NacioCheck extension 0.1.0 and later. Last reviewed: 16 November 2026.
+      </p>
+
+      <nav>
+        <a href="#summary">Summary</a>
+        <a href="#data">What is stored, and where</a>
+        <a href="#not">What it does not do</a>
+        <a href="#delete">Export and delete</a>
+        <a href="/privacy/">Español</a>
+        <a href="/en/">Home</a>
+      </nav>
+
+      <h2 id="summary">Summary</h2>
+      <div class="card">
+        <p>
+          NacioCheck keeps your applications and the history of checks
+          <strong>in your browser only</strong>. There are no accounts, no servers of our own, no
+          analytics and no advertising. The extension does not send your data anywhere.
+        </p>
+      </div>
+
+      <h2 id="data">What is stored, and where</h2>
+      <p>Everything is stored with the browser's storage API, inside the extension's profile:</p>
+      <ul>
+        <li>
+          <strong>Local storage</strong> (<code>storage.local</code>, key <code>naciocheck</code>):
+          the applications you add (the name you recognise them by, and the NIE, the application
+          number, the year and the date of birth — or those same details encrypted), the history of
+          checks (date, outcome, the status text the site returned, and whether you have seen it)
+          and the settings (reminder and language).
+        </li>
+        <li>
+          <strong>Session storage</strong> (<code>storage.session</code>): the encryption
+          passphrase, while the browser is open. The browser clears that storage when it closes and
+          the passphrase is never written to disk.
+        </li>
+      </ul>
+      <p>
+        The history lives in the browser profile: signing out of the browser or clearing its data
+        can lose it. That is what the backup is for.
+      </p>
+
+      <h2 id="not">What it does not do</h2>
+      <ul>
+        <li>It does not create accounts and it has no servers of its own.</li>
+        <li>
+          It does not send your data anywhere: no analytics, no telemetry, no advertising, no
+          tracking.
+        </li>
+        <li>
+          It does not use the browser's synchronised storage, so your data does not travel to Google
+          or Mozilla.
+        </li>
+        <li>
+          It does not solve the captcha or send it to any service: you tick it. The official site
+          loads Google's reCAPTCHA on its own page, and that happens on that page, not in the
+          extension.
+        </li>
+        <li>
+          When you start a check, your browser submits the form to the electronic site
+          (sede.mjusticia.gob.es) exactly as if you had filled it in by hand. That is the query you
+          asked for, and it goes to the official site, not to us.
+        </li>
+      </ul>
+
+      <h2 id="encryption">Optional encryption</h2>
+      <p>
+        You can protect the NIE, the application number, the year and the date of birth with a
+        passphrase of your own, from Options. They are encrypted with AES-GCM and a key derived from
+        your passphrase with PBKDF2-HMAC-SHA-256 (600,000 iterations). The passphrase is never
+        stored on disk: without it, those details cannot be read.
+      </p>
+      <p>
+        <strong>If you forget the passphrase, they cannot be recovered.</strong> The history of
+        checks stays, but you will have to type the applications again. Nobody, not even the person
+        who maintains the project, can decrypt them.
+      </p>
+
+      <h2 id="delete">Backup, export and delete</h2>
+      <ul>
+        <li>
+          <strong>Export</strong> (Options → Backup): downloads a JSON file with what you have
+          stored. If the data is not encrypted, the extension warns you first. You keep that file
+          wherever you like, and it is the only way your data can leave the browser.
+        </li>
+        <li>
+          <strong>Import</strong>: reads a backup file and merges it with what you already have.
+        </li>
+        <li>
+          <strong>Delete one application</strong> (Options → Delete): removes the application and
+          its checks.
+        </li>
+        <li>
+          <strong>Delete everything</strong>: uninstall the extension, or clear its data from the
+          browser (chrome://extensions → NacioCheck → Remove; about:addons → NacioCheck → Remove in
+          Firefox). Uninstalling makes the browser delete the extension's storage.
+        </li>
+      </ul>
+
+      <h2 id="children">Children and third parties</h2>
+      <p>
+        NacioCheck is not aimed at children and collects nobody's data: there is nothing to pass on
+        and nobody to share it with. No data is sold or transferred to third parties, because none
+        is collected.
+      </p>
+
+      <h2 id="changes">Changes to this policy</h2>
+      <p>
+        If what the extension stores or sends changes, this page changes before that version is
+        published, and the review date above will say so. The project's history is in the
+        repository.
+      </p>
+
+      <h2 id="contact">Contact</h2>
+      <p>
+        For privacy questions, write on the extension's listing in the Chrome Web Store or
+        addons.mozilla.org, or open an issue in the project's repository
+        (github.com/vgr-dev/naciocheck).
+      </p>
+
+      <h2 id="affiliation">Not affiliated</h2>
+      <p>
+        NacioCheck is a personal, independent project. It is not affiliated with the Ministerio de
+        Justicia, the Government of Spain or any public body, and it does not represent any of them.
+        NacioCheck is not an official tool and its information does not replace the official
+        resolution of your application.
+      </p>
+
+      <footer>
+        <p>
+          <a href="/en/">NacioCheck</a> ·
+          <a href="/privacy/">Política de privacidad en español</a> · Last reviewed: 16 November
+          2026
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
