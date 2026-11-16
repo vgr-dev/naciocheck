@@ -59,6 +59,8 @@ export const en: Record<MessageKey, string> = {
   'onboarding.doesNot3':
     'It is not an official Ministry of Justice tool; the decision arrives through DEHú.',
   'onboarding.applicationTitle': 'Your application',
+  'onboarding.encryptionOptional':
+    'Optional step: you can protect the data now or later from Options.',
   'onboarding.reminderTitle': 'When should I remind you?',
   'onboarding.reminderHint':
     'Pick an hour when you are usually with the device: you are the one who ticks the captcha.',

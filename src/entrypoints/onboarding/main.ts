@@ -2,11 +2,13 @@ import { type MessageKey, t } from '../../core/i18n';
 import { REMINDER_PRESETS } from '../../core/schedule';
 import { listApplications, setReminder } from '../../core/storage';
 import { buildApplicationForm } from '../shared/application-form';
+import { renderEncryption } from '../shared/encryption-sections';
 import { initPageLocale } from '../shared/locale';
 import { button, el, openPage, root } from '../shared/ui';
 
 /**
- * First run: what the extension does, what it deliberately does not do, one application and a reminder.
+ * First run: what the extension does, what it deliberately does not do, one application, the optional
+ * encryption of what was saved and a reminder.
  */
 
 const DOES: readonly MessageKey[] = ['onboarding.does1', 'onboarding.does2', 'onboarding.does3'];
@@ -50,6 +52,11 @@ async function main(): Promise<void> {
 
   view.append(el('h2', 'section', t('onboarding.applicationTitle')));
   view.append(await buildApplicationForm((label) => announce(view, t('options.saved', { label }))));
+
+  // The optional step, with the same section as options: enabling it here encrypts what is already saved, and
+  // the form above asks for the passphrase for anything added afterwards.
+  view.append(el('p', 'hint', t('onboarding.encryptionOptional')));
+  await renderEncryption(view, () => redraw(view));
 
   view.append(el('h2', 'section', t('onboarding.reminderTitle')));
   view.append(el('p', 'hint', t('onboarding.reminderHint')));
@@ -98,6 +105,12 @@ async function main(): Promise<void> {
 function announce(view: HTMLElement, text: string): void {
   view.querySelector('.saved')?.remove();
   view.append(el('p', 'hint saved', text));
+}
+
+/** Renders the page again from the store, which is what the encryption section needs after it changes it. */
+async function redraw(view: HTMLElement): Promise<void> {
+  view.replaceChildren();
+  await main();
 }
 
 void main();

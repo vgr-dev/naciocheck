@@ -63,6 +63,8 @@ export const es = {
   'onboarding.doesNot3':
     'No es una herramienta oficial del Ministerio de Justicia; la resolución llega por DEHú.',
   'onboarding.applicationTitle': 'Tu solicitud',
+  'onboarding.encryptionOptional':
+    'Paso opcional: puedes proteger los datos ahora o más tarde desde Opciones.',
   'onboarding.reminderTitle': '¿Cuándo te aviso?',
   'onboarding.reminderHint':
     'Elige una hora a la que suelas estar con el dispositivo: el captcha lo tienes que marcar tú.',
