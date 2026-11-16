@@ -36,11 +36,18 @@ async function main(): Promise<void> {
   document.title = t('options.pageTitle');
   view.append(el('h1', 'title', t('options.title')));
 
+  // The encryption section is drawn after the application form but reads the store that form changes, so the
+  // page draws it again after a save.
+  let refreshEncryption = (): void => undefined;
+
   await renderLanguage(view);
-  await renderApplications(view);
+  await renderApplications(view, () => refreshEncryption());
   await renderReminder(view);
-  await renderEncryption(view, () => redraw(view));
-  await renderBackup(view);
+  const encryption = await renderEncryption(view, () => redraw(view));
+  refreshEncryption = (): void => {
+    void encryption.refresh();
+  };
+  renderBackup(view);
   await renderHistory(view);
 
   view.append(el('p', 'disclaimer', t('options.disclaimer')));
@@ -86,7 +93,7 @@ async function renderLanguage(view: HTMLElement): Promise<void> {
   view.append(wrapper);
 }
 
-async function renderApplications(view: HTMLElement): Promise<void> {
+async function renderApplications(view: HTMLElement, onSaved: () => void): Promise<void> {
   view.append(el('h2', 'section', t('options.applications')));
 
   const applications = await listApplications();
@@ -99,7 +106,12 @@ async function renderApplications(view: HTMLElement): Promise<void> {
   }
 
   view.append(el('h2', 'section', t('options.addAnother')));
-  view.append(await buildApplicationForm((label) => announce(view, t('options.saved', { label }))));
+  view.append(
+    await buildApplicationForm((label) => {
+      announce(view, t('options.saved', { label }));
+      onSaved();
+    }),
+  );
 }
 
 function buildApplicationCard(application: Application, view: HTMLElement): HTMLElement {

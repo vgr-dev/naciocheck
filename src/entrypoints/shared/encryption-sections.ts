@@ -12,10 +12,36 @@ import { button, el, type ExtensionPage } from './ui';
 
 /** The encryption and backup sections of the options page, kept in one place because they share the store. */
 
+/** What a page needs from the section after the store changes underneath it. */
+export interface EncryptionSection {
+  /** Draws the section again: its on/off state and the list of plain identities follow the store. */
+  refresh: () => Promise<void>;
+}
+
+/**
+ * The encryption section, in a container of its own so a page can redraw it without redrawing the page.
+ *
+ * Every action reads the store when it runs, never the copy the section was drawn from: a first run adds the
+ * application and turns encryption on in the same visit, and a section holding the store of a moment ago would
+ * encrypt nothing and say it had.
+ */
 export async function renderEncryption(
   view: HTMLElement,
   redraw: () => Promise<void>,
-): Promise<void> {
+): Promise<EncryptionSection> {
+  const container = el('div', 'encryption');
+  view.append(container);
+
+  const refresh = async (): Promise<void> => {
+    container.replaceChildren();
+    await fillEncryption(container, redraw);
+  };
+
+  await refresh();
+  return { refresh };
+}
+
+async function fillEncryption(view: HTMLElement, redraw: () => Promise<void>): Promise<void> {
   const store = await readStore();
   const encrypted = store.applications.filter(
     (application) => application.identity.kind === 'encrypted',
@@ -66,7 +92,17 @@ export async function renderEncryption(
               message.textContent = t('encryption.mismatch');
               return;
             }
-            for (const application of store.applications) {
+            // Read now, not when the section was drawn: the application the person just added is the one this
+            // button exists for, and reporting success while encrypting nothing would be a lie about the data.
+            const current = await readStore();
+            const plainNow = current.applications.filter(
+              (application) => application.identity.kind === 'plain',
+            );
+            if (plainNow.length === 0) {
+              message.textContent = t('encryption.nothingToEncrypt');
+              return;
+            }
+            for (const application of current.applications) {
               if (application.identity.kind !== 'plain') continue;
               const encryptedIdentity = await encryptIdentity(
                 application.identity,
@@ -102,13 +138,16 @@ export async function renderEncryption(
           t('encryption.repair'),
           () => {
             void (async () => {
-              const sample = encrypted[0];
+              const current = await readStore();
+              const sample = current.applications.find(
+                (application) => application.identity.kind === 'encrypted',
+              );
               if (sample === undefined || sample.identity.kind !== 'encrypted') return;
               try {
                 // The passphrase is checked against an identity that is already encrypted before anything is
                 // written, exactly like the form does.
                 await decryptIdentity(sample.identity, passphrase.value);
-                for (const application of plain) {
+                for (const application of current.applications) {
                   if (application.identity.kind !== 'plain') continue;
                   const encryptedIdentity = await encryptIdentity(
                     application.identity,
@@ -134,15 +173,16 @@ export async function renderEncryption(
         t('encryption.disable'),
         () => {
           void (async () => {
-            try {
-              for (const application of store.applications) {
-                if (application.identity.kind !== 'encrypted') continue;
-                const plain = await decryptIdentity(application.identity, passphrase.value);
-                await updateIdentity(application.id, plain);
+            const current = await readStore();
+            for (const application of current.applications) {
+              if (application.identity.kind !== 'encrypted') continue;
+              try {
+                const decrypted = await decryptIdentity(application.identity, passphrase.value);
+                await updateIdentity(application.id, decrypted);
+              } catch {
+                message.textContent = t('encryption.decryptFailed');
+                return;
               }
-            } catch {
-              message.textContent = t('encryption.decryptFailed');
-              return;
             }
             await browser.runtime.sendMessage({ type: 'naciocheck:lock' });
             message.textContent = t('encryption.disabled');
@@ -168,17 +208,21 @@ export async function renderEncryption(
   view.append(field, encrypted.length === 0 ? confirmation : el('div'), actions, message);
 }
 
-export async function renderBackup(view: HTMLElement): Promise<void> {
+export function renderBackup(view: HTMLElement): void {
   view.append(el('h2', 'section', t('backup.title')));
   view.append(el('p', 'hint', t('backup.hint')));
 
   const message = el('p', 'hint');
-  const store = await readStore();
 
   const exportButton = button(t('backup.export'), () => {
-    if (hasPlainIdentities(store) && !window.confirm(t('backup.plainWarning'))) return;
-    download(t('backup.filename'), exportStore(store));
-    message.textContent = t('backup.exported');
+    void (async () => {
+      // The store as it is now: an application added in clear after this page was drawn must not slip past the
+      // warning, and the file must be the store the person is looking at.
+      const current = await readStore();
+      if (hasPlainIdentities(current) && !window.confirm(t('backup.plainWarning'))) return;
+      download(t('backup.filename'), exportStore(current));
+      message.textContent = t('backup.exported');
+    })();
   });
 
   const input = el('input');

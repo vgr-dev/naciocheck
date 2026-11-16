@@ -48,6 +48,7 @@ export const es = {
   'validation.numero': 'El número empieza por una letra y sigue con dígitos, por ejemplo R500001.',
   'validation.year': 'El año son cuatro dígitos, por ejemplo 2015.',
   'validation.birthDate': 'La fecha de nacimiento va como AAAA-MM-DD.',
+  'validation.birthDateFuture': 'La fecha de nacimiento no puede ser futura.',
 
   // Onboarding -------------------------------------------------------------------------------------------------
   'onboarding.subtitle':
@@ -138,6 +139,8 @@ export const es = {
   'encryption.tooShort': 'Usa una contraseña de al menos 8 caracteres.',
   'encryption.mismatch': 'Las dos contraseñas no coinciden.',
   'encryption.done': 'Datos cifrados. Guarda la contraseña en un sitio seguro.',
+  'encryption.nothingToEncrypt':
+    'Añade una solicitud antes de activar el cifrado: no hay nada que cifrar.',
   'encryption.decryptFailed': 'No se ha podido descifrar: ¿está bien la contraseña?',
   'encryption.disabled': 'Cifrado desactivado.',
   'encryption.unlocked': 'Desbloqueado hasta que cierres el navegador.',

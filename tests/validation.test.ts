@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { t } from '../src/core/i18n';
 import { isValidIdentity, validateIdentity } from '../src/core/validation';
 
 const VALID = {
@@ -7,6 +8,15 @@ const VALID = {
   year: '2015',
   birthDate: '1990-01-01',
 };
+
+/** The reader's own date as `AAAA-MM-DD`, moved by `offsetDays`: what the form says today and tomorrow. */
+function isoDate(offsetDays = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${String(date.getFullYear()).padStart(4, '0')}-${month}-${day}`;
+}
 
 describe('validateIdentity', () => {
   it('accepts a well-formed identity', () => {
@@ -39,6 +49,34 @@ describe('validateIdentity', () => {
   it('rejects a date that is not a real AAAA-MM-DD', () => {
     expect(validateIdentity({ ...VALID, birthDate: '01/01/1990' }).birthDate).toBeDefined();
     expect(validateIdentity({ ...VALID, birthDate: '1990-13-01' }).birthDate).toBeDefined();
+  });
+
+  it('rejects a day that its month does not have, which Date.parse would roll over', () => {
+    for (const birthDate of [
+      '2023-02-30',
+      '2023-02-31',
+      '2023-02-29',
+      '1990-04-31',
+      '1990-00-10',
+    ]) {
+      expect(validateIdentity({ ...VALID, birthDate }).birthDate, birthDate).toBe(
+        t('validation.birthDate'),
+      );
+    }
+  });
+
+  it('accepts the 29th of February of a leap year', () => {
+    expect(validateIdentity({ ...VALID, birthDate: '2024-02-29' }).birthDate).toBeUndefined();
+    expect(validateIdentity({ ...VALID, birthDate: '2000-02-29' }).birthDate).toBeUndefined();
+  });
+
+  it('accepts today and rejects anything later', () => {
+    expect(validateIdentity({ ...VALID, birthDate: isoDate() }).birthDate).toBeUndefined();
+    for (const birthDate of [isoDate(1), '2999-01-01']) {
+      expect(validateIdentity({ ...VALID, birthDate }).birthDate, birthDate).toBe(
+        t('validation.birthDateFuture'),
+      );
+    }
   });
 
   it('reports every bad field at once', () => {

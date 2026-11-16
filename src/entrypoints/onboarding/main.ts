@@ -51,12 +51,23 @@ async function main(): Promise<void> {
   );
 
   view.append(el('h2', 'section', t('onboarding.applicationTitle')));
-  view.append(await buildApplicationForm((label) => announce(view, t('options.saved', { label }))));
+  // The form is drawn before the section, but the section reads the store the form writes, so a save draws it
+  // again. Refreshing the section alone keeps the save announcement on screen.
+  let refreshEncryption = (): void => undefined;
+  view.append(
+    await buildApplicationForm((label) => {
+      announce(view, t('options.saved', { label }));
+      refreshEncryption();
+    }),
+  );
 
   // The optional step, with the same section as options: enabling it here encrypts what is already saved, and
   // the form above asks for the passphrase for anything added afterwards.
   view.append(el('p', 'hint', t('onboarding.encryptionOptional')));
-  await renderEncryption(view, () => redraw(view));
+  const encryption = await renderEncryption(view, () => redraw(view));
+  refreshEncryption = (): void => {
+    void encryption.refresh();
+  };
 
   view.append(el('h2', 'section', t('onboarding.reminderTitle')));
   view.append(el('p', 'hint', t('onboarding.reminderHint')));

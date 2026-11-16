@@ -61,10 +61,20 @@ export interface StoredCheck {
   readonly acknowledged: boolean;
 }
 
+export interface StoredSettings {
+  readonly reminders: {
+    readonly enabled: boolean;
+    readonly weekdays: readonly number[];
+    readonly time: string;
+  };
+  readonly language: string;
+}
+
 export interface StoredStore {
   readonly version: number;
   readonly applications: readonly StoredApplication[];
   readonly checks: readonly StoredCheck[];
+  readonly settings: StoredSettings;
 }
 
 /**
@@ -204,4 +214,55 @@ export async function readStoredStore(): Promise<StoredStore> {
     throw new Error('The extension has no store to read');
   }
   return store as StoredStore;
+}
+
+/**
+ * The store exactly as the extension wrote it, as text.
+ *
+ * What a test greps for a value that must not be there any more: a NIE or a birth date that encryption is
+ * supposed to have taken out of reach cannot be asserted on a parsed identity alone.
+ */
+export async function readStoredStoreText(): Promise<string> {
+  const context = await openExtensionPage('options.html');
+  const text = await context.execute(async () => {
+    const api = (globalThis as { chrome?: ExtensionApi }).chrome;
+    if (api === undefined) throw new Error('This page has no extension API: it is not one of ours');
+    const stored = await api.storage.local.get('naciocheck');
+    return JSON.stringify(stored.naciocheck ?? null);
+  });
+  return String(text);
+}
+
+/**
+ * Stores a language choice and reloads nothing: the caller refreshes the page it is on.
+ *
+ * For `qps`, the pseudo-RTL locale that exists only to prove the layout survives a right-to-left direction and
+ * that the options select deliberately does not offer.
+ */
+export async function setStoredLanguage(language: string): Promise<void> {
+  const context = await openExtensionPage('options.html');
+  await context.execute(async (value: string) => {
+    const api = (globalThis as { chrome?: ExtensionApi }).chrome;
+    if (api === undefined) throw new Error('This page has no extension API: it is not one of ours');
+    const stored = await api.storage.local.get('naciocheck');
+    const store = stored.naciocheck as { settings?: { language?: string } } | undefined;
+    if (store === undefined) throw new Error('The extension has no store to change');
+    await api.storage.local.set({
+      naciocheck: { ...store, settings: { ...store.settings, language: value } },
+    });
+  }, language);
+}
+
+/**
+ * The content script's fallback switch (`DEV_FLAG_KEY` in `src/entrypoints/content.ts`): with it on, the page
+ * keeps its whole form and the hint says the query has to be sent by hand. A test turns it off again.
+ */
+export async function setFallbackSwitch(enabled: boolean): Promise<void> {
+  const context = await openExtensionPage('options.html');
+  await context.execute(async (value: boolean) => {
+    const api = (globalThis as { chrome?: ExtensionApi }).chrome;
+    if (api === undefined) throw new Error('This page has no extension API: it is not one of ours');
+    if (value) await api.storage.local.set({ 'naciocheck:dev:no-captcha-only': true });
+    else await api.storage.local.remove('naciocheck:dev:no-captcha-only');
+  }, enabled);
 }

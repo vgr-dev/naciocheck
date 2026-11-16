@@ -44,6 +44,7 @@ export const en: Record<MessageKey, string> = {
     'The application number starts with a letter and continues with digits, for example R500001.',
   'validation.year': 'The year is four digits, for example 2015.',
   'validation.birthDate': 'The date of birth goes as YYYY-MM-DD.',
+  'validation.birthDateFuture': 'The date of birth cannot be in the future.',
 
   // Onboarding -------------------------------------------------------------------------------------------------
   'onboarding.subtitle':
@@ -134,6 +135,8 @@ export const en: Record<MessageKey, string> = {
   'encryption.tooShort': 'Use a passphrase of at least 8 characters.',
   'encryption.mismatch': 'The two passphrases do not match.',
   'encryption.done': 'Data encrypted. Keep the passphrase somewhere safe.',
+  'encryption.nothingToEncrypt':
+    'Add an application before turning encryption on: there is nothing to encrypt yet.',
   'encryption.decryptFailed': 'Could not decrypt it: is the passphrase right?',
   'encryption.disabled': 'Encryption turned off.',
   'encryption.unlocked': 'Unlocked until you close the browser.',

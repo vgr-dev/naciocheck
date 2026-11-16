@@ -10,7 +10,7 @@ import {
   type PlainIdentity,
 } from '../src/core/storage';
 import { buildApplicationForm } from '../src/entrypoints/shared/application-form';
-import { renderEncryption } from '../src/entrypoints/shared/encryption-sections';
+import { renderBackup, renderEncryption } from '../src/entrypoints/shared/encryption-sections';
 
 /**
  * The repair path of the encryption section: a store that ended up mixed — some applications encrypted, some
@@ -166,6 +166,37 @@ async function waitForApplications(count: number): Promise<void> {
   throw new Error(`The store never reached ${count} applications`);
 }
 
+/** Any button of a section, by the text a person reads on it. */
+function sectionButton(view: HTMLElement, label: string): HTMLButtonElement {
+  const found = [...view.querySelectorAll('button')].find(
+    (candidate) => candidate.textContent === label,
+  );
+  if (found === undefined) throw new Error(`The section offers no '${label}' action`);
+  return found;
+}
+
+/** Types the passphrase the section asks for; the repeat field is only there when encryption is off. */
+function fillPassphrase(view: HTMLElement, passphrase: string): void {
+  const field = view.querySelector<HTMLInputElement>('#passphrase');
+  if (field === null) throw new Error('The section asks for no passphrase');
+  field.value = passphrase;
+  const repeated = view.querySelector<HTMLInputElement>('#passphrase-repeat');
+  if (repeated !== null) repeated.value = passphrase;
+}
+
+/** The disable and enable actions are asynchronous and return nothing, so the store is polled. */
+async function waitForEveryIdentity(kind: 'plain' | 'encrypted'): Promise<void> {
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    const applications = await listApplications();
+    if (applications.length > 0 && applications.every((entry) => entry.identity.kind === kind)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`The store never turned every identity ${kind}`);
+}
+
 /**
  * The onboarding step the plan asks for: enabling encryption from the section has to change what the form does
  * afterwards, otherwise the user would believe the new application is protected and it would not be.
@@ -212,5 +243,142 @@ describe('enabling encryption from the section', () => {
     ]);
     const stored = applications[1]?.identity;
     expect(JSON.stringify(stored)).not.toContain(SECOND.nie);
+  });
+});
+
+/**
+ * The order a first run takes: the page is drawn, the application arrives, and only then is encryption turned
+ * on. The section used to keep the store it was drawn from and encrypt nothing while saying it had, so every
+ * action here has to act on the store as it is when the person presses the button.
+ */
+describe('when the store changes after the section was drawn', () => {
+  it('encrypts an application added after the section was drawn', async () => {
+    const view = document.createElement('div');
+    document.body.append(view);
+    await renderEncryption(view, () => Promise.resolve());
+
+    await addApplication({ label: 'Añadida después', identity: FIRST });
+
+    fillPassphrase(view, PASSPHRASE);
+    enableButton(view).click();
+    await waitForEveryIdentity('encrypted');
+
+    const applications = await listApplications();
+    expect(
+      applications.map((application) => [application.label, application.identity.kind]),
+    ).toEqual([['Añadida después', 'encrypted']]);
+  });
+
+  it('says there is nothing to encrypt instead of claiming it did', async () => {
+    const view = document.createElement('div');
+    document.body.append(view);
+    await renderEncryption(view, () => Promise.resolve());
+
+    fillPassphrase(view, PASSPHRASE);
+    enableButton(view).click();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    await expect(listApplications()).resolves.toEqual([]);
+    expect(view.textContent).toContain(t('encryption.nothingToEncrypt'));
+    expect(view.textContent).not.toContain(t('encryption.done'));
+  });
+
+  it('decrypts every application, including one added after the section was drawn', async () => {
+    const encrypted = await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS);
+    await addApplication({ label: 'Cifrada', identity: encrypted });
+
+    const view = document.createElement('div');
+    document.body.append(view);
+    await renderEncryption(view, () => Promise.resolve());
+
+    await addApplication({ label: 'Añadida después', identity: SECOND });
+
+    fillPassphrase(view, PASSPHRASE);
+    sectionButton(view, t('encryption.disable')).click();
+    await waitForEveryIdentity('plain');
+
+    const applications = await listApplications();
+    expect(applications.map((application) => application.identity.kind)).toEqual([
+      'plain',
+      'plain',
+    ]);
+  });
+
+  it('draws itself again from the store, so a new plain identity is offered for repair', async () => {
+    const encrypted = await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS);
+    await addApplication({ label: 'Cifrada', identity: encrypted });
+
+    const view = document.createElement('div');
+    document.body.append(view);
+    const section = await renderEncryption(view, () => Promise.resolve());
+    expect(view.textContent).not.toContain(t('encryption.repair'));
+
+    await addApplication({ label: 'Añadida después', identity: SECOND });
+    await section.refresh();
+
+    expect(view.textContent).toContain('Añadida después');
+    expect(
+      [...view.querySelectorAll('button')].map((candidate) => candidate.textContent),
+    ).toContain(t('encryption.repair'));
+  });
+});
+
+describe('the backup section', () => {
+  it('exports the store as it is now and warns about a plain identity added since', async () => {
+    const encrypted = await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS);
+    await addApplication({ label: 'Cifrada', identity: encrypted });
+
+    const view = document.createElement('div');
+    document.body.append(view);
+    renderBackup(view);
+
+    // jsdom has no download and no dialog: the question is answered here and the Blob is kept instead of being
+    // handed to an anchor. Captured through `Reflect` because the lint rules call an extracted method one that
+    // lost its object.
+    const original: Record<string, unknown> = {
+      confirm: Reflect.get(window, 'confirm'),
+      createObjectURL: Reflect.get(URL, 'createObjectURL'),
+      revokeObjectURL: Reflect.get(URL, 'revokeObjectURL'),
+      click: Reflect.get(HTMLAnchorElement.prototype, 'click'),
+    };
+    let asked = 0;
+    const files: Blob[] = [];
+    Reflect.set(window, 'confirm', () => {
+      asked += 1;
+      return true;
+    });
+    Reflect.set(URL, 'createObjectURL', (blob: Blob) => {
+      files.push(blob);
+      return 'blob:naciocheck-test';
+    });
+    Reflect.set(URL, 'revokeObjectURL', () => undefined);
+    Reflect.set(HTMLAnchorElement.prototype, 'click', () => undefined);
+
+    try {
+      // In clear, and added after the section was drawn: this is the identity the warning is for.
+      await addApplication({ label: 'Añadida después', identity: SECOND });
+      sectionButton(view, t('backup.export')).click();
+
+      const deadline = Date.now() + 5_000;
+      while (files.length === 0 && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    } finally {
+      Reflect.set(window, 'confirm', original.confirm);
+      Reflect.set(URL, 'createObjectURL', original.createObjectURL);
+      Reflect.set(URL, 'revokeObjectURL', original.revokeObjectURL);
+      Reflect.set(HTMLAnchorElement.prototype, 'click', original.click);
+    }
+
+    expect(asked).toBe(1);
+    const [file] = files;
+    if (file === undefined) throw new Error('The export produced no file');
+    const backup = JSON.parse(await file.text()) as {
+      store: { applications: Array<{ label: string }> };
+    };
+    expect(backup.store.applications.map((application) => application.label)).toEqual([
+      'Cifrada',
+      'Añadida después',
+    ]);
   });
 });
