@@ -29,6 +29,11 @@ export const es = {
   'form.labelName': 'Nombre para reconocerla',
   'form.labelPlaceholder': 'Mi solicitud',
   'form.submit': 'Guardar solicitud',
+  'form.saveChanges': 'Guardar cambios',
+  'form.revealIdentity': 'Mostrar los datos',
+  'form.editPassphrase': 'Contraseña para ver y cambiar los datos',
+  'form.editPassphraseHint':
+    'Los datos están cifrados: escribe la contraseña para verlos y cambiarlos. Si solo cambias el nombre, no hace falta.',
   'form.errorLabel': 'Ponle un nombre para reconocerla.',
   'form.passphrase': 'Contraseña del cifrado',
   'form.passphraseHint':
@@ -75,6 +80,9 @@ export const es = {
   'options.addAnother': 'Añadir otra',
   'options.addedOn': 'Añadida el {date}',
   'options.saved': 'Solicitud «{label}» guardada.',
+  'options.edit': 'Editar',
+  'options.cancelEdit': 'Cancelar',
+  'options.editedOn': 'Editada el {date}',
   'options.delete': 'Borrar',
   'options.reminders': 'Recordatorios',
   'options.remindersHint':

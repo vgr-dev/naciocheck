@@ -22,6 +22,7 @@ import {
   setLanguage,
   setReminder,
   type PlainIdentity,
+  updateApplication,
 } from '../src/core/storage';
 import { DEFAULT_REMINDER } from '../src/core/schedule';
 
@@ -78,6 +79,85 @@ describe('applications', () => {
     await deleteApplication(first);
 
     await expect(listApplications()).resolves.toMatchObject([{ id: second }]);
+  });
+});
+
+describe('updateApplication', () => {
+  /** One check on an application, so every case can prove the history survived. */
+  async function addCheckTo(applicationId: string): Promise<void> {
+    await appendCheck({
+      applicationId,
+      outcome: 'status',
+      statusKey: 'abierto-registrado',
+      raw: 'Abierto - Registrado.',
+      subStatus: null,
+    });
+  }
+
+  it('changes only the label and records the edit, identity and history untouched', async () => {
+    const application = await addApplication({ label: 'Antes', identity: IDENTITY });
+    await addCheckTo(application.id);
+
+    await updateApplication(application.id, { label: 'Después' });
+
+    const stored = await getApplication(application.id);
+    expect(stored).toMatchObject({ label: 'Después', identity: IDENTITY });
+    expect(stored?.editedAt).toEqual(expect.any(String));
+    expect(stored?.createdAt).toBe(application.createdAt);
+    await expect(listChecks(application.id)).resolves.toHaveLength(1);
+  });
+
+  it('changes only the identity and keeps the label and the history', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+    await addCheckTo(application.id);
+    const edited: PlainIdentity = { ...IDENTITY, nie: 'Y0000001Y' };
+
+    await updateApplication(application.id, { identity: edited });
+
+    const stored = await getApplication(application.id);
+    expect(stored).toMatchObject({ label: 'Primera', identity: edited });
+    expect(stored?.editedAt).toEqual(expect.any(String));
+    await expect(listChecks(application.id)).resolves.toHaveLength(1);
+  });
+
+  it('changes both at once', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+    const edited: PlainIdentity = { ...IDENTITY, year: '2016' };
+
+    await updateApplication(application.id, { label: 'Segunda', identity: edited });
+
+    await expect(getApplication(application.id)).resolves.toMatchObject({
+      label: 'Segunda',
+      identity: edited,
+    });
+  });
+
+  it('does nothing at all for an unknown id', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+
+    await updateApplication('no-existe', { label: 'Fantasma' });
+
+    const applications = await listApplications();
+    expect(applications).toEqual([application]);
+    expect(applications[0]?.editedAt).toBeUndefined();
+  });
+
+  it('keeps the edit date across further edits and leaves other applications alone', async () => {
+    const first = await addApplication({ label: 'Primera', identity: IDENTITY });
+    const second = await addApplication({ label: 'Segunda', identity: IDENTITY });
+
+    await updateApplication(first.id, { label: 'Primera bis' });
+    const editedOnce = await getApplication(first.id);
+    await updateApplication(second.id, { label: 'Segunda bis' });
+
+    const after = await getApplication(first.id);
+    expect(after?.editedAt).toEqual(expect.any(String));
+    expect(new Date(after?.editedAt ?? 0).getTime()).toBeGreaterThanOrEqual(
+      new Date(editedOnce?.editedAt ?? 0).getTime(),
+    );
+    await expect(getApplication(second.id)).resolves.not.toMatchObject({
+      label: 'Primera bis',
+    });
   });
 });
 

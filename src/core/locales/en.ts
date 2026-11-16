@@ -24,6 +24,11 @@ export const en: Record<MessageKey, string> = {
   'form.labelName': 'A name you will recognise it by',
   'form.labelPlaceholder': 'My application',
   'form.submit': 'Save application',
+  'form.saveChanges': 'Save changes',
+  'form.revealIdentity': 'Show the data',
+  'form.editPassphrase': 'Passphrase to see and change the data',
+  'form.editPassphraseHint':
+    'The data is encrypted: type the passphrase to see and change it. If you only rename it, you do not need it.',
   'form.errorLabel': 'Give it a name you will recognise it by.',
   'form.passphrase': 'Encryption passphrase',
   'form.passphraseHint':
@@ -71,6 +76,9 @@ export const en: Record<MessageKey, string> = {
   'options.addAnother': 'Add another',
   'options.addedOn': 'Added on {date}',
   'options.saved': 'Application “{label}” saved.',
+  'options.edit': 'Edit',
+  'options.cancelEdit': 'Cancel',
+  'options.editedOn': 'Edited on {date}',
   'options.delete': 'Delete',
   'options.reminders': 'Reminders',
   'options.remindersHint':

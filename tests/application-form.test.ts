@@ -1,7 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
-import { encryptIdentity } from '../src/core/crypto';
-import { addApplication, type PlainIdentity, readStore, type Store } from '../src/core/storage';
+import { decryptIdentity, encryptIdentity } from '../src/core/crypto';
+import { DEFAULT_LOCALE, setLocale, t } from '../src/core/i18n';
+import {
+  addApplication,
+  appendCheck,
+  type Application,
+  getApplication,
+  type PlainIdentity,
+  readStore,
+  type Store,
+} from '../src/core/storage';
 import { buildApplicationForm } from '../src/entrypoints/shared/application-form';
 
 /**
@@ -34,9 +43,17 @@ const NEW: PlainIdentity = {
 };
 
 /** Puts one encrypted application in the store, which is what turns encryption on for the form. */
-async function seedEncryptedApplication(): Promise<void> {
+async function seedEncryptedApplication(): Promise<Application> {
   const identity = await encryptIdentity(EXISTING, PASSPHRASE, FAST_ITERATIONS);
-  await addApplication({ label: 'La de antes', identity });
+  const application = await addApplication({ label: 'La de antes', identity });
+  await appendCheck({
+    applicationId: application.id,
+    outcome: 'status',
+    statusKey: 'abierto-registrado',
+    raw: 'Abierto - Registrado.',
+    subStatus: null,
+  });
+  return application;
 }
 
 function field(form: HTMLElement, id: string): HTMLInputElement | null {
@@ -90,6 +107,7 @@ function shownErrors(form: HTMLElement): string[] {
 }
 
 beforeEach(async () => {
+  setLocale(DEFAULT_LOCALE);
   await browser.storage.local.clear();
   document.body.replaceChildren();
 });
@@ -168,5 +186,128 @@ describe('the application form', () => {
     const store = await readStore();
     expect(store.applications).toHaveLength(1);
     expect(shownErrors(form).join(' ')).toMatch(/nombre/i);
+  });
+});
+
+/** The button that unlocks the identity fields of an encrypted application. */
+function revealButton(form: HTMLElement): HTMLButtonElement {
+  const found = [...form.querySelectorAll('button')].find(
+    (candidate) => candidate.textContent === t('form.revealIdentity'),
+  );
+  if (found === undefined) throw new Error('The edit form offers no way to reveal the identity');
+  return found;
+}
+
+/** Polls a condition that the form settles asynchronously. */
+async function waitFor(condition: () => boolean | Promise<boolean>, what: string): Promise<void> {
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    if (await condition()) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`Never happened: ${what}`);
+}
+
+async function waitForEdit(applicationId: string): Promise<Application> {
+  let stored: Application | null = null;
+  await waitFor(async () => {
+    stored = await getApplication(applicationId);
+    return stored?.editedAt !== undefined;
+  }, 'the edit to be saved');
+  if (stored === null) throw new Error('The application is gone');
+  return stored;
+}
+
+describe('the application form in edit mode', () => {
+  it('renames an encrypted application without the passphrase and keeps its identity and history', async () => {
+    const application = await seedEncryptedApplication();
+    const form = await buildApplicationForm(() => undefined, { application });
+    document.body.append(form);
+
+    // The identity is not shown at all until the passphrase opens it.
+    expect(field(form, 'field-nie')?.disabled).toBe(true);
+    expect(field(form, 'field-nie')?.value).toBe('');
+
+    fill(form, NEW, 'La de ahora');
+    submit(form);
+
+    const stored = await waitForEdit(application.id);
+    expect(stored.label).toBe('La de ahora');
+    expect(stored.identity).toEqual(application.identity);
+    await expect(readStore()).resolves.toMatchObject({
+      checks: [{ applicationId: application.id }],
+    });
+  });
+
+  it('keeps an encrypted identity locked when the passphrase is wrong', async () => {
+    const application = await seedEncryptedApplication();
+    const form = await buildApplicationForm(() => undefined, { application });
+    document.body.append(form);
+
+    const passphrase = field(form, 'field-passphrase');
+    if (passphrase === null) throw new Error('The edit form asks for no passphrase');
+    passphrase.value = 'no es la frase';
+    revealButton(form).click();
+
+    await waitFor(() => shownErrors(form).length > 0, 'the wrong-passphrase message');
+    expect(shownErrors(form).join(' ')).toMatch(/no se ha guardado/);
+    expect(field(form, 'field-nie')?.disabled).toBe(true);
+    expect(field(form, 'field-nie')?.value).toBe('');
+    await expect(getApplication(application.id)).resolves.toEqual(application);
+  });
+
+  it('shows the identity once the passphrase opens it, and re-encrypts the edit with it', async () => {
+    const application = await seedEncryptedApplication();
+    const form = await buildApplicationForm(() => undefined, { application });
+    document.body.append(form);
+
+    const passphrase = field(form, 'field-passphrase');
+    if (passphrase === null) throw new Error('The edit form asks for no passphrase');
+    passphrase.value = PASSPHRASE;
+    revealButton(form).click();
+
+    await waitFor(
+      () => field(form, 'field-nie')?.disabled === false,
+      'the identity to be revealed',
+    );
+    expect(field(form, 'field-nie')?.value).toBe(EXISTING.nie);
+
+    const nie = field(form, 'field-nie');
+    if (nie !== null) nie.value = 'Z0000002Z';
+    submit(form);
+
+    const stored = await waitForEdit(application.id);
+    expect(stored.identity.kind).toBe('encrypted');
+    if (stored.identity.kind !== 'encrypted') throw new Error('The identity was stored in clear');
+    await expect(decryptIdentity(stored.identity, PASSPHRASE)).resolves.toEqual({
+      ...EXISTING,
+      nie: 'Z0000002Z',
+    });
+  });
+
+  it('prefills and edits a plain application in the same form', async () => {
+    const application = await addApplication({ label: 'Sin cifrar', identity: EXISTING });
+    const form = await buildApplicationForm(() => undefined, { application });
+
+    expect(field(form, 'field-nie')?.value).toBe(EXISTING.nie);
+    expect(field(form, 'field-passphrase')).toBeNull();
+
+    fill(form, NEW, 'Renombrada');
+    submit(form);
+
+    const stored = await waitForEdit(application.id);
+    expect(stored).toMatchObject({ label: 'Renombrada', identity: NEW });
+  });
+
+  it('refuses the same invalid values as when adding', async () => {
+    const application = await addApplication({ label: 'Sin cifrar', identity: EXISTING });
+    const form = await buildApplicationForm(() => undefined, { application });
+
+    fill(form, { ...NEW, nie: 'nada' }, 'Renombrada');
+    submit(form);
+
+    await waitFor(() => shownErrors(form).length > 0, 'the NIE error');
+    expect(shownErrors(form).join(' ')).toMatch(/NIE/);
+    await expect(getApplication(application.id)).resolves.toEqual(application);
   });
 });

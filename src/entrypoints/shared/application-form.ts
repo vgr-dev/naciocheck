@@ -7,17 +7,19 @@ import {
   type Identity,
   type PlainIdentity,
   readStore,
+  updateApplication,
 } from '../../core/storage';
 import { type IdentityErrors, type IdentityField, validateIdentity } from '../../core/validation';
 import { button, el } from './ui';
 
 /**
- * The "add an application" form, shared by onboarding and options so the rules live in one place.
+ * The application form, shared by onboarding and options so the rules live in one place: it adds one and, with
+ * an application in its options, edits it.
  *
  * When the store is encrypted the form asks for the passphrase, checks it by opening an identity that is
- * already encrypted, and encrypts the new one with it. Nothing is written unless the passphrase opens the
+ * already encrypted, and encrypts what it writes with it. Nothing is written unless the passphrase opens the
  * store, and the passphrase is kept nowhere afterwards (D5): not in storage, not in a variable, not in the
- * field.
+ * field. An encrypted identity is only shown once the passphrase opens it; the label can be edited without it.
  */
 
 /** What the form can show an error for: the identity fields, the label, and the passphrase. */
@@ -56,12 +58,24 @@ function fields(): ReadonlyArray<{
   ];
 }
 
-export async function buildApplicationForm(onSaved: (label: string) => void): Promise<HTMLElement> {
+export interface ApplicationFormOptions {
+  /** The application being edited; absent when the form adds a new one. */
+  readonly application?: Application;
+}
+
+export async function buildApplicationForm(
+  onSaved: (label: string) => void,
+  options: ApplicationFormOptions = {},
+): Promise<HTMLElement> {
+  const editing = options.application ?? null;
   const form = el('form', 'fields');
   form.noValidate = true;
 
   // Read once at build time to decide whether to ask: the pages rebuild the form whenever the store changes.
-  const encryptedAtBuild = await encryptedIdentityInStore();
+  const encryptionOn = (await encryptedIdentityInStore()) !== null;
+  // An encrypted identity cannot be shown until the passphrase opens it. The label can always be edited, so the
+  // identity stays locked (and untouched) until then.
+  let identityEditable = editing === null || editing.identity.kind === 'plain';
 
   const inputs = new Map<FormField, HTMLInputElement>();
   const errors = new Map<FormField, HTMLElement>();
@@ -86,15 +100,6 @@ export async function buildApplicationForm(onSaved: (label: string) => void): Pr
     errors.set(key, error);
   };
 
-  addField('label', t('form.labelName'), 'text', t('form.labelPlaceholder'));
-  for (const field of fields()) addField(field.key, field.label, field.type, field.placeholder);
-  if (encryptedAtBuild !== null) {
-    addField('passphrase', t('form.passphrase'), 'password', '');
-    const passphrase = inputs.get('passphrase');
-    if (passphrase !== undefined) passphrase.autocomplete = 'current-password';
-    form.append(el('p', 'hint', t('form.passphraseHint')));
-  }
-
   const showErrors = (found: IdentityErrors, extra: Partial<Record<FormField, string>>): void => {
     for (const [key, input] of inputs) {
       const message = isIdentityField(key) ? (found[key] ?? null) : (extra[key] ?? null);
@@ -107,8 +112,75 @@ export async function buildApplicationForm(onSaved: (label: string) => void): Pr
     }
   };
 
+  const setIdentityValues = (identity: PlainIdentity): void => {
+    const values: ReadonlyArray<readonly [IdentityField, string]> = [
+      ['nie', identity.nie],
+      ['numero', identity.numero],
+      ['year', identity.year],
+      ['birthDate', identity.birthDate],
+    ];
+    for (const [key, value] of values) {
+      const input = inputs.get(key);
+      if (input !== undefined) input.value = value;
+    }
+  };
+
+  const setIdentityEnabled = (enabled: boolean): void => {
+    for (const key of IDENTITY_FIELDS) {
+      const input = inputs.get(key);
+      if (input !== undefined) input.disabled = !enabled;
+    }
+  };
+
+  addField('label', t('form.labelName'), 'text', t('form.labelPlaceholder'));
+  for (const field of fields()) addField(field.key, field.label, field.type, field.placeholder);
+
+  const labelInput = inputs.get('label');
+  if (labelInput !== undefined && editing !== null) labelInput.value = editing.label;
+  if (editing !== null && editing.identity.kind === 'plain') setIdentityValues(editing.identity);
+
+  if (encryptionOn) {
+    addField(
+      'passphrase',
+      editing === null ? t('form.passphrase') : t('form.editPassphrase'),
+      'password',
+      '',
+    );
+    const passphrase = inputs.get('passphrase');
+    if (passphrase !== undefined) passphrase.autocomplete = 'current-password';
+    form.append(
+      el('p', 'hint', editing === null ? t('form.passphraseHint') : t('form.editPassphraseHint')),
+    );
+  }
+
+  if (editing !== null && editing.identity.kind === 'encrypted') {
+    setIdentityEnabled(false);
+
+    const reveal = button(t('form.revealIdentity'), () => {
+      void (async () => {
+        const stored = editing.identity;
+        const passphrase = inputs.get('passphrase');
+        if (passphrase === undefined || stored.kind !== 'encrypted') return;
+        if (passphrase.value === '') {
+          showErrors({}, { passphrase: t('form.errorPassphrase') });
+          return;
+        }
+        try {
+          setIdentityValues(await decryptIdentity(stored, passphrase.value));
+        } catch {
+          showErrors({}, { passphrase: t('form.errorPassphraseWrong') });
+          return;
+        }
+        setIdentityEnabled(true);
+        identityEditable = true;
+        showErrors({}, {});
+      })();
+    });
+    form.append(reveal);
+  }
+
   const submit = button(
-    t('form.submit'),
+    t(editing === null ? 'form.submit' : 'form.saveChanges'),
     () => {
       void (async () => {
         const label = inputs.get('label')?.value.trim() ?? '';
@@ -120,26 +192,34 @@ export async function buildApplicationForm(onSaved: (label: string) => void): Pr
         };
         const plainIdentity: PlainIdentity = { kind: 'plain', ...identity };
 
-        const found = validateIdentity(identity);
         const extra: Partial<Record<FormField, string>> = {};
         if (label === '') extra.label = t('form.errorLabel');
+        // While the identity is locked only the label can change, so the identity fields are not validated.
+        const found = identityEditable ? validateIdentity(identity) : {};
 
-        // The store is read again here: a form built while encryption was off must not write plain once it is
-        // on. When encryption is on, nothing is stored unless the passphrase opens an existing identity.
-        const encryptedNow = await encryptedIdentityInStore();
-        const passphraseInput = inputs.get('passphrase');
-        let toStore: Identity = plainIdentity;
-        if (encryptedNow !== null) {
-          if (passphraseInput === undefined) {
-            extra.passphrase = t('form.reloadPassphrase');
-          } else if (passphraseInput.value === '') {
-            extra.passphrase = t('form.errorPassphrase');
-          } else {
-            try {
-              await decryptIdentity(encryptedNow, passphraseInput.value);
-              toStore = await encryptIdentity(plainIdentity, passphraseInput.value);
-            } catch {
-              extra.passphrase = t('form.errorPassphraseWrong');
+        let toStore: Identity | undefined;
+        if (identityEditable) {
+          toStore = plainIdentity;
+          // The store is read again here: a form built while encryption was off must not write plain once it
+          // is on. With encryption in force, nothing is written unless the passphrase opens the store.
+          const encryptedNow = await encryptedIdentityInStore();
+          const sample =
+            editing !== null && editing.identity.kind === 'encrypted'
+              ? editing.identity
+              : encryptedNow;
+          if (sample !== null) {
+            const passphrase = inputs.get('passphrase');
+            if (passphrase === undefined) {
+              extra.passphrase = t('form.reloadPassphrase');
+            } else if (passphrase.value === '') {
+              extra.passphrase = t('form.errorPassphrase');
+            } else {
+              try {
+                await decryptIdentity(sample, passphrase.value);
+                toStore = await encryptIdentity(plainIdentity, passphrase.value);
+              } catch {
+                extra.passphrase = t('form.errorPassphraseWrong');
+              }
             }
           }
         }
@@ -147,10 +227,18 @@ export async function buildApplicationForm(onSaved: (label: string) => void): Pr
         showErrors(found, extra);
         if (Object.keys(found).length > 0 || Object.keys(extra).length > 0) return;
 
-        await addApplication({ label, identity: toStore });
+        if (editing === null) {
+          await addApplication({ label, identity: toStore ?? plainIdentity });
+        } else if (toStore === undefined) {
+          await updateApplication(editing.id, { label });
+        } else {
+          await updateApplication(editing.id, { label, identity: toStore });
+        }
+
         form.reset();
         // `form.reset()` already emptied it; stated because D5 makes it a rule, not an implementation detail.
-        if (passphraseInput !== undefined) passphraseInput.value = '';
+        const passphrase = inputs.get('passphrase');
+        if (passphrase !== undefined) passphrase.value = '';
         onSaved(label);
       })();
     },

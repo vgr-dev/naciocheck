@@ -104,9 +104,19 @@ async function renderApplications(view: HTMLElement): Promise<void> {
 
 function buildApplicationCard(application: Application, view: HTMLElement): HTMLElement {
   const card = el('li', 'app-card');
-  card.append(el('p', 'label', application.label));
-  card.append(
-    el('p', 'meta', t('options.addedOn', { date: formatDate(application.createdAt) })),
+  renderCardSummary(card, application, view);
+  return card;
+}
+
+/** The card as it reads when it is not being edited; also what cancelling an edit puts back. */
+function renderCardSummary(card: HTMLElement, application: Application, view: HTMLElement): void {
+  card.replaceChildren(el('p', 'label', application.label));
+
+  const actions = el('div', 'row');
+  actions.append(
+    button(t('options.edit'), () => {
+      void openEditForm(card, application, view);
+    }),
     button(
       t('options.delete'),
       () => {
@@ -118,7 +128,31 @@ function buildApplicationCard(application: Application, view: HTMLElement): HTML
       'button danger',
     ),
   );
-  return card;
+
+  card.append(
+    el('p', 'meta', t('options.addedOn', { date: formatDate(application.createdAt) })),
+    actions,
+  );
+}
+
+/** The same form as "add", in place of the card, saving onto this application instead of adding one. */
+async function openEditForm(
+  card: HTMLElement,
+  application: Application,
+  view: HTMLElement,
+): Promise<void> {
+  const form = await buildApplicationForm(
+    () => {
+      void redraw(view);
+    },
+    { application },
+  );
+  form.append(
+    button(t('options.cancelEdit'), () => {
+      renderCardSummary(card, application, view);
+    }),
+  );
+  card.replaceChildren(form);
 }
 
 async function renderReminder(view: HTMLElement): Promise<void> {
@@ -223,6 +257,11 @@ async function renderHistory(view: HTMLElement): Promise<void> {
     const checks = await listChecks(application.id);
     const card = el('div', 'card');
     card.append(el('h3', '', application.label));
+    if (application.editedAt !== undefined) {
+      card.append(
+        el('p', 'meta', t('options.editedOn', { date: formatDate(application.editedAt) })),
+      );
+    }
     if (checks.length === 0) {
       card.append(el('p', '', t('options.noChecks')));
     } else {

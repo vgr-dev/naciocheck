@@ -37,6 +37,11 @@ export interface Application {
   label: string;
   identity: Identity;
   createdAt: string;
+  /**
+   * When the label or the identity was last edited. Absent until the first edit, so no migration is needed:
+   * the schema stays version 1 and an older snapshot simply has no marker (D6).
+   */
+  editedAt?: string;
 }
 
 /** `unknown` means the page was not recognised: not a status, but not a captcha or data error either. */
@@ -205,6 +210,33 @@ export async function updateIdentity(applicationId: string, identity: Identity):
   const store = await readStore();
   const applications = store.applications.map((application) =>
     application.id === applicationId ? { ...application, identity } : application,
+  );
+  await writeStore({ ...store, applications });
+}
+
+/**
+ * Edits an application's label and/or its identity, and records when (D6).
+ *
+ * The history is deliberately untouched: checks belong to the application by id, and editing what identifies it
+ * must not hide the checks already recorded. An id that is not in the store changes nothing at all.
+ */
+export async function updateApplication(
+  applicationId: string,
+  change: { label?: string; identity?: Identity },
+): Promise<void> {
+  const store = await readStore();
+  if (!store.applications.some((application) => application.id === applicationId)) return;
+
+  const editedAt = new Date().toISOString();
+  const applications = store.applications.map((application) =>
+    application.id === applicationId
+      ? {
+          ...application,
+          ...(change.label === undefined ? {} : { label: change.label }),
+          ...(change.identity === undefined ? {} : { identity: change.identity }),
+          editedAt,
+        }
+      : application,
   );
   await writeStore({ ...store, applications });
 }
