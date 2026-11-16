@@ -30,6 +30,13 @@ export const es = {
   'form.labelPlaceholder': 'Mi solicitud',
   'form.submit': 'Guardar solicitud',
   'form.errorLabel': 'Ponle un nombre para reconocerla.',
+  'form.passphrase': 'Contraseña del cifrado',
+  'form.passphraseHint':
+    'Es la misma con la que cifraste las demás solicitudes: sirve para guardar esta cifrada y no se queda en ningún sitio.',
+  'form.errorPassphrase': 'Escribe la contraseña del cifrado.',
+  'form.errorPassphraseWrong': 'Esa no es la contraseña: no se ha guardado nada.',
+  'form.reloadPassphrase':
+    'El cifrado ha cambiado mientras este formulario estaba abierto: recarga la página y vuelve a intentarlo.',
 
   // Field validation -------------------------------------------------------------------------------------------
   'validation.nie': 'Escribe el NIE con letra final, por ejemplo X1234567L.',
@@ -125,6 +132,10 @@ export const es = {
   'encryption.disabled': 'Cifrado desactivado.',
   'encryption.unlocked': 'Desbloqueado hasta que cierres el navegador.',
   'encryption.unlockFailed': 'No se ha podido desbloquear.',
+  'encryption.plainLeft': 'Quedan {count} solicitudes sin cifrar: {labels}.',
+  'encryption.repair': 'Cifrarlas ahora',
+  'encryption.repaired': 'Solicitudes cifradas.',
+  'encryption.repairFailed': 'No se han podido cifrar: ¿está bien la contraseña?',
 
   // Backup section (options) -----------------------------------------------------------------------------------
   'backup.title': 'Copia de seguridad',

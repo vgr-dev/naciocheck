@@ -20,6 +20,9 @@ export async function renderEncryption(
   const encrypted = store.applications.filter(
     (application) => application.identity.kind === 'encrypted',
   );
+  // A store can end up mixed: encryption was turned on, and an application added afterwards was written in
+  // clear. Listing them and offering to encrypt them is the repair for that state.
+  const plain = store.applications.filter((application) => application.identity.kind === 'plain');
 
   view.append(el('h2', 'section', t('encryption.title')));
   view.append(el('p', 'hint', t('encryption.hint')));
@@ -83,6 +86,49 @@ export async function renderEncryption(
       ),
     );
   } else {
+    if (plain.length > 0) {
+      view.append(
+        el(
+          'p',
+          'hint',
+          t('encryption.plainLeft', {
+            count: plain.length,
+            labels: plain.map((application) => application.label).join(', '),
+          }),
+        ),
+      );
+      actions.append(
+        button(
+          t('encryption.repair'),
+          () => {
+            void (async () => {
+              const sample = encrypted[0];
+              if (sample === undefined || sample.identity.kind !== 'encrypted') return;
+              try {
+                // The passphrase is checked against an identity that is already encrypted before anything is
+                // written, exactly like the form does.
+                await decryptIdentity(sample.identity, passphrase.value);
+                for (const application of plain) {
+                  if (application.identity.kind !== 'plain') continue;
+                  const encryptedIdentity = await encryptIdentity(
+                    application.identity,
+                    passphrase.value,
+                  );
+                  await updateIdentity(application.id, encryptedIdentity);
+                }
+              } catch {
+                message.textContent = t('encryption.repairFailed');
+                return;
+              }
+              message.textContent = t('encryption.repaired');
+              await redraw();
+            })();
+          },
+          'button primary',
+        ),
+      );
+    }
+
     actions.append(
       button(
         t('encryption.disable'),

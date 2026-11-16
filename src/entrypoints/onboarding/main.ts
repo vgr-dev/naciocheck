@@ -49,7 +49,7 @@ async function main(): Promise<void> {
   );
 
   view.append(el('h2', 'section', t('onboarding.applicationTitle')));
-  view.append(buildApplicationForm((label) => announce(view, t('options.saved', { label }))));
+  view.append(await buildApplicationForm((label) => announce(view, t('options.saved', { label }))));
 
   view.append(el('h2', 'section', t('onboarding.reminderTitle')));
   view.append(el('p', 'hint', t('onboarding.reminderHint')));

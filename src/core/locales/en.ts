@@ -25,6 +25,13 @@ export const en: Record<MessageKey, string> = {
   'form.labelPlaceholder': 'My application',
   'form.submit': 'Save application',
   'form.errorLabel': 'Give it a name you will recognise it by.',
+  'form.passphrase': 'Encryption passphrase',
+  'form.passphraseHint':
+    'The one you encrypted the other applications with: it encrypts this one and is not kept anywhere.',
+  'form.errorPassphrase': 'Type the encryption passphrase.',
+  'form.errorPassphraseWrong': 'That is not the passphrase: nothing was saved.',
+  'form.reloadPassphrase':
+    'The encryption changed while this form was open: reload the page and try again.',
 
   // Field validation -------------------------------------------------------------------------------------------
   'validation.nie': 'Write the NIE with its final letter, for example X1234567L.',
@@ -121,6 +128,10 @@ export const en: Record<MessageKey, string> = {
   'encryption.disabled': 'Encryption turned off.',
   'encryption.unlocked': 'Unlocked until you close the browser.',
   'encryption.unlockFailed': 'Could not unlock it.',
+  'encryption.plainLeft': '{count} application(s) are still unencrypted: {labels}.',
+  'encryption.repair': 'Encrypt them now',
+  'encryption.repaired': 'Applications encrypted.',
+  'encryption.repairFailed': 'Could not encrypt them: is the passphrase right?',
 
   // Backup section (options) -----------------------------------------------------------------------------------
   'backup.title': 'Backup',

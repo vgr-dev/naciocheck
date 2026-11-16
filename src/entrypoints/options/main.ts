@@ -99,7 +99,7 @@ async function renderApplications(view: HTMLElement): Promise<void> {
   }
 
   view.append(el('h2', 'section', t('options.addAnother')));
-  view.append(buildApplicationForm((label) => announce(view, t('options.saved', { label }))));
+  view.append(await buildApplicationForm((label) => announce(view, t('options.saved', { label }))));
 }
 
 function buildApplicationCard(application: Application, view: HTMLElement): HTMLElement {
