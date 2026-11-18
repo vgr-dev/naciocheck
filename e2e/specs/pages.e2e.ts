@@ -24,6 +24,7 @@ import {
   SECOND_APPLICATION,
   addApplicationThroughUi,
   enableEncryptionThroughUi,
+  lockExtensionSession,
   readStoredStore,
   readStoredStoreText,
   resetExtensionStorage,
@@ -333,6 +334,13 @@ describe('extension pages', () => {
           gap: links.length > 1 ? (links[1]?.left ?? 0) - (links[0]?.right ?? 0) : -1,
         };
       });
+      const underlines = await popup.execute(() =>
+        [...document.querySelectorAll('a.link')].map(
+          (anchor) => getComputedStyle(anchor).textDecorationLine,
+        ),
+      );
+      expect(underlines).toHaveLength(2);
+      for (const line of underlines) expect(line).toContain('underline');
       expect(layout.linkTops).toHaveLength(2);
       for (const top of layout.linkTops) expect(top).toBeGreaterThanOrEqual(layout.buttonBottom);
       for (const height of layout.linkHeights) expect(height).toBeGreaterThanOrEqual(44);
@@ -396,6 +404,111 @@ describe('extension pages', () => {
       );
       expect(borders.length).toBeGreaterThan(3);
       for (const colour of borders) expect(contrastOnWhite(colour)).toBeGreaterThanOrEqual(3);
+    });
+
+    /**
+     * The non-affiliation line is the one a person must not miss. It was 13 px grey text, a size under the page's own
+     * 14 px; it is now at least body size and set off from what is above it by a rule.
+     */
+    it('sets the disclaimer off at body size', async () => {
+      const page = await openExtensionContext('options.html');
+      await expect(page.$('p.disclaimer')).toBeExisting();
+      const style = await page.execute(() => {
+        const note = document.querySelector('p.disclaimer');
+        if (note === null) throw new Error('No disclaimer');
+        const own = getComputedStyle(note);
+        return { size: parseFloat(own.fontSize), rule: parseFloat(own.borderTopWidth) };
+      });
+      expect(style.size).toBeGreaterThanOrEqual(14);
+      expect(style.rule).toBeGreaterThanOrEqual(1);
+    });
+
+    /**
+     * Seven single letters, two of them T and two S, tell a screen reader nothing: each box carries the full name of
+     * its day, and the label shows it as a tooltip.
+     */
+    it('names every reminder day in full for assistive technology', async () => {
+      const page = await openExtensionContext('options.html');
+      await expect(page.$('.checks')).toBeExisting();
+      const names = await page.execute(() =>
+        [...document.querySelectorAll('.checks label')].map((label) => ({
+          title: label.getAttribute('title'),
+          aria: label.querySelector('input')?.getAttribute('aria-label') ?? null,
+        })),
+      );
+      expect(names).toHaveLength(7);
+      const spoken = names.map((entry) => entry.aria ?? '');
+      expect(new Set(spoken).size).toBe(7);
+      for (const entry of names) {
+        expect(entry.aria ?? '').not.toBe('');
+        expect(entry.title).toBe(entry.aria);
+      }
+      expect(spoken[0]).toBe('lunes');
+    });
+
+    /** The link under "Historial" was bare text with no margin, a few pixels under the heading. */
+    it('puts the link to the status guide in a paragraph of its own under the history heading', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const page = await openExtensionContext('options.html');
+      await expect(page.$('.app-card')).toBeExisting();
+      const parent = await page.execute(() => {
+        const anchor = [...document.querySelectorAll('a.link')].find((candidate) =>
+          (candidate.textContent ?? '').includes('Qué significa'),
+        );
+        return anchor === undefined ? null : (anchor.parentElement?.className ?? null);
+      });
+      expect(parent).toBe('hint');
+    });
+
+    /** A submit button in a form stretched to the form's width while the section buttons did not: one rule, natural width. */
+    it('keeps every button at its natural width, in forms too', async () => {
+      const page = await openExtensionContext('options.html');
+      await expect(page.$('h1.title')).toBeExisting();
+      const widths = await page.execute(() =>
+        [...document.querySelectorAll('form.fields > button')].map((control) => ({
+          label: control.textContent,
+          button: control.getBoundingClientRect().width,
+          form: (control.parentElement ?? control).getBoundingClientRect().width,
+        })),
+      );
+      expect(widths.length).toBeGreaterThan(0);
+      for (const entry of widths) expect(entry.button).toBeLessThan(entry.form - 100);
+    });
+
+    /** Unlock stretched edge to edge while options and onboarding sit in a column: one product, one page frame. */
+    it('draws the unlock page in the same column as the other pages', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      await enableEncryptionThroughUi(PASSPHRASE);
+      await lockExtensionSession();
+
+      const unlock = await openExtensionContext('unlock.html');
+      await expect(unlock.$('#passphrase')).toBeExisting();
+      const column = await unlock.execute(() => {
+        const app = document.getElementById('app');
+        if (app === null) throw new Error('Missing #app');
+        const own = getComputedStyle(app);
+        return { maxWidth: own.maxWidth, centred: own.marginLeft === own.marginRight };
+      });
+      expect(column.maxWidth).not.toBe('none');
+      expect(column.centred).toBe(true);
+    });
+
+    /**
+     * The current status was translated and the rest were the site's Spanish: "Open - In progress" over a history of
+     * "Abierto - Registrado.". Every place that names a status reads it through the catalogue in English and keeps the
+     * site's own text in Spanish (13.9).
+     */
+    it('names the statuses in English on every page when the language is English', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      await seedPreviousCheck(FIRST_APPLICATION.label, 'Abierto - Registrado.', null);
+      await setStoredLanguage('en');
+
+      const options = await openExtensionContext('options.html');
+      await expect(options.$('ul.history li')).toHaveText(/Open - Registered/);
+      expect(await options.$('ul.history li').getText()).not.toContain('Abierto');
+
+      const popup = await openExtensionContext('popup.html');
+      await expect(popup.$('.app-card .status')).toHaveText('Open - Registered');
     });
 
     it('names every bad field and writes nothing', async () => {
@@ -615,7 +728,13 @@ describe('extension pages', () => {
 
     it('renders every section and keeps its sources as plain links', async () => {
       const page = await openExtensionContext('statuses.html');
-      await expect(page.$('#app h1.title')).toHaveText('Qué significa cada estado');
+      // Source links are underlined here as they are on the result page: a link is not told apart by colour alone.
+      const underline = await page.execute(() => {
+        const anchor = document.querySelector('#app a.link');
+        return anchor === null ? null : getComputedStyle(anchor).textDecorationLine;
+      });
+      expect(underline).toContain('underline');
+      await expect(page.$('#app h1.title')).toHaveText('NacioCheck · Qué significa cada estado');
 
       const sections: string[] = [];
       for (const heading of await page.$$('#app h2.section')) {
@@ -706,6 +825,16 @@ describe('extension pages', () => {
       expect(style.size).toBe(style.pageSize);
       expect(style.color).toBe(style.pageColor);
       expect(style.marginTop).toBe('0px');
+
+      // The non-affiliation line is at least 14 px and set off by a rule (13.7).
+      const note = await result.execute(() => {
+        const disclaimer = document.querySelector('p.disclaimer');
+        if (disclaimer === null) throw new Error('No disclaimer');
+        const own = getComputedStyle(disclaimer);
+        return { size: parseFloat(own.fontSize), rule: parseFloat(own.borderTopWidth) };
+      });
+      expect(note.size).toBeGreaterThanOrEqual(14);
+      expect(note.rule).toBeGreaterThanOrEqual(1);
     });
 
     it('retries a failed check and finishes the run', async () => {

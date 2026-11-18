@@ -179,7 +179,7 @@ export const en: Record<MessageKey, string> = {
     'Informational only, not legal advice. The official decision arrives through DEHú. NacioCheck is not an official Ministry of Justice tool.',
 
   // Status guide -----------------------------------------------------------------------------------------------
-  'statuses.title': 'What each status means',
+  'statuses.title': 'NacioCheck · What each status means',
   'statuses.whatYouCanDo': 'What you can do: {text}',
   'statuses.noOfficialDefinition': 'No official definition: the sources disagree.',
   'statuses.mainPathTitle': 'The usual path',

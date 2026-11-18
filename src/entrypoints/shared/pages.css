@@ -152,6 +152,11 @@ form.fields {
   margin-block: 12px;
 }
 
+/* A grid stretches its children: a submit button would run the width of the form, unlike the buttons elsewhere. */
+form.fields > button {
+  justify-self: start;
+}
+
 /*
  * Outside a `form.fields` grid (which spaces its own children) a field, a row of buttons or the list of
  * applications is a plain block: without this a button sits flush against the input or the card above it.
@@ -220,13 +225,14 @@ ul.apps + .row {
   margin: 0;
 }
 
+/* Underlined: the status text beside a link is teal too, so colour alone does not say what is a link. */
 a.link {
   color: var(--teal-700);
-  text-decoration: none;
+  text-decoration: underline;
 }
 
 a.link:hover {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 
 /* A row of links on its own: apart from each other, and each one as tall as a tap target. */
@@ -269,8 +275,11 @@ ul.history {
   font-size: 0.8125rem;
 }
 
+/* The non-affiliation line: at least body size, and set off from what is above it. */
 .disclaimer {
   margin-block-start: 20px;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--gray-200);
   color: var(--gray-600);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }

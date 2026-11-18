@@ -1,5 +1,5 @@
 import { evaluateChange } from '../../core/changes';
-import { t } from '../../core/i18n';
+import { currentLocale, t } from '../../core/i18n';
 import {
   type Application,
   type Check,
@@ -7,6 +7,7 @@ import {
   listApplications,
   listChecks,
 } from '../../core/storage';
+import { displayStatus } from '../../core/statuses';
 import { initPageLocale } from '../shared/locale';
 import { button, el, formatDate, link, openPage, root } from '../shared/ui';
 
@@ -82,7 +83,9 @@ async function buildCard(application: Application): Promise<HTMLElement> {
     const status = el(
       'p',
       'status',
-      latest.outcome === 'status' ? latest.raw : t('popup.lastError'),
+      latest.outcome === 'status'
+        ? displayStatus(latest.raw, currentLocale().content)
+        : t('popup.lastError'),
     );
     if (change.kind === 'changed' && !latest.acknowledged) {
       status.append(el('span', 'marker', t('popup.changed')));

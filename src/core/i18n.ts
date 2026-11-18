@@ -153,9 +153,19 @@ export function formatDate(iso: string | null): string {
  * including ones added later, gets its own letters.
  */
 export function weekdayNarrow(day: number): string {
+  return weekdayName(day, 'narrow');
+}
+
+/**
+ * The full name of a weekday, 1 = Monday …. The single letters are ambiguous (two Ts and two Ss in English), so
+ * the reminder days also carry this name, for screen readers and as a tooltip.
+ */
+export function weekdayLong(day: number): string {
+  return weekdayName(day, 'long');
+}
+
+function weekdayName(day: number, style: 'narrow' | 'long'): string {
   // 2024-01-01 was a Monday, so the anchor keeps the ISO numbering in any locale.
   const anchor = new Date(Date.UTC(2024, 0, 1 + (day - 1)));
-  return new Intl.DateTimeFormat(active.intl, { weekday: 'narrow', timeZone: 'UTC' }).format(
-    anchor,
-  );
+  return new Intl.DateTimeFormat(active.intl, { weekday: style, timeZone: 'UTC' }).format(anchor);
 }

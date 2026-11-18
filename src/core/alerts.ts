@@ -2,7 +2,13 @@ import type { AnomalyNote } from './anomaly';
 import type { Change } from './changes';
 import { translate } from './i18n';
 import { classifyTransition, resolvePathState, type ResolvedPathState } from './paths';
-import { type StatusEntry, type StatusSource, findStatus, findSubStatus } from './statuses';
+import {
+  type StatusEntry,
+  type StatusSource,
+  displayStatus,
+  findStatus,
+  findSubStatus,
+} from './statuses';
 import type { Check } from './storage';
 
 /**
@@ -166,7 +172,8 @@ export function buildResultView(input: {
 function previousSummary(change: Change, locale: Locale): { text: string; at: string } | null {
   const previous = change.kind === 'changed' ? change.previous : null;
   if (previous === null) return null;
-  return { text: translate(locale, 'alert.before', { status: previous.raw }), at: previous.at };
+  const status = displayStatus(previous.raw, locale);
+  return { text: translate(locale, 'alert.before', { status }), at: previous.at };
 }
 
 function versionLine(change: Change, locale: Locale): string {

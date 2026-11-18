@@ -13,6 +13,7 @@ import {
   setLocale,
   t,
   translate,
+  weekdayLong,
   weekdayNarrow,
 } from '../src/core/i18n';
 import { en } from '../src/core/locales/en';
@@ -137,6 +138,27 @@ describe('t', () => {
 
     setLocale('en');
     expect(weekdayNarrow(1)).toBe('M');
+  });
+
+  it('gives every weekday a full name, because the single letters repeat', () => {
+    setLocale('en');
+    const names = [1, 2, 3, 4, 5, 6, 7].map(weekdayLong);
+    expect(names).toEqual([
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ]);
+    // In English the narrow letters collide; the long names never do.
+    expect(new Set([1, 2, 3, 4, 5, 6, 7].map(weekdayNarrow)).size).toBeLessThan(7);
+    expect(new Set(names).size).toBe(7);
+
+    setLocale('es');
+    expect(weekdayLong(1)).toBe('lunes');
+    expect(weekdayLong(7)).toBe('domingo');
   });
 
   it('formats a stored timestamp in the active locale', () => {

@@ -173,6 +173,31 @@ describe('buildResultView — status', () => {
     expect(view.observedMeaning).toContain('first step of the observed sequence');
   });
 
+  it('names the previous status in the language of the view', () => {
+    const spanish = buildResultView({ label: 'Primera', change: changeOf('changed') });
+    const english = buildResultView({ label: 'First', change: changeOf('changed'), locale: 'en' });
+
+    // Spanish keeps the text the site printed; English reads it through the catalogue, like the current status.
+    expect(spanish.previous?.text).toBe('Antes: Abierto - Registrado.');
+    expect(english.previous?.text).toBe('Before: Open - Registered');
+    expect(english.status?.title).toBe('Open - In progress');
+  });
+
+  it('keeps the previous status as the site printed it when the catalogue does not know it', () => {
+    const odd = check({
+      id: 'check-0',
+      raw: 'Un estado que nadie ha visto.',
+      statusKey: 'unknown',
+    });
+    const view = buildResultView({
+      label: 'First',
+      change: changeOf('changed', { previous: odd }),
+      locale: 'en',
+    });
+
+    expect(view.previous?.text).toBe('Before: Un estado que nadie ha visto.');
+  });
+
   it('gives the same sub-status text a different meaning for T4 and for K', () => {
     const sentence = 'Su expediente se encuentra en calificación.';
     const T4 = check({

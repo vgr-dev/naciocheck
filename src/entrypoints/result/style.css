@@ -6,6 +6,7 @@
   --red-600: #dc2626;
   --gray-900: #0f172a;
   --gray-600: #4b5563;
+  --gray-200: #e2e8f0;
 }
 
 * {
@@ -69,8 +70,10 @@ body {
 }
 
 .disclaimer {
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--gray-200);
   color: var(--gray-600);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .anomaly {

@@ -183,7 +183,7 @@ export const es = {
     'Información orientativa, no es asesoramiento jurídico. La resolución oficial llega por DEHú. NacioCheck no es una herramienta oficial del Ministerio de Justicia.',
 
   // Status guide -----------------------------------------------------------------------------------------------
-  'statuses.title': 'Qué significa cada estado',
+  'statuses.title': 'NacioCheck · Qué significa cada estado',
   'statuses.whatYouCanDo': 'Qué puedes hacer: {text}',
   'statuses.noOfficialDefinition': 'Sin definición oficial: las fuentes no coinciden.',
   'statuses.mainPathTitle': 'El camino habitual',

@@ -2,12 +2,15 @@ import {
   type LanguageSetting,
   LOCALES,
   SELECTABLE_LOCALES,
+  currentLocale,
   isLanguageSetting,
   resolveLocaleCode,
   t,
+  weekdayLong,
   weekdayNarrow,
 } from '../../core/i18n';
 import { REMINDER_PRESETS, type ReminderConfig } from '../../core/schedule';
+import { displayStatus } from '../../core/statuses';
 import {
   type Application,
   deleteApplication,
@@ -190,6 +193,10 @@ async function renderReminder(view: HTMLElement): Promise<void> {
     input.type = 'checkbox';
     input.checked = reminders.weekdays.includes(day);
     dayInputs.set(day, input);
+    // The letter alone is ambiguous: the full name is the box's accessible name and the label's tooltip.
+    const fullName = weekdayLong(day);
+    input.setAttribute('aria-label', fullName);
+    wrapper.title = fullName;
     wrapper.append(input, document.createTextNode(` ${weekdayNarrow(day)}`));
     days.append(wrapper);
   }
@@ -259,11 +266,13 @@ async function renderHistory(view: HTMLElement): Promise<void> {
   if (applications.length === 0) return;
 
   view.append(el('h2', 'section', t('options.history')));
-  view.append(
+  const guide = el('p', 'hint');
+  guide.append(
     link(t('options.whatMeans'), () => {
       openPage('/statuses.html');
     }),
   );
+  view.append(guide);
 
   for (const application of applications) {
     const checks = await listChecks(application.id);
@@ -284,7 +293,9 @@ async function renderHistory(view: HTMLElement): Promise<void> {
             'li',
             '',
             `${formatDate(check.at)} · ${
-              check.outcome === 'status' ? check.raw : t('common.errorPrefix', { text: check.raw })
+              check.outcome === 'status'
+                ? displayStatus(check.raw, currentLocale().content)
+                : t('common.errorPrefix', { text: check.raw })
             }`,
           ),
         );
