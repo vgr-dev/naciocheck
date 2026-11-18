@@ -20,9 +20,8 @@ public/icon/
 # End-to-end artefacts: actual screenshots, visual diffs, logs, downloaded HTML
 e2e/.artifacts/
 
-# Plans are local working documents, never committed (folder skeleton kept via .gitkeep)
-.ai/plans/**
-.ai/drafts/**
-.ai/explorations/**
-!.ai/plans/*/
-!.ai/plans/*/.gitkeep
+# Agent tooling: local-only state
+.claude/agent-memory-local/
+.kilo/agent-manager.json
+.kilo/worktrees/
+.kilocode/agent-manager.json

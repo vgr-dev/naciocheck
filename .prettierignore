@@ -1,7 +1,5 @@
-# Local plans, drafts and the tool-specific agent wrappers are hand-written: never reformatted.
-.ai/
+# Tool command files are hand-written: never reformatted.
 .claude/
-.github/
 
 # Brand sources are the architect's and are formatted when the store assets are produced (Phase 10).
 brand/
