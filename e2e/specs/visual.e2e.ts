@@ -53,16 +53,22 @@ const LOCALES = ['es', 'en'] as const;
 
 type Locale = (typeof LOCALES)[number];
 
-type Viewport = '1280x800' | '412x915' | '380x600';
+type Viewport = '1280x800' | '412x915' | '380x600' | 'full1280' | 'full412';
 
 const VIEWPORTS: Record<Viewport, { width: number; height: number }> = {
   '1280x800': { width: 1280, height: 800 },
   '412x915': { width: 412, height: 915 },
   '380x600': { width: 380, height: 600 },
+  // The window of a full-page image: the whole page is scrolled and stitched at this width.
+  full1280: { width: 1280, height: 800 },
+  full412: { width: 412, height: 915 },
 };
 
 /** The two viewports every page is taken at: a desktop window and a phone. */
 const EVERYWHERE: readonly Viewport[] = ['1280x800', '412x915'];
+
+/** The two long pages are also photographed whole, because their second half never fits a screen. */
+const WHOLE_PAGE: readonly Viewport[] = ['full1280', 'full412'];
 
 /** The popup also gets the width Chrome opens it at. */
 const WITH_POPUP_WIDTH: readonly Viewport[] = ['1280x800', '380x600', '412x915'];
@@ -98,7 +104,7 @@ async function shoot(
 ): Promise<void> {
   await browser.setViewport(VIEWPORTS[viewport]);
   const tag = screenTag(page, state, locale, viewport);
-  const shot = await compareScreen(tag);
+  const shot = await compareScreen(tag, viewport.startsWith('full'));
   comparisons.push({ name: `${tag}.png`, mismatch: shot.misMatchPercentage });
   expect(shot.misMatchPercentage).toBeLessThanOrEqual(MISMATCH_TOLERANCE);
 }
@@ -115,6 +121,11 @@ async function capturePage(
     await expect($('#app')).toBeExisting();
     await shoot(page, state, locale, viewport);
   }
+}
+
+/** Opens one of the extension's own pages and compares all of it, at both widths. */
+async function captureWholePage(page: string, state: string, locale: Locale): Promise<void> {
+  await capturePage(page, state, locale, WHOLE_PAGE);
 }
 
 /** Runs `capture` once per locale, with the page in that language. */
@@ -182,6 +193,7 @@ describe('screenshots', () => {
     await resetExtensionStorage();
     await perLocale(async (locale) => {
       await capturePage('onboarding', 'empty', locale, EVERYWHERE);
+      await captureWholePage('onboarding', 'empty', locale);
     });
   });
 
@@ -250,6 +262,7 @@ describe('screenshots', () => {
     await freezeStoredDates();
     await perLocale(async (locale) => {
       await capturePage('options', 'several', locale, EVERYWHERE);
+      await captureWholePage('options', 'several', locale);
     });
   });
 
@@ -415,14 +428,16 @@ describe('screenshots', () => {
       'Written by `e2e/specs/visual.e2e.ts` after every run. Baselines are tracked by git (D3): an image that',
       'changes is a change to review, so its new version belongs in the history next to the code that made it.',
       '',
-      `- **Images**: ${comparisons.length} — 2 locales × 40: onboarding 2 states × 2 viewports (4), popup 4 × 3 (12),`,
-      '  options 4 × 2 (8), statuses 1 × 2 (2), result 3 × 2 (6), unlock 1 × 2 (2), the fake form 3 overlays × 2 (6).',
-      '- **Viewports**: desktop 1280×800, phone 412×915, popup 380×600 (popup only).',
+      `- **Images**: ${comparisons.length} — 2 locales × 44: onboarding 2 states × 2 viewports (4), popup 4 × 3 (12),`,
+      '  options 4 × 2 (8), statuses 1 × 2 (2), result 3 × 2 (6), unlock 1 × 2 (2), the fake form 3 overlays × 2 (6),',
+      '  and the two long pages whole: onboarding (empty) and options (two applications) × 2 widths (4).',
+      '- **Viewports**: desktop 1280×800, phone 412×915, popup 380×600 (popup only); `full1280` and `full412` are the',
+      '  whole page, scrolled and stitched, at those two widths.',
       `- **Tolerance**: ${MISMATCH_TOLERANCE} % of the pixels; above it the spec fails and a diff is written next`,
       '  to the actual image.',
       '- **Fonts** (recorded 2026-11-16): `fc-list | wc -l` → 835; `fc-match system-ui` → DejaVu Sans Book;',
       '  `fc-match sans-serif` → DejaVu Sans Book. A machine with other fonts renders other pixels.',
-      '- **Browser**: Chrome for Testing 157.0.8103.78, headless (`--headless=new`).',
+      `- **Browser**: Chrome for Testing ${String(browser.capabilities.browserVersion)}, headless (\`--headless=new\`), with reduced motion forced, so the animated logo is at rest.`,
       `- **Files**: baselines in \`e2e/baselines/${VISUAL_BROWSER}/\`; what the run saw in`,
       `  \`e2e/.artifacts/screenshots/actual/${VISUAL_BROWSER}/\` and its diffs in`,
       `  \`e2e/.artifacts/screenshots/diff/${VISUAL_BROWSER}/\`.`,

@@ -176,9 +176,10 @@ certificate (`tls/`) and the files the backup spec exports (`backup/`).
 #### Visual baselines
 
 The `visual` spec photographs every extension page in its main states, in Spanish and English, at desktop
-(1280×800), phone (412×915) and popup (380×600) sizes: 80 images. The approved ones are **tracked** in
-[`e2e/baselines/`](e2e/baselines), because an image that changes is a change to review. A run fails when more than
-0.1 % of an image's pixels differ.
+(1280×800), phone (412×915) and popup (380×600) sizes, and the two long pages, onboarding and options, whole at
+both widths: 88 images. The approved ones are **tracked** in [`e2e/baselines/`](e2e/baselines), because an image
+that changes is a change to review. A run fails when more than 0.01 % of an image's pixels differ. Chrome runs with
+reduced motion forced, so the animated logo is at rest and two runs on one machine agree to the pixel.
 
 Fonts decide pixels. The baselines were taken on Ubuntu 22.04 in WSL2, where `fc-match system-ui` answers DejaVu
 Sans (package `fonts-dejavu-core`). On a machine that answers another font the visual spec fails for reasons that
@@ -187,7 +188,7 @@ have nothing to do with the code; check with `fc-match system-ui` before trustin
 After a deliberate UI change:
 
 ```sh
-npm run test:e2e:update-baselines   # deletes e2e/baselines/ and writes all 80 again
+npm run test:e2e:update-baselines   # deletes e2e/baselines/ and writes all 88 again
 git diff --stat e2e/baselines       # review what changed, then commit it with the code that caused it
 ```
 

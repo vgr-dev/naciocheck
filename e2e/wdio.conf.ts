@@ -74,6 +74,9 @@ const CHROME_EXTENSION_ARGS = [
   `--host-resolver-rules=${HOST_RULES}`,
   '--no-first-run',
   '--no-default-browser-check',
+  // The logo on two of the pages is an animated SVG that honours reduced motion: without this a screenshot catches
+  // it at some frame of its draw-in, and the baselines differ from run to run.
+  '--force-prefers-reduced-motion',
   ...(headed ? [] : ['--headless=new']),
 ];
 

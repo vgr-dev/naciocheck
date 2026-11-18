@@ -194,6 +194,20 @@ describe('extension pages', () => {
     expect(['es', 'en']).toContain(lang);
   });
 
+  /**
+   * The logo on the onboarding and result pages is an animated SVG that draws itself in, and a screenshot taken at
+   * any frame of it is a different image each run (a notch in the ring, a half-drawn check). The browser runs with
+   * reduced motion, which the SVG honours by showing the finished icon at once.
+   */
+  it('runs with reduced motion, so the animated logo is photographed at rest', async () => {
+    const page = await openExtensionContext('statuses.html');
+    await expect(page.$('#app h1.title')).toBeExisting();
+    const reduced = await page.execute(
+      () => globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    );
+    expect(reduced).toBe(true);
+  });
+
   describe('onboarding', () => {
     beforeEach(async () => {
       await resetExtensionStorage();

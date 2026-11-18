@@ -49,10 +49,11 @@ export function createVisualFolders(): void {
 /**
  * How much of an image may differ before it counts as a change, in percent.
  *
- * `0.1 %` is the starting point the plan asked for: enough for sub-pixel text rendering, far too little to
- * hide a moved element, a colour or a wrapped word.
+ * `0.01 %` (about 100 pixels of a desktop image). It began at `0.1 %`, which let a popup that had lost its width
+ * through (the change moved a few card borders, 0.09 %). With the animated logo held at rest two consecutive runs
+ * agree to the pixel, so every difference above this is a change somebody made.
  */
-export const MISMATCH_TOLERANCE = 0.1;
+export const MISMATCH_TOLERANCE = 0.01;
 
 /** True when the run is regenerating baselines instead of comparing against them. */
 export function updatingBaselines(): boolean {
@@ -93,13 +94,17 @@ export interface ScreenComparison {
 }
 
 /**
- * Compares the viewport that is current in the session against the baseline of `tag`.
+ * Compares the viewport that is current in the session against the baseline of `tag`, or the whole page,
+ * scrolled and stitched, when `fullPage` is set.
  *
  * The service answers with a percentage when it is not asked for everything, and with the whole result when it
  * is; this keeps the second shape and fails loudly if the service ever changes it.
  */
-export async function compareScreen(tag: string): Promise<ScreenComparison> {
-  const result = await browser.checkScreen(tag, { returnAllCompareData: true });
+export async function compareScreen(tag: string, fullPage = false): Promise<ScreenComparison> {
+  const options = { returnAllCompareData: true };
+  const result = fullPage
+    ? await browser.checkFullPageScreen(tag, options)
+    : await browser.checkScreen(tag, options);
   if (typeof result !== 'object' || result === null) {
     throw new Error(`The comparison of ${tag} answered with a bare number, not a result`);
   }

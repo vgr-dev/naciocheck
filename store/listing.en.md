@@ -69,8 +69,8 @@ fill in the form and read the result. The backup is a file you choose where to k
 
 ## The brand tagline
 
-Spanish: _Tu expediente de nacionalidad, al día._ — English: _Your nationality file, kept in check_ (the
-proposal in `brand/README.md`; 10.4 records it as the final one).
+Spanish: _Tu expediente de nacionalidad, al día._ — English: _Your nationality application, up to date._
+(decided on 2026-11-13; `brand/README.md` is the source of truth).
 
 ## How it is measured
 
