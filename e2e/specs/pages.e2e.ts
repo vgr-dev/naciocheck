@@ -58,6 +58,21 @@ function resultPage(values: Record<string, string> = {}): ReturnType<typeof capt
   return capturedPage('result-format.htm', { ...RESULT_VALUES, ...values });
 }
 
+/**
+ * WCAG contrast of an `rgb(r, g, b)` colour on white (relative luminance, WCAG 2.x). The page reports the colour it
+ * computed; the ratio is worked out here so the number in a failure message is the one a reviewer can check.
+ */
+function contrastOnWhite(rgb: string): number {
+  const channels = (rgb.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
+  if (channels.length < 3) throw new Error(`Not an rgb() colour: ${rgb}`);
+  const [red = 0, green = 0, blue = 0] = channels.map((channel) => {
+    const unit = channel / 255;
+    return unit <= 0.03928 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  return 1.05 / (luminance + 0.05);
+}
+
 function extensionPage(page: string): string {
   return extensionPageUrl(browser.capabilities.browserName, page);
 }
@@ -294,6 +309,35 @@ describe('extension pages', () => {
       expect(width).toBeGreaterThanOrEqual(320);
       expect(width).toBeLessThanOrEqual(480);
     });
+
+    /**
+     * "Options" and "What each status means" used to share the button's line, about 8 px apart: in English they
+     * read as one phrase, and in Spanish the second one wrapped. They sit on a row of their own, apart from each
+     * other, and are as tall as a tap target.
+     */
+    it('keeps the links on a row of their own, apart and tap-sized', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const popup = await openExtensionContext('popup.html');
+      await expect(popup.$('ul.apps')).toBeExisting();
+
+      const layout = await popup.execute(() => {
+        const checkAll = document.querySelector('div.row > button.primary');
+        if (checkAll === null) throw new Error('No check-all button');
+        const links = [...document.querySelectorAll('a.link')].map((anchor) =>
+          anchor.getBoundingClientRect(),
+        );
+        return {
+          buttonBottom: checkAll.getBoundingClientRect().bottom,
+          linkTops: links.map((box) => box.top),
+          linkHeights: links.map((box) => box.height),
+          gap: links.length > 1 ? (links[1]?.left ?? 0) - (links[0]?.right ?? 0) : -1,
+        };
+      });
+      expect(layout.linkTops).toHaveLength(2);
+      for (const top of layout.linkTops) expect(top).toBeGreaterThanOrEqual(layout.buttonBottom);
+      for (const height of layout.linkHeights) expect(height).toBeGreaterThanOrEqual(44);
+      expect(layout.gap).toBeGreaterThanOrEqual(12);
+    });
   });
 
   describe('options', () => {
@@ -307,6 +351,53 @@ describe('extension pages', () => {
      * A birth date after today is a real date and still not one anybody was born on, so it takes a second
      * submission: the field itself cannot tell the two apart.
      */
+    /**
+     * Measured on the real page: Edit and Delete were 35 px tall and the reminder day boxes 13 px, too small for a
+     * thumb. Buttons and the day labels are at least 44 px, and the boxes themselves 20 px.
+     */
+    it('gives buttons and checkboxes a tap-sized hit area', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const page = await openExtensionContext('options.html');
+      await expect(page.$('.app-card')).toBeExisting();
+
+      const sizes = await page.execute(() => ({
+        buttons: [...document.querySelectorAll('button')]
+          .map((control) => control.getBoundingClientRect())
+          .filter((box) => box.height > 0)
+          .map((box) => box.height),
+        labels: [...document.querySelectorAll('.checks label')].map((label) => {
+          const box = label.getBoundingClientRect();
+          return [box.width, box.height];
+        }),
+        boxes: [...document.querySelectorAll('.checks input')].map(
+          (input) => input.getBoundingClientRect().width,
+        ),
+      }));
+
+      expect(sizes.buttons.length).toBeGreaterThan(0);
+      for (const height of sizes.buttons) expect(height).toBeGreaterThanOrEqual(44);
+      expect(sizes.labels).toHaveLength(7);
+      for (const [width = 0, height = 0] of sizes.labels) {
+        expect(width).toBeGreaterThanOrEqual(44);
+        expect(height).toBeGreaterThanOrEqual(44);
+      }
+      for (const width of sizes.boxes) expect(width).toBeGreaterThanOrEqual(20);
+    });
+
+    /** WCAG 1.4.11: the edge of a field that says where to type is a graphical object and needs 3:1 on white. */
+    it('draws the edge of every field at 3:1 or better against the page', async () => {
+      const page = await openExtensionContext('options.html');
+      await expect(page.$('h1.title')).toBeExisting();
+
+      const borders = await page.execute(() =>
+        [...document.querySelectorAll('.field input, .field select')]
+          .filter((control) => control.getBoundingClientRect().height > 0)
+          .map((control) => getComputedStyle(control).borderTopColor),
+      );
+      expect(borders.length).toBeGreaterThan(3);
+      for (const colour of borders) expect(contrastOnWhite(colour)).toBeGreaterThanOrEqual(3);
+    });
+
     it('names every bad field and writes nothing', async () => {
       const page = await openExtensionContext('options.html');
       const form = page.$('form.fields:has(#field-label)');
@@ -627,6 +718,10 @@ describe('extension pages', () => {
       await solveStubCaptcha(checkWindow);
       const failed = await waitForResult(checkWindow);
       await expect(failed.$('.banner.error')).toBeExisting();
+      // The result page has its own button style; its buttons are tap-sized like the rest (13.4).
+      expect(await failed.$('button=Volver a intentarlo').getSize('height')).toBeGreaterThanOrEqual(
+        44,
+      );
 
       await failed.$('button=Volver a intentarlo').click();
       await waitForPageUrl(checkWindow, SEDE_FORM_URL, 'The retry did not go back to the form');

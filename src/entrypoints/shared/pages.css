@@ -6,6 +6,8 @@
   --red-600: #dc2626;
   --gray-900: #0f172a;
   --gray-600: #4b5563;
+  /* The edge of a field: 4.8:1 on white (WCAG 1.4.11 asks 3:1). --gray-200 is for decoration only. */
+  --gray-500: #6b7280;
   --gray-200: #e2e8f0;
 }
 
@@ -106,6 +108,7 @@ li.app-card {
 }
 
 button.button {
+  min-block-size: 44px;
   padding: 6px 12px;
   border: 1px solid var(--teal-700);
   border-radius: 8px;
@@ -177,7 +180,7 @@ ul.apps + .row {
 .field input,
 .field select {
   padding: 7px 9px;
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--gray-500);
   border-radius: 8px;
   font: inherit;
 }
@@ -198,13 +201,23 @@ ul.apps + .row {
 .checks {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 4px;
 }
 
+/* The whole label is the hit area: 44 px each way, and the box 20 px instead of the browser's 13. */
 .check {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  min-block-size: 44px;
+  min-inline-size: 44px;
+  padding-inline: 6px;
+}
+
+.check input {
+  inline-size: 20px;
+  block-size: 20px;
+  margin: 0;
 }
 
 a.link {
@@ -214,6 +227,17 @@ a.link {
 
 a.link:hover {
   text-decoration: underline;
+}
+
+/* A row of links on its own: apart from each other, and each one as tall as a tap target. */
+.links {
+  gap: 0 20px;
+}
+
+.links a.link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
 }
 
 ul.history {

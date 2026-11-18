@@ -52,6 +52,11 @@ async function main(): Promise<void> {
       },
       'button primary',
     ),
+  );
+  // The links on a row of their own: beside the button they sat 8 px apart and read as one phrase, and the second
+  // wrapped in Spanish but not in English.
+  const links = el('div', 'row links');
+  links.append(
     link(t('popup.options'), () => {
       openPage('/options.html');
     }),
@@ -59,7 +64,7 @@ async function main(): Promise<void> {
       openPage('/statuses.html');
     }),
   );
-  view.append(row);
+  view.append(row, links);
 }
 
 async function buildCard(application: Application): Promise<HTMLElement> {
