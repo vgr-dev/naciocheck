@@ -275,6 +275,25 @@ describe('extension pages', () => {
       await expect(popup.$('ul.apps .app-card .meta')).toHaveText(/Comprobado el/);
       await expect(popup.$('button=Comprobar todo')).toBeExisting();
     });
+
+    /**
+     * The toolbar sizes a popup to its content, and a page with no width of its own shrinks to its narrowest
+     * unbreakable content: about 140 px, a scrollbar and a status wrapped over three lines. The spec cannot open
+     * the toolbar popup, so it measures what the toolbar measures: the width the body takes when it is shrunk to
+     * its minimum content.
+     */
+    it('has a width of its own, so the toolbar does not shrink it to its content', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const popup = await openExtensionContext('popup.html');
+      await expect(popup.$('ul.apps')).toBeExisting();
+
+      const width = await popup.execute(() => {
+        document.body.style.width = 'min-content';
+        return document.body.getBoundingClientRect().width;
+      });
+      expect(width).toBeGreaterThanOrEqual(320);
+      expect(width).toBeLessThanOrEqual(480);
+    });
   });
 
   describe('options', () => {
@@ -566,6 +585,36 @@ describe('extension pages', () => {
       const { checks } = await readStoredStore();
       expect(checks).toHaveLength(2);
       expect(checks.at(-1)?.acknowledged).toBe(true);
+    });
+
+    /**
+     * The view's class on the page container used to be `status`, which is also the heading's class: the heading's
+     * size, colour and margins then applied to the whole page and its centring was lost. The container has to
+     * keep the page's own text size and colour.
+     */
+    it('draws the status view at the page text size, not at the heading size', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const sede = serveFakeSede({ results: [resultPage()] });
+
+      const result = await runOneCheck(sede);
+      await expect(result.$('h1.status')).toHaveText('Abierto - Registrado');
+
+      const style = await result.execute(() => {
+        const app = document.getElementById('app');
+        if (app === null) throw new Error('Missing #app');
+        const own = getComputedStyle(app);
+        const page = getComputedStyle(document.body);
+        return {
+          size: own.fontSize,
+          pageSize: page.fontSize,
+          color: own.color,
+          pageColor: page.color,
+          marginTop: own.marginTop,
+        };
+      });
+      expect(style.size).toBe(style.pageSize);
+      expect(style.color).toBe(style.pageColor);
+      expect(style.marginTop).toBe('0px');
     });
 
     it('retries a failed check and finishes the run', async () => {

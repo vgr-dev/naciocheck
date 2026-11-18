@@ -28,6 +28,16 @@ body {
   padding: 16px;
 }
 
+/*
+ * The toolbar sizes a popup to its content, so a popup with no width of its own shrinks to its narrowest
+ * unbreakable word and button (about 140 px). 23.75rem is the 380 px the popup is designed and photographed at;
+ * `max-inline-size` keeps it from overflowing a narrower window, such as a phone where the popup opens as a page.
+ */
+.app.popup {
+  inline-size: 23.75rem;
+  max-inline-size: 100%;
+}
+
 .app.wide {
   max-inline-size: 46rem;
   margin-inline: auto;

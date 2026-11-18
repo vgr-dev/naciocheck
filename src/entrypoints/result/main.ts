@@ -48,7 +48,9 @@ function renderEmpty(): void {
 function render(payload: ResultPayload): void {
   if (app === null) return;
   const { view } = payload;
-  app.className = `app ${view.view}`;
+  // `view-…`, not the bare view name: `status` and `error` are also the heading's and the banner's classes, and
+  // the heading's rules would then apply to the whole page.
+  app.className = `app view-${view.view}`;
   app.replaceChildren();
 
   if (view.view !== 'status') {
