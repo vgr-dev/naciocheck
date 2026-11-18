@@ -1,7 +1,7 @@
 import { defineConfig } from 'wxt';
 
 /**
- * The only host the extension may ever touch: the official nationality check form.
+ * The settled host scope: the official eConsultas subtree used by the nationality procedure.
  * Anything else is a privacy violation — see `scripts/check-privacy.mjs`.
  */
 export const SEDE_HOST_PATTERN = 'https://sede.mjusticia.gob.es/eConsultas/*';
@@ -15,6 +15,8 @@ export const GECKO_ID = 'naciocheck@vgr.cat';
 export default defineConfig({
   srcDir: 'src',
   manifestVersion: 3,
+  // Keep the exact runtime pin in source archives without enabling other hidden/local files.
+  zip: { includeSources: ['**/*', '.nvmrc'] },
   // Vite's modulepreload polyfill injects a `fetch()` into every page bundle. Supported browsers have
   // modulepreload natively, and the privacy gate forbids `fetch(` anywhere — correctly, so the polyfill goes.
   vite: () => ({
@@ -28,7 +30,7 @@ export default defineConfig({
     default_locale: 'es',
     permissions: ['storage', 'alarms', 'notifications'],
     host_permissions: [SEDE_HOST_PATTERN],
-    // Declared so the change alert can set a badge; the popup arrives in Phase 7.
+    // The action carries the popup and the badge set by the change alert.
     action: {},
     icons: {
       16: 'icon/16.png',
