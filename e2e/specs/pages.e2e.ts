@@ -213,6 +213,33 @@ describe('extension pages', () => {
       await resetExtensionStorage();
     });
 
+    /**
+     * Five solid buttons on one page told a person nothing about which one finishes the flow. The two reminder
+     * presets are choices, drawn like the secondary buttons of options; Save and Finish stay solid.
+     */
+    it('draws the reminder presets as secondary buttons and keeps Save and Finish solid', async () => {
+      const page = await openExtensionContext('onboarding.html');
+      await expect(page.$('#app form.fields')).toBeExisting();
+      const fills = await page.execute(() => {
+        const fill = (label: string) => {
+          const control = [...document.querySelectorAll('button')].find((candidate) =>
+            (candidate.textContent ?? '').includes(label),
+          );
+          return control === undefined ? null : getComputedStyle(control).backgroundColor;
+        };
+        return {
+          preset: fill('Laborables a las 10:00'),
+          save: fill('Guardar solicitud'),
+          finish: fill('Terminar'),
+        };
+      });
+      const SOLID = 'rgb(15, 118, 110)';
+      expect(fills.save).toBe(SOLID);
+      expect(fills.finish).toBe(SOLID);
+      expect(fills.preset).not.toBeNull();
+      expect(fills.preset).not.toBe(SOLID);
+    });
+
     it('adds two applications, sets a reminder and leaves no identity readable', async () => {
       const page = await openExtensionContext('onboarding.html');
       const form = page.$('#app form.fields');
@@ -497,6 +524,7 @@ describe('extension pages', () => {
 
       const unlock = await openExtensionContext('unlock.html');
       await expect(unlock.$('#passphrase')).toBeExisting();
+      await expect(unlock.$('.brand .brand-name')).toHaveText('NacioCheck');
       const column = await unlock.execute(() => {
         const app = document.getElementById('app');
         if (app === null) throw new Error('Missing #app');
@@ -800,6 +828,20 @@ describe('extension pages', () => {
       const result = await runOneCheck(sede);
       await expect(result.$('.banner.changed')).toBeExisting();
 
+      // The button that dismisses the alert is on the first screen, not after the explanation and the sources (13.13).
+      const placement = await result.execute(() => {
+        const button = [...document.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === 'Entendido',
+        );
+        return {
+          bottom: button?.getBoundingClientRect().bottom ?? Number.POSITIVE_INFINITY,
+          screen: window.innerHeight,
+        };
+      });
+      expect(placement.bottom).toBeLessThanOrEqual(placement.screen);
+      // The alert's banner carries the mark already: no second brand header over it (13.15).
+      await expect(result.$('.brand')).not.toBeExisting();
+
       await result.$('button=Entendido').click();
       await browser.waitUntil(async () => !(await result.$('button=Entendido').isExisting()), {
         timeoutMsg: 'The change was not acknowledged',
@@ -822,6 +864,9 @@ describe('extension pages', () => {
 
       const result = await runOneCheck(sede);
       await expect(result.$('h1.status')).toHaveText('Abierto - Registrado');
+      // Every result page but the alert names the product at the top (13.15).
+      await expect(result.$('.brand .brand-name')).toHaveText('NacioCheck');
+      await expect(result.$('.brand img')).toBeExisting();
 
       const style = await result.execute(() => {
         const app = document.getElementById('app');
@@ -861,6 +906,7 @@ describe('extension pages', () => {
       await solveStubCaptcha(checkWindow);
       const failed = await waitForResult(checkWindow);
       await expect(failed.$('.banner.error')).toBeExisting();
+      await expect(failed.$('.brand .brand-name')).toHaveText('NacioCheck');
       // The result page has its own button style; its buttons are tap-sized like the rest (13.4).
       expect(await failed.$('button=Volver a intentarlo').getSize('height')).toBeGreaterThanOrEqual(
         44,

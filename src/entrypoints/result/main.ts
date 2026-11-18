@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import type { ResultView } from '../../core/alerts';
 import { t } from '../../core/i18n';
+import { brandHeader } from '../shared/brand';
 import { initPageLocale } from '../shared/locale';
 
 /**
@@ -53,9 +54,16 @@ function render(payload: ResultPayload): void {
   app.className = `app view-${view.view}`;
   app.replaceChildren();
 
+  // The changed alert has the mark in its banner; every other result names the product at the top.
+  if (view.view !== 'changed') app.append(brandHeader());
+
   if (view.view !== 'status') {
     app.append(buildBanner(view));
   }
+
+  // The alert's way out sits under the banner: after the explanation and the sources it was off the first screen.
+  const actions = buildActions(payload);
+  if (view.view === 'changed') app.append(actions);
 
   app.append(element('p', 'label', view.label));
 
@@ -119,7 +127,7 @@ function render(payload: ResultPayload): void {
   }
 
   app.append(element('p', 'disclaimer', t('result.disclaimer')));
-  app.append(buildActions(payload));
+  if (view.view !== 'changed') app.append(actions);
 }
 
 function buildBanner(view: ResultView): HTMLElement {

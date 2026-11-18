@@ -1,5 +1,6 @@
 import { t } from '../../core/i18n';
 import { listApplications } from '../../core/storage';
+import { brandHeader } from '../shared/brand';
 import { initPageLocale } from '../shared/locale';
 import { button, el, root } from '../shared/ui';
 
@@ -14,7 +15,7 @@ async function main(): Promise<void> {
   const view = root();
   await initPageLocale();
   document.title = t('unlock.pageTitle');
-  view.append(el('h1', 'title', t('unlock.title')));
+  view.append(brandHeader(), el('h1', 'title', t('unlock.title')));
   view.append(el('p', 'hint', t('unlock.hint')));
 
   const applications = await listApplications();

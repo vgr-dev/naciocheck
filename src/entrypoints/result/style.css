@@ -128,6 +128,11 @@ body {
   margin-block-start: 1.75rem;
 }
 
+/* Directly under the alert's banner: close to it, with room before the status that follows. */
+.banner + .actions {
+  margin-block: -0.25rem 1.5rem;
+}
+
 button.primary {
   min-block-size: 44px;
   padding: 0.7rem 1.25rem;

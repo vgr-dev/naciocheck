@@ -75,17 +75,13 @@ async function main(): Promise<void> {
   const presets = el('div', 'row');
   for (const preset of REMINDER_PRESETS) {
     presets.append(
-      button(
-        t('options.preset', { time: preset.config.time }),
-        () => {
-          void (async () => {
-            await setReminder(preset.config);
-            await browser.runtime.sendMessage({ type: 'naciocheck:reschedule' });
-            announce(view, t('onboarding.reminderSaved', { time: preset.config.time }));
-          })();
-        },
-        'button primary',
-      ),
+      button(t('options.preset', { time: preset.config.time }), () => {
+        void (async () => {
+          await setReminder(preset.config);
+          await browser.runtime.sendMessage({ type: 'naciocheck:reschedule' });
+          announce(view, t('onboarding.reminderSaved', { time: preset.config.time }));
+        })();
+      }),
     );
   }
   view.append(presets);

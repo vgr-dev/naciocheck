@@ -67,7 +67,7 @@ const VIEWPORTS: Record<Viewport, { width: number; height: number }> = {
 /** The two viewports every page is taken at: a desktop window and a phone. */
 const EVERYWHERE: readonly Viewport[] = ['1280x800', '412x915'];
 
-/** The two long pages are also photographed whole, because their second half never fits a screen. */
+/** The long pages are also photographed whole, because their second half never fits a screen. */
 const WHOLE_PAGE: readonly Viewport[] = ['full1280', 'full412'];
 
 /** The popup also gets the width Chrome opens it at. */
@@ -343,7 +343,7 @@ describe('screenshots', () => {
       });
       const checkWindow = await startCheckFromPopup();
       await finishCheck(checkWindow);
-      await captureResult('changed', locale, EVERYWHERE);
+      await captureResult('changed', locale, [...EVERYWHERE, ...WHOLE_PAGE]);
     }
   });
 
@@ -428,9 +428,10 @@ describe('screenshots', () => {
       'Written by `e2e/specs/visual.e2e.ts` after every run. Baselines are tracked by git (D3): an image that',
       'changes is a change to review, so its new version belongs in the history next to the code that made it.',
       '',
-      `- **Images**: ${comparisons.length} — 2 locales × 44: onboarding 2 states × 2 viewports (4), popup 4 × 3 (12),`,
+      `- **Images**: ${comparisons.length} — 2 locales × 46: onboarding 2 states × 2 viewports (4), popup 4 × 3 (12),`,
       '  options 4 × 2 (8), statuses 1 × 2 (2), result 3 × 2 (6), unlock 1 × 2 (2), the fake form 3 overlays × 2 (6),',
-      '  and the two long pages whole: onboarding (empty) and options (two applications) × 2 widths (4).',
+      '  and the long pages whole: onboarding (empty), options (two applications) and the changed-status alert,',
+      '  × 2 widths (6).',
       '- **Viewports**: desktop 1280×800, phone 412×915, popup 380×600 (popup only); `full1280` and `full412` are the',
       '  whole page, scrolled and stitched, at those two widths.',
       `- **Tolerance**: ${MISMATCH_TOLERANCE} % of the pixels; above it the spec fails and a diff is written next`,

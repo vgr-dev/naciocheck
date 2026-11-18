@@ -1,0 +1,18 @@
+/* The mark and the name at the top of a page: used by the pages that do not carry them in a title of their own. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 12px;
+}
+
+.brand img {
+  inline-size: 32px;
+  block-size: 32px;
+}
+
+.brand-name {
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: #0f766e;
+}
