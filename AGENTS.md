@@ -1,114 +1,66 @@
-# AGENTS.md — repository conventions
+# NacioCheck
 
-Read this before changing anything.
+A personal browser extension for Chrome and Firefox (desktop and Firefox for Android) that turns checking a
+Spanish nationality-by-residence application into _reminder → captcha → result_: it autofills the official
+form, shows only the captcha, submits once the human has solved it, reads the status, stores every check
+locally and alerts loudly when the status changes. Not affiliated with the Ministerio de Justicia.
 
-## The project in one paragraph
+## Stack
 
-**NacioCheck** is a personal browser extension for Chrome and Firefox (desktop + Firefox for Android) that
-makes checking a Spanish nationality-by-residence application a _reminder → captcha → result_ task: it
-autofills the official form, shows only the captcha, submits once the human has solved it, reads the status,
-stores every check locally and alerts loudly when the status changes. It is **not affiliated with the
-Ministerio de Justicia**. It must never bypass the captcha, never send personal data anywhere, and never
-present its status explanations as official.
+- TypeScript on WXT (Manifest V3, one source tree for Chrome and Firefox), Node 24 (`.nvmrc`)
+- Vitest (unit), WebdriverIO (Chrome E2E), ESLint (typed), Prettier, Sharp (icons at build time)
+- Developed from WSL2; E2E runs the Linux Chrome for Testing, the Windows browsers are for hands-on checks
 
-## Stack and commands
+## Commands
 
-TypeScript on **WXT** (Manifest V3 for Chrome and Firefox from one source tree), Vitest, WebdriverIO for the
-Chrome end-to-end suite, ESLint (typed) and Prettier, Sharp for build-time icon rasterisation. Node LTS is pinned in `.nvmrc` (24).
+- Install: `npm ci` (runs `wxt prepare`)
+- Test (all): `npm test`; filtered: `npx vitest run tests/<file>.test.ts`
+- Lint / format: `npm run lint`; `npm run format` (check: `npm run format:check`)
+- Typecheck: `npm run typecheck`
+- Privacy gate: `npm run check:privacy` (needs a build first)
+- Build: `npm run build:chrome` / `npm run build:firefox`
+- Dev: `npm run dev` (Chrome) / `npm run dev:firefox`
+- E2E (Chrome only): `npm run test:e2e` (headless, builds both browsers); `npm run test:e2e:headed`
+- E2E baselines: `npm run test:e2e:update-baselines` (rewrites `e2e/baselines/`)
+- Site check: `npm run check:site` (offline)
+- Packages: `npm run zip`, `npm run zip:sources`
 
-| Task          | Command                                                                         |
-| ------------- | ------------------------------------------------------------------------------- |
-| Install       | `npm ci` (runs `wxt prepare`)                                                   |
-| Dev (Chrome)  | `npm run dev`                                                                   |
-| Dev (Firefox) | `npm run dev:firefox`                                                           |
-| Build         | `npm run build:chrome` / `npm run build:firefox`                                |
-| Test          | `npm test`                                                                      |
-| Lint          | `npm run lint`                                                                  |
-| Type check    | `npm run typecheck`                                                             |
-| Format        | `npm run format` (check: `npm run format:check`)                                |
-| Privacy gate  | `npm run check:privacy` (needs a build first)                                   |
-| E2E (Chrome)  | `npm run test:e2e` (headless; builds both browsers) / `npm run test:e2e:headed` |
-| E2E baselines | `npm run test:e2e:update-baselines` (rewrites `e2e/baselines/`)                 |
-| Site check    | `npm run check:site` (offline)                                                  |
-| Site deploy   | `npm run deploy:site` (the user's, never an agent's)                            |
-| Packages      | `npm run zip`, `npm run zip:sources`                                            |
+## Standards
 
-## How work happens here: spec-driven, two agents
+- Licence is GPL-3.0-or-later; the identifier appears in `README.md`, this file and `store/permissions.md`
+  (`tests/licence.test.ts` checks it). Browser archives must carry the licence notices.
+- Identity: the product is NacioCheck, slug `naciocheck`, gecko id `naciocheck@vgr.cat`. The gecko id can
+  never change after the first AMO upload. Brand rules (colours, icon, logo, tagline) are in `brand/README.md`;
+  the logotype ships as outlined paths, never a remote font.
+- Fake identities only in tests, fixtures, baselines, screenshots, store images and logs: the repo and the
+  store listings become public. `tests/fixtures/` stays byte-for-byte.
+- Tests run the production build unchanged: no test-only permissions, host patterns, manifest `key` or build
+  flags. The E2E network guard must stay at 0 unexpected requests.
+- When encryption is on, no identity is ever written to storage in plain form, and no form keeps the
+  passphrase.
+- Status explanations are never presented as official.
+- Firefox desktop is verified by hand with `docs/manual-firefox-checklist.md` before each release.
 
-No change to application code happens without an **active plan**.
+## Boundaries
 
-| Role                                                                         | How to start it                                                                                   | Writes                                |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **architect** — plans with the user, assists review, archives                | `claude --agent architect`; Copilot: pick the **Architect** agent                                 | only `.ai/`, `AGENTS.md`, `README.md` |
-| **builder** — executes one phase of the active plan, proposes commits, stops | `claude --agent builder` or delegated by the architect; Copilot: **Builder** agent or the handoff | code + its plan's progress sections   |
+- Never: bypass, solve or outsource the captcha; make a network request from the extension; add telemetry;
+  use `storage.sync`; send personal data anywhere; strip response headers; reach the live sede or reCAPTCHA
+  from a test or a tool; commit personal data (the git history becomes public).
+- Never: run `npm run deploy:site`, upload to a store, or change repository visibility. Those are the user's.
+- Ask first: any new manifest permission or host pattern (`npm run check:privacy` allows exactly one host),
+  new URLs in `scripts/allowed-urls.json`, dependency changes, anything that touches a settled decision in
+  `docs/adr/`.
 
-**No agent ever stages, commits or pushes.** The user reviews and commits every change by hand. Each
-finished phase ends with proposed Conventional Commits messages for the user to review and run.
+## Rules index
 
-Slash commands (same names in Claude Code and Copilot Chat):
+- UI review of the screenshot matrix: `.claude/commands/review-ui.md` (read-only; run it after visual changes)
+- Decisions: `docs/adr/0002`…`0007` (stack, captcha, local data and encryption, distribution, brand and
+  licence, testing). If you think one is wrong, raise it with the user rather than silently reverting it.
+- Open release gates and the audit trail: `docs/pre-release-audit-2026-11-18.md`
 
-| Command                                 | Does                                                                  |
-| --------------------------------------- | --------------------------------------------------------------------- |
-| `/create-plan <requirement>`            | architect drafts a plan into `.ai/plans/pending/`                     |
-| `/implement-step [Phase N \| Task N.M]` | builder implements one task or phase of the active plan               |
-| `/create-commit-message`                | one Conventional Commits line for what you staged (user-invoked only) |
+## Workflow
 
-Plan lifecycle and the evidence standard: `.ai/rules/plans.md`. Plan template: `.ai/templates/plan.md`.
-
-### Where the instructions live — one source, thin wrappers per tool
-
-This repo is used from Claude Code (CLI and VS Code extension) and from GitHub Copilot Chat in VS Code
-(with any model, e.g. DeepSeek via its Copilot provider). The **canonical** texts are tool-neutral and live
-in `.ai/`; each tool only gets a thin wrapper that points to them. **Edit the canonical file, never a
-wrapper.**
-
-| Canonical                               | Claude Code wrapper        | Copilot Chat wrapper                                                       |
-| --------------------------------------- | -------------------------- | -------------------------------------------------------------------------- |
-| `AGENTS.md` (this file)                 | `CLAUDE.md` (`@AGENTS.md`) | read natively (`chat.useAgentsMdFile`) + `.github/copilot-instructions.md` |
-| `.ai/agents/architect.md`, `builder.md` | `.claude/agents/*.md`      | `.github/agents/*.agent.md`                                                |
-| `.ai/prompts/*.md`                      | `.claude/commands/*.md`    | `.github/prompts/*.prompt.md`                                              |
-| `.ai/rules/plans.md`                    | read via `AGENTS.md`       | `.github/instructions/plans.instructions.md` (`applyTo: .ai/plans/**`)     |
-
-Guard rails differ by tool: Claude Code **blocks** `git add/commit/push` (`.claude/settings.json`) and
-architect writes outside `.ai/` (hook). Copilot can only **require confirmation** for those git commands
-(`.vscode/settings.json`); the rest relies on the instructions.
-
-Plans are **local only**: `.ai/plans/` is git-ignored (except the `.gitkeep` placeholders).
-
-```
-.ai/plans/pending/   → drafts and approved plans in the queue
-.ai/plans/active/    → the one plan being built (at most one)
-.ai/plans/finished/  → signed-off plans with an Archive Metadata footer
-```
-
-A plain session (no `--agent`) follows the same rules: check `.ai/plans/active/` before starting work,
-and if a request is not covered by the active plan, say so and propose drafting a plan instead.
-
-## Settled decisions — do not undo these
-
-Each was decided deliberately. Plans are local-only, so this table is the **tracked** record: keep the
-rationale here, self-contained (the plan name is only a local pointer). If you think one is wrong,
-raise it with the user rather than silently reverting it.
-
-| Decision                                                                                                                                                                         | Rationale                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Plan                                            |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| **Browser extension, WXT + TypeScript, Chrome and Firefox (desktop + Android).**                                                                                                 | One MV3 codebase covers PC and mobile (Firefox for Android supports extensions); no server needed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 2026-11-06-status-tracker-extension             |
-| **The human solves the reCAPTCHA; never bypass, solve or outsource it.**                                                                                                         | Solving services send personal data to third parties and break the site's terms. The extension autofills, shows only the captcha, and submits after the user solves it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 2026-11-06-status-tracker-extension             |
-| **Captcha runs in a compact window on the real page, not in the popup.**                                                                                                         | The sede sends `X-Frame-Options: SAMEORIGIN` and the reCAPTCHA key is bound to its domain, so it cannot render inside extension pages. Stripping headers is rejected.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | 2026-11-06-status-tracker-extension             |
-| **All data local: `storage.local` / `storage.session` only, no network requests, no telemetry.**                                                                                 | Personal tool handling NIE and birth date; `storage.sync` uploads to Google/Mozilla. Enforced by `npm run check:privacy`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 2026-11-06-status-tracker-extension             |
-| **Encryption of identifying fields is optional, user's choice.**                                                                                                                 | Trade-off between privacy at rest and friction on every check; the user decides.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 2026-11-06-status-tracker-extension             |
-| **Publish listed on Chrome Web Store and AMO only; no unlisted/self-hosted releases.**                                                                                           | Store installs are the trusted path, and AMO listing enables Firefox for Android.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 2026-11-06-status-tracker-extension             |
-| **Public pages on a `vgr.cat` subdomain via Cloudflare Workers static assets, explicit custom domain.**                                                                          | The org's Free GitHub plan cannot serve Pages from a private repo; the user already runs `vgr.cat` on Workers. No wildcard routes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 2026-11-06-status-tracker-extension             |
-| **Repo private until the first public release, then public for good.**                                                                                                           | The whole git history becomes public, so personal data must never be committed; history is audited before the switch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | 2026-11-06-status-tracker-extension             |
-| **Product name: NacioCheck** (slug `naciocheck`, `naciocheck.vgr.cat`, gecko id `naciocheck@vgr.cat`).                                                                           | Clearest in Spanish and English (_Nacio_ = nacionalidad / nation; _check_ is a common anglicism in Spain) and does not suggest an official tool. The gecko id can never change after the first AMO upload.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | 2026-11-06-status-tracker-extension             |
-| **Icon: symmetric N-check on a white badge; logo: icon + "NacioCheck" in Nunito 800 + tagline.** Full guide: `brand/README.md`.                                                  | Chosen after five rounds. The N's last strokes form a check (mirror angles, check from the diagonal midpoint at 1:2). Colours: teal `#0F766E` with accent `#14B8A6` / `#0D9488`; no red/yellow or official symbols. Logotype ships as outlined paths, never a remote font.                                                                                                                                                                                                                                                                                                                                                                                                                                                   | 2026-11-06-status-tracker-extension             |
-| **Licence: GPL-3.0-or-later.**                                                                                                                                                   | The product's value is trust: copyleft means any distributed fork, including one that adds telemetry, must publish its source. Both stores accept it; Nunito keeps its own OFL licence file. "Or later" (chosen over `-only` on 2026-11-18) follows the FSF's default and keeps the code compatible if the GPL is revised.                                                                                                                                                                                                                                                                                                                                                                                                   | 2026-11-06-status-tracker-extension             |
-| **Automated E2E runs in Chrome only, against a fake sede served at the real URLs; the stub captcha exists only on fake pages; no automated request ever reaches the live sede.** | Chrome for Testing is started with host-resolver rules that map the sede, reCAPTCHA and font hosts to a local HTTPS server (throwaway certificate) and every other host to nothing, so the suite cannot reach a real server by construction, while URLs, manifest and content-script matches stay exactly as shipped and the tests run the production build. BiDi interception of the window the extension opens itself proved unreliable (an unpaused request bypasses the guard). A test that touched the live sede would put personal-data traffic and the captcha in an automated path. Visual baselines are tracked in `e2e/baselines/` (fake data only), actual and diff images stay in the ignored `e2e/.artifacts/`. | 2026-11-13-mvp-completion-and-release-readiness |
-| **Firefox desktop is verified by a manual checklist, not by automated E2E.**                                                                                                     | Marionette refuses to navigate to `moz-extension://` pages, so extension pages cannot be driven. The user runs `docs/manual-firefox-checklist.md` against the store-bound package before each release; `npm run test:e2e:firefox` runs only a smoke spec and fails on purpose. No Nightly/Developer Edition workaround is built.                                                                                                                                                                                                                                                                                                                                                                                             | 2026-11-13-mvp-completion-and-release-readiness |
-| **When encryption is on, identities are always encrypted at rest; the add and edit forms ask for the passphrase and never keep it.**                                             | A form that stored a new application as plain while the options page described the store as encrypted was a privacy defect. The passphrase is verified by decrypting an existing encrypted identity before saving, and is neither written to `storage.session` nor held in memory after the save. The unlock page's passphrase, used to run checks, lives in `storage.session` only. Editing an identity keeps its history, with an "edited on" marker.                                                                                                                                                                                                                                                                      | 2026-11-13-mvp-completion-and-release-readiness |
-| **Implementation plans are not tracked by git.**                                                                                                                                 | User decision: plans are local working documents; this table is the tracked record.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | —                                               |
-
-## Verification culture
-
-Evidence is recorded, not asserted. Capture the exact command and its output in the plan, state what you
-did _not_ verify, and never tick a checkbox for partial work.
+- Spec-driven: see `docs/adr/0001-agent-workflow.md`. Work lives in `specs/<date>-<slug>/`.
+- stale-after-days: 14
+- Commit format: Conventional Commits, one line, imperative, at most 72 characters, no `"` characters.
+  Agents propose the message; the user commits.

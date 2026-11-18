@@ -129,7 +129,7 @@ store/ site/       store listing texts and images; the static privacy-policy sit
 brand/             name, icon, logo and colours: the single source of truth (brand/README.md)
 ```
 
-[`AGENTS.md`](AGENTS.md) holds the repository's conventions and the decisions that are not up for silent change.
+[`AGENTS.md`](AGENTS.md) holds the repository's conventions; the decisions that are not up for silent change are in [`docs/adr/`](docs/adr).
 It is the file to read before changing anything.
 
 ### Checks

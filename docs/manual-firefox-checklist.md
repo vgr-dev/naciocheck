@@ -1,6 +1,6 @@
 # Manual Firefox checklist (desktop)
 
-The automated end-to-end suite runs in Chrome only (see `AGENTS.md`, settled decisions). This list is what
+The automated end-to-end suite runs in Chrome only (see `docs/adr/0007-testing-strategy.md`). This list is what
 replaces it on Firefox desktop: run it before every release against the same package that goes to AMO.
 
 Out of scope here: Chrome (automated in `e2e/`), Firefox for Android (device, see the README), the deployed
