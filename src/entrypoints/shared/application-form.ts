@@ -179,9 +179,15 @@ export async function buildApplicationForm(
     form.append(reveal);
   }
 
+  const saveMessage = el('p', 'error');
+  saveMessage.hidden = true;
+  saveMessage.setAttribute('role', 'alert');
   const submit = button(
     t(editing === null ? 'form.submit' : 'form.saveChanges'),
     () => {
+      if (submit.disabled) return;
+      submit.disabled = true;
+      saveMessage.hidden = true;
       void (async () => {
         const label = inputs.get('label')?.value.trim() ?? '';
         const identity = {
@@ -225,6 +231,10 @@ export async function buildApplicationForm(
         }
 
         showErrors(found, extra);
+        if (extra.passphrase !== undefined && !inputs.has('passphrase')) {
+          saveMessage.textContent = extra.passphrase;
+          saveMessage.hidden = false;
+        }
         if (Object.keys(found).length > 0 || Object.keys(extra).length > 0) return;
 
         if (editing === null) {
@@ -240,12 +250,21 @@ export async function buildApplicationForm(
         const passphrase = inputs.get('passphrase');
         if (passphrase !== undefined) passphrase.value = '';
         onSaved(label);
-      })();
+      })()
+        .catch(() => {
+          saveMessage.textContent = t('form.saveFailed');
+          saveMessage.hidden = false;
+          const passphrase = inputs.get('passphrase');
+          if (passphrase !== undefined) passphrase.value = '';
+        })
+        .finally(() => {
+          submit.disabled = false;
+        });
     },
     'button primary',
   );
 
-  form.append(submit);
+  form.append(submit, saveMessage);
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     submit.click();

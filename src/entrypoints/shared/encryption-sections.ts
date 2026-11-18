@@ -7,8 +7,8 @@ import {
 } from '../../core/backup';
 import { encryptIdentity, decryptIdentity } from '../../core/crypto';
 import { t } from '../../core/i18n';
-import { readStore, replaceStore, updateIdentity } from '../../core/storage';
-import { button, el, type ExtensionPage } from './ui';
+import { mutateStore, readStore } from '../../core/storage';
+import { announceAfter, button, el, type ExtensionPage } from './ui';
 
 /** The encryption and backup sections of the options page, kept in one place because they share the store. */
 
@@ -34,14 +34,21 @@ export async function renderEncryption(
 
   const refresh = async (): Promise<void> => {
     container.replaceChildren();
-    await fillEncryption(container, redraw);
+    await fillEncryption(container, async (text) => {
+      await redraw();
+      const section = view.querySelector('.encryption');
+      if (section !== null) announceAfter(section, text);
+    });
   };
 
   await refresh();
   return { refresh };
 }
 
-async function fillEncryption(view: HTMLElement, redraw: () => Promise<void>): Promise<void> {
+async function fillEncryption(
+  view: HTMLElement,
+  redraw: (text: string) => Promise<void>,
+): Promise<void> {
   const store = await readStore();
   const encrypted = store.applications.filter(
     (application) => application.identity.kind === 'encrypted',
@@ -94,28 +101,38 @@ async function fillEncryption(view: HTMLElement, redraw: () => Promise<void>): P
             }
             // Read now, not when the section was drawn: the application the person just added is the one this
             // button exists for, and reporting success while encrypting nothing would be a lie about the data.
-            const current = await readStore();
-            const plainNow = current.applications.filter(
-              (application) => application.identity.kind === 'plain',
-            );
-            if (plainNow.length === 0) {
-              message.textContent = t('encryption.nothingToEncrypt');
+            const secret = passphrase.value;
+            try {
+              await mutateStore(async (current) => {
+                if (!hasPlainIdentities(current)) throw new Error(t('encryption.nothingToEncrypt'));
+                const applications = await Promise.all(
+                  current.applications.map(async (application) => {
+                    if (application.identity.kind === 'encrypted') {
+                      await decryptIdentity(application.identity, secret);
+                      return application;
+                    }
+                    return {
+                      ...application,
+                      identity: await encryptIdentity(application.identity, secret),
+                    };
+                  }),
+                );
+                return { ...current, applications };
+              });
+            } catch (error) {
+              message.textContent =
+                error instanceof Error && error.message === t('encryption.nothingToEncrypt')
+                  ? error.message
+                  : t('encryption.failed');
               return;
+            } finally {
+              passphrase.value = '';
+              repeated.value = '';
             }
-            for (const application of current.applications) {
-              if (application.identity.kind !== 'plain') continue;
-              const encryptedIdentity = await encryptIdentity(
-                application.identity,
-                passphrase.value,
-              );
-              await updateIdentity(application.id, encryptedIdentity);
-            }
-            await browser.runtime.sendMessage({
-              type: 'naciocheck:unlock',
-              passphrase: passphrase.value,
-            });
-            message.textContent = t('encryption.done');
-            await redraw();
+            await browser.runtime
+              .sendMessage({ type: 'naciocheck:unlock', passphrase: secret })
+              .catch(() => undefined);
+            await redraw(t('encryption.done'));
           })();
         },
         'button primary',
@@ -138,29 +155,30 @@ async function fillEncryption(view: HTMLElement, redraw: () => Promise<void>): P
           t('encryption.repair'),
           () => {
             void (async () => {
-              const current = await readStore();
-              const sample = current.applications.find(
-                (application) => application.identity.kind === 'encrypted',
-              );
-              if (sample === undefined || sample.identity.kind !== 'encrypted') return;
+              const secret = passphrase.value;
               try {
-                // The passphrase is checked against an identity that is already encrypted before anything is
-                // written, exactly like the form does.
-                await decryptIdentity(sample.identity, passphrase.value);
-                for (const application of current.applications) {
-                  if (application.identity.kind !== 'plain') continue;
-                  const encryptedIdentity = await encryptIdentity(
-                    application.identity,
-                    passphrase.value,
+                await mutateStore(async (current) => {
+                  const applications = await Promise.all(
+                    current.applications.map(async (application) => {
+                      if (application.identity.kind === 'encrypted') {
+                        await decryptIdentity(application.identity, secret);
+                        return application;
+                      }
+                      return {
+                        ...application,
+                        identity: await encryptIdentity(application.identity, secret),
+                      };
+                    }),
                   );
-                  await updateIdentity(application.id, encryptedIdentity);
-                }
+                  return { ...current, applications };
+                });
               } catch {
                 message.textContent = t('encryption.repairFailed');
                 return;
+              } finally {
+                passphrase.value = '';
               }
-              message.textContent = t('encryption.repaired');
-              await redraw();
+              await redraw(t('encryption.repaired'));
             })();
           },
           'button primary',
@@ -173,34 +191,57 @@ async function fillEncryption(view: HTMLElement, redraw: () => Promise<void>): P
         t('encryption.disable'),
         () => {
           void (async () => {
-            const current = await readStore();
-            for (const application of current.applications) {
-              if (application.identity.kind !== 'encrypted') continue;
-              try {
-                const decrypted = await decryptIdentity(application.identity, passphrase.value);
-                await updateIdentity(application.id, decrypted);
-              } catch {
-                message.textContent = t('encryption.decryptFailed');
-                return;
-              }
+            if (!window.confirm(t('encryption.disableConfirm'))) return;
+            const secret = passphrase.value;
+            try {
+              await mutateStore(async (current) => ({
+                ...current,
+                applications: await Promise.all(
+                  current.applications.map(async (application) => ({
+                    ...application,
+                    identity:
+                      application.identity.kind === 'encrypted'
+                        ? await decryptIdentity(application.identity, secret)
+                        : application.identity,
+                  })),
+                ),
+              }));
+            } catch {
+              message.textContent = t('encryption.decryptFailed');
+              return;
+            } finally {
+              passphrase.value = '';
             }
-            await browser.runtime.sendMessage({ type: 'naciocheck:lock' });
-            message.textContent = t('encryption.disabled');
-            await redraw();
+            await browser.runtime.sendMessage({ type: 'naciocheck:lock' }).catch(() => undefined);
+            await redraw(t('encryption.disabled'));
           })();
         },
         'button danger',
       ),
       button(t('encryption.unlockSession'), () => {
         void (async () => {
-          const response: unknown = await browser.runtime.sendMessage({
-            type: 'naciocheck:unlock',
-            passphrase: passphrase.value,
-          });
+          const response: unknown = await browser.runtime
+            .sendMessage({
+              type: 'naciocheck:unlock',
+              passphrase: passphrase.value,
+            })
+            .catch(() => null);
+          passphrase.value = '';
           message.textContent = isUnlocked(response)
             ? t('encryption.unlocked')
             : t('encryption.unlockFailed');
         })();
+      }),
+      button(t('encryption.lockNow'), () => {
+        passphrase.value = '';
+        void browser.runtime.sendMessage({ type: 'naciocheck:lock' }).then(
+          () => {
+            message.textContent = t('encryption.locked');
+          },
+          () => {
+            message.textContent = t('encryption.unlockFailed');
+          },
+        );
       }),
     );
   }
@@ -210,7 +251,9 @@ async function fillEncryption(view: HTMLElement, redraw: () => Promise<void>): P
   view.append(actions, message);
 }
 
-export function renderBackup(view: HTMLElement): void {
+export function renderBackup(page: HTMLElement, redraw: () => Promise<void>): void {
+  const view = el('div', 'backup');
+  page.append(view);
   view.append(el('h2', 'section', t('backup.title')));
   view.append(el('p', 'hint', t('backup.hint')));
 
@@ -232,6 +275,18 @@ export function renderBackup(view: HTMLElement): void {
   input.accept = 'application/json,.json';
   input.id = 'import-file';
 
+  const modeField = el('div', 'field');
+  const modeLabel = el('label', '', t('backup.mode'));
+  const mode = el('select');
+  mode.id = 'backup-mode';
+  modeLabel.htmlFor = mode.id;
+  for (const value of ['merge', 'replace'] as const) {
+    const option = el('option', '', t(`backup.${value}`));
+    option.value = value;
+    mode.append(option);
+  }
+  modeField.append(modeLabel, mode);
+
   const importButton = button(t('backup.import'), () => {
     void (async () => {
       const file = input.files?.[0];
@@ -241,10 +296,44 @@ export function renderBackup(view: HTMLElement): void {
       }
       try {
         const imported = parseBackup(await file.text());
-        const merge = window.confirm(t('backup.mergeQuestion'));
-        const current = await readStore();
-        await replaceStore(merge ? mergeStores(current, imported) : imported);
-        message.textContent = merge ? t('backup.merged') : t('backup.replaced');
+        const merge = mode.value === 'merge';
+        const before = await readStore();
+        if (
+          before.applications.some((application) => application.identity.kind === 'encrypted') &&
+          hasPlainIdentities(imported)
+        ) {
+          throw new Error(t('backup.encryptionRequired'));
+        }
+        if (
+          !window.confirm(
+            merge
+              ? t('backup.confirmMerge')
+              : t('backup.confirmReplace', {
+                  applications: before.applications.length,
+                  checks: before.checks.length,
+                }),
+          )
+        )
+          return;
+        await mutateStore((current) => {
+          if (JSON.stringify(current) !== JSON.stringify(before))
+            throw new Error(t('backup.changed'));
+          if (
+            current.applications.some((application) => application.identity.kind === 'encrypted') &&
+            hasPlainIdentities(imported)
+          ) {
+            throw new Error(t('backup.encryptionRequired'));
+          }
+          return merge ? mergeStores(current, imported) : imported;
+        });
+        await Promise.allSettled([
+          browser.runtime.sendMessage({ type: 'naciocheck:lock' }),
+          browser.runtime.sendMessage({ type: 'naciocheck:reschedule' }),
+        ]);
+        await redraw();
+        const section = page.querySelector('.backup');
+        if (section !== null)
+          announceAfter(section, merge ? t('backup.merged') : t('backup.replaced'));
       } catch (error) {
         message.textContent = t('backup.importFailed', { error: String(error) });
       }
@@ -262,7 +351,7 @@ export function renderBackup(view: HTMLElement): void {
   exportRow.append(exportButton);
   const importRow = el('div', 'row');
   importRow.append(importButton);
-  view.append(exportRow, fileField, importRow, message);
+  view.append(exportRow, fileField, modeField, importRow, message);
 }
 
 function isUnlocked(value: unknown): boolean {
@@ -276,8 +365,10 @@ function download(filename: string, text: string): void {
   const anchor = el('a');
   anchor.href = url;
   anchor.download = filename;
+  document.body.append(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 export type { Backup, ExtensionPage };

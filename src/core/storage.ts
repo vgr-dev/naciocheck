@@ -2,6 +2,8 @@ import { browser } from 'wxt/browser';
 import { DEFAULT_LANGUAGE, isLanguageSetting, type LanguageSetting } from './i18n';
 import { DEFAULT_REMINDER, isValidReminder, type ReminderConfig } from './schedule';
 import type { ResolvedStatusKey } from './statuses';
+import { isValidEncryptedPayload } from './crypto';
+import { isValidIdentity } from './validation';
 
 /**
  * The local store: everything the extension knows lives in `storage.local` under a single key.
@@ -15,6 +17,9 @@ export const SCHEMA_VERSION = 1;
 /** Single key, so a read is one round trip and a write replaces a consistent snapshot. */
 const STORAGE_KEY = 'naciocheck';
 
+/** One cross-context lock: the background worker and every extension page share the extension origin. */
+const STORE_LOCK = 'naciocheck:store';
+
 /** Identifying fields as the user typed them. */
 export interface PlainIdentity {
   kind: 'plain';
@@ -24,7 +29,7 @@ export interface PlainIdentity {
   year: string;
 }
 
-/** Phase 8 defines what goes inside `payload`; until then it is stored and moved around untouched. */
+/** The envelope is validated structurally on read/import; authentication waits for the passphrase. */
 export interface EncryptedIdentity {
   kind: 'encrypted';
   payload: string;
@@ -117,33 +122,141 @@ function createId(): string {
   return globalThis.crypto.randomUUID();
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+function isTimestamp(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Date.parse(value));
+}
+
+/** Validates the identity that a backup or a previous build put in storage before we trust it. */
+function validateIdentity(value: unknown, where: string): asserts value is Identity {
+  if (!isRecord(value)) throw new Error(`${where}: identity is not an object`);
+  if (value.kind === 'plain') {
+    const { nie, birthDate, numero, year } = value;
+    if (
+      typeof nie !== 'string' ||
+      typeof birthDate !== 'string' ||
+      typeof numero !== 'string' ||
+      typeof year !== 'string' ||
+      nie.trim() === '' ||
+      birthDate.trim() === '' ||
+      numero.trim() === '' ||
+      year.trim() === ''
+    ) {
+      throw new Error(`${where}: plain identity is missing fields`);
+    }
+    if (!isValidIdentity({ nie, birthDate, numero, year })) {
+      throw new Error(`${where}: plain identity fields are invalid`);
+    }
+    return;
+  }
+  if (value.kind === 'encrypted') {
+    if (!isNonEmptyString(value.payload) || !isValidEncryptedPayload(value.payload)) {
+      throw new Error(`${where}: encrypted identity payload is invalid`);
+    }
+    return;
+  }
+  throw new Error(`${where}: identity kind is unknown`);
+}
+
+function validateApplication(value: unknown, index: number): asserts value is Application {
+  const where = `application[${index}]`;
+  if (!isRecord(value)) throw new Error(`${where}: not an object`);
+  if (!isNonEmptyString(value.id)) throw new Error(`${where}: id is missing`);
+  if (!isNonEmptyString(value.label)) throw new Error(`${where}: label is missing`);
+  if (!isTimestamp(value.createdAt)) throw new Error(`${where}: createdAt is not a timestamp`);
+  if (value.editedAt !== undefined && !isTimestamp(value.editedAt)) {
+    throw new Error(`${where}: editedAt is not a timestamp`);
+  }
+  validateIdentity(value.identity, where);
+}
+
+const CHECK_OUTCOMES: readonly CheckOutcome[] = ['status', 'error', 'unknown'];
+
+function validateCheck(
+  value: unknown,
+  index: number,
+  applicationIds: ReadonlySet<string>,
+): asserts value is Check {
+  const where = `check[${index}]`;
+  if (!isRecord(value)) throw new Error(`${where}: not an object`);
+  if (!isNonEmptyString(value.id)) throw new Error(`${where}: id is missing`);
+  if (!isNonEmptyString(value.applicationId) || !applicationIds.has(value.applicationId)) {
+    throw new Error(`${where}: application reference is missing`);
+  }
+  if (!isTimestamp(value.at)) throw new Error(`${where}: at is not a timestamp`);
+  if (!CHECK_OUTCOMES.includes(value.outcome as CheckOutcome)) {
+    throw new Error(`${where}: outcome is unknown`);
+  }
+  if (!isNonEmptyString(value.statusKey)) throw new Error(`${where}: statusKey is missing`);
+  if (!isNonEmptyString(value.raw)) throw new Error(`${where}: raw text is missing`);
+  if (value.subStatus !== null && typeof value.subStatus !== 'string') {
+    throw new Error(`${where}: subStatus is invalid`);
+  }
+  if (typeof value.acknowledged !== 'boolean') {
+    throw new Error(`${where}: acknowledged is invalid`);
+  }
+}
+
 /**
  * Validates whatever was found in storage and brings it up to the current schema.
  *
  * Version 1 is the first schema, so the migration step is the identity function; the hook exists because
- * imports (Phase 8) and every later schema change depend on it.
+ * backup imports and every later schema change depend on it.
  */
 export function migrateStore(raw: unknown): Store {
-  if (raw === null || typeof raw !== 'object') {
+  if (!isRecord(raw)) {
     throw new Error('Stored data is not an object');
   }
-  const candidate = raw as Partial<Store>;
-  if (typeof candidate.version !== 'number') {
+  const version = raw.version;
+  if (typeof version !== 'number') {
     throw new Error('Stored data has no schema version');
   }
-  if (candidate.version > SCHEMA_VERSION) {
+  if (!Number.isInteger(version) || version < 1) {
+    throw new Error('Stored data has no valid schema version');
+  }
+  if (version > SCHEMA_VERSION) {
     throw new Error(
-      `Stored data uses schema version ${candidate.version}, newer than this build supports (${SCHEMA_VERSION})`,
+      `Stored data uses schema version ${version}, newer than this build supports (${SCHEMA_VERSION})`,
     );
   }
-  if (!Array.isArray(candidate.applications) || !Array.isArray(candidate.checks)) {
+  if (!Array.isArray(raw.applications) || !Array.isArray(raw.checks)) {
     throw new Error('Stored data is missing applications or checks');
   }
+
+  const applications: Application[] = [];
+  const applicationIds = new Set<string>();
+  for (const [index, value] of raw.applications.entries()) {
+    validateApplication(value, index);
+    if (applicationIds.has(value.id)) {
+      throw new Error(`Stored data has a duplicate application id at index ${index}`);
+    }
+    applicationIds.add(value.id);
+    applications.push(value);
+  }
+
+  const checks: Check[] = [];
+  const checkIds = new Set<string>();
+  for (const [index, value] of raw.checks.entries()) {
+    validateCheck(value, index, applicationIds);
+    if (checkIds.has(value.id)) {
+      throw new Error(`Stored data has a duplicate check id at index ${index}`);
+    }
+    checkIds.add(value.id);
+    checks.push(value);
+  }
+
   return {
     version: SCHEMA_VERSION,
-    applications: candidate.applications,
-    checks: candidate.checks,
-    settings: normaliseSettings(candidate.settings),
+    applications,
+    checks,
+    settings: normaliseSettings(raw.settings),
   };
 }
 
@@ -158,9 +271,44 @@ async function writeStore(store: Store): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEY]: store });
 }
 
-/** Replaces the whole store, which is what an import does after the schema check. */
+/**
+ * Serialises one read-modify-write of the whole store across the background worker and every extension page.
+ *
+ * The callback must not call another store mutator: Web Locks are not reentrant. It may be async (encryption
+ * and import need it), and whatever it returns is validated before a single write replaces the snapshot.
+ */
+function storeLockManager(): LockManager {
+  const locks = globalThis.navigator?.locks;
+  if (locks === undefined) {
+    throw new Error('Atomic storage updates require the Web Locks API');
+  }
+  return locks;
+}
+
+async function withStoreLock<T>(operation: () => Promise<T>): Promise<T> {
+  return storeLockManager().request(STORE_LOCK, operation);
+}
+
+export async function mutateStore(
+  mutate: (current: Store) => Store | Promise<Store>,
+): Promise<Store> {
+  return withStoreLock(async () => {
+    const current = await readStore();
+    const next = await mutate(current);
+    const validated = migrateStore(next);
+    await writeStore(validated);
+    return validated;
+  });
+}
+
+/**
+ * Replaces the whole store without reading it first, which is what an import or a recovery reset needs: the
+ * previous snapshot may itself be corrupt, and the replacement still has to be valid before it is written.
+ */
 export async function replaceStore(store: Store): Promise<void> {
-  await writeStore(migrateStore(store));
+  await withStoreLock(async () => {
+    await writeStore(migrateStore(store));
+  });
 }
 
 export async function listApplications(): Promise<Application[]> {
@@ -174,15 +322,19 @@ export async function getSettings(): Promise<Settings> {
 /** Replaces the reminder settings; the caller then asks the background to reschedule. */
 export async function setReminder(config: ReminderConfig): Promise<void> {
   if (!isValidReminder(config)) throw new Error('Invalid reminder configuration');
-  const store = await readStore();
-  await writeStore({ ...store, settings: { ...store.settings, reminders: config } });
+  await mutateStore((store) => ({
+    ...store,
+    settings: { ...store.settings, reminders: config },
+  }));
 }
 
 /** Stores the language override. Every page reads it on load, so no message is needed here. */
 export async function setLanguage(language: LanguageSetting): Promise<void> {
   if (!isLanguageSetting(language)) throw new Error('Invalid language setting');
-  const store = await readStore();
-  await writeStore({ ...store, settings: { ...store.settings, language } });
+  await mutateStore((store) => ({
+    ...store,
+    settings: { ...store.settings, language },
+  }));
 }
 
 export async function getApplication(id: string): Promise<Application | null> {
@@ -190,28 +342,49 @@ export async function getApplication(id: string): Promise<Application | null> {
   return store.applications.find((application) => application.id === id) ?? null;
 }
 
+function hasEncryptedIdentity(store: Store): boolean {
+  return store.applications.some((application) => application.identity.kind === 'encrypted');
+}
+
+/**
+ * The at-rest promise is checked inside the lock, not only in the form: another page may have turned
+ * encryption on between the form being drawn and the write. Only the explicit batch transaction may move a
+ * store to plaintext, and it does so by returning a store with no encrypted identities at all.
+ */
+function assertPlainWriteAllowed(store: Store, identity: Identity): void {
+  if (identity.kind === 'plain' && hasEncryptedIdentity(store)) {
+    throw new Error('Cannot write a plain identity while the store has encrypted identities');
+  }
+}
+
 export async function addApplication(input: {
   label: string;
   identity: Identity;
 }): Promise<Application> {
-  const store = await readStore();
   const application: Application = {
     id: createId(),
     label: input.label,
     identity: input.identity,
     createdAt: new Date().toISOString(),
   };
-  await writeStore({ ...store, applications: [...store.applications, application] });
+  await mutateStore((store) => {
+    assertPlainWriteAllowed(store, input.identity);
+    return { ...store, applications: [...store.applications, application] };
+  });
   return application;
 }
 
 /** Rewrites one application's identity, which is how encryption is turned on or off. */
 export async function updateIdentity(applicationId: string, identity: Identity): Promise<void> {
-  const store = await readStore();
-  const applications = store.applications.map((application) =>
-    application.id === applicationId ? { ...application, identity } : application,
-  );
-  await writeStore({ ...store, applications });
+  await mutateStore((store) => {
+    assertPlainWriteAllowed(store, identity);
+    return {
+      ...store,
+      applications: store.applications.map((application) =>
+        application.id === applicationId ? { ...application, identity } : application,
+      ),
+    };
+  });
 }
 
 /**
@@ -224,31 +397,34 @@ export async function updateApplication(
   applicationId: string,
   change: { label?: string; identity?: Identity },
 ): Promise<void> {
-  const store = await readStore();
-  if (!store.applications.some((application) => application.id === applicationId)) return;
+  await mutateStore((store) => {
+    if (!store.applications.some((application) => application.id === applicationId)) {
+      return store;
+    }
+    if (change.identity !== undefined) assertPlainWriteAllowed(store, change.identity);
 
-  const editedAt = new Date().toISOString();
-  const applications = store.applications.map((application) =>
-    application.id === applicationId
-      ? {
-          ...application,
-          ...(change.label === undefined ? {} : { label: change.label }),
-          ...(change.identity === undefined ? {} : { identity: change.identity }),
-          editedAt,
-        }
-      : application,
-  );
-  await writeStore({ ...store, applications });
+    const editedAt = new Date().toISOString();
+    const applications = store.applications.map((application) =>
+      application.id === applicationId
+        ? {
+            ...application,
+            ...(change.label === undefined ? {} : { label: change.label }),
+            ...(change.identity === undefined ? {} : { identity: change.identity }),
+            editedAt,
+          }
+        : application,
+    );
+    return { ...store, applications };
+  });
 }
 
 /** Deletes the application and every check that belongs to it — no orphan history is left behind. */
 export async function deleteApplication(id: string): Promise<void> {
-  const store = await readStore();
-  await writeStore({
+  await mutateStore((store) => ({
     ...store,
     applications: store.applications.filter((application) => application.id !== id),
     checks: store.checks.filter((check) => check.applicationId !== id),
-  });
+  }));
 }
 
 /** Appends a check. There is deliberately no update or delete: the history is append-only. */
@@ -259,11 +435,6 @@ export async function appendCheck(input: {
   raw: string;
   subStatus: string | null;
 }): Promise<Check> {
-  const store = await readStore();
-  const known = store.applications.some((application) => application.id === input.applicationId);
-  if (!known) {
-    throw new Error(`Cannot record a check for unknown application ${input.applicationId}`);
-  }
   const check: Check = {
     id: createId(),
     applicationId: input.applicationId,
@@ -274,7 +445,13 @@ export async function appendCheck(input: {
     subStatus: input.subStatus,
     acknowledged: false,
   };
-  await writeStore({ ...store, checks: [...store.checks, check] });
+  await mutateStore((store) => {
+    const known = store.applications.some((application) => application.id === input.applicationId);
+    if (!known) {
+      throw new Error(`Cannot record a check for unknown application ${input.applicationId}`);
+    }
+    return { ...store, checks: [...store.checks, check] };
+  });
   return check;
 }
 
@@ -299,9 +476,10 @@ export function latestStatusBefore(checks: readonly Check[], check: Check): Chec
 
 /** The only mutation a check allows: marking the change alert as seen. Its content never changes. */
 export async function acknowledgeCheck(id: string): Promise<void> {
-  const store = await readStore();
-  const checks = store.checks.map((check) =>
-    check.id === id ? { ...check, acknowledged: true } : check,
-  );
-  await writeStore({ ...store, checks });
+  await mutateStore((store) => ({
+    ...store,
+    checks: store.checks.map((check) =>
+      check.id === id ? { ...check, acknowledged: true } : check,
+    ),
+  }));
 }

@@ -1,5 +1,5 @@
 import { evaluateChange } from '../../core/changes';
-import { currentLocale, t } from '../../core/i18n';
+import { currentLocale, resolveLocaleCode, setLocale, t } from '../../core/i18n';
 import {
   type Application,
   type Check,
@@ -8,7 +8,8 @@ import {
   listChecks,
 } from '../../core/storage';
 import { displayStatus } from '../../core/statuses';
-import { initPageLocale } from '../shared/locale';
+import { applyDocumentLocale, initPageLocale } from '../shared/locale';
+import { isStoreRecoveryNeeded, renderStoreRecovery } from '../shared/recovery';
 import { button, el, formatDate, link, openPage, root } from '../shared/ui';
 
 /**
@@ -18,9 +19,45 @@ import { button, el, formatDate, link, openPage, root } from '../shared/ui';
 
 async function main(): Promise<void> {
   const view = root();
-  await initPageLocale();
+  let applications: Application[] | null = null;
+  let needsRecovery = false;
+  let recoveryError: unknown;
+
+  try {
+    await initPageLocale();
+    applications = await listApplications();
+  } catch (error) {
+    if (!(await isStoreRecoveryNeeded())) throw error;
+    needsRecovery = true;
+    recoveryError = error;
+    // The stored language cannot be read while the store is corrupt: fall back to the browser's language so
+    // the recovery panel is readable instead of the page staying blank.
+    applyDocumentLocale(setLocale(resolveLocaleCode('auto', browser.i18n.getUILanguage())));
+  }
+
   document.title = t('app.title');
-  const applications = await listApplications();
+
+  if (needsRecovery) {
+    await renderStoreRecovery(view, {
+      error: recoveryError,
+      labels: {
+        title: t('recovery.title'),
+        description: t('recovery.description'),
+        error: (detail) => t('recovery.error', { error: detail }),
+        download: t('recovery.download'),
+        downloaded: t('recovery.downloaded'),
+        reset: t('recovery.reset'),
+        resetConfirm: t('recovery.resetConfirm'),
+        resetDone: t('recovery.resetDone'),
+      },
+      onReset: () => {
+        window.location.reload();
+      },
+    });
+    return;
+  }
+
+  if (applications === null) return;
 
   view.append(el('h1', 'title', t('app.title')));
 
@@ -66,6 +103,16 @@ async function main(): Promise<void> {
       openPage('/statuses.html');
     }),
   );
+  if (
+    applications.some((application) => application.identity.kind === 'encrypted') &&
+    (await sessionUnlocked())
+  ) {
+    links.append(
+      link(t('popup.lockNow'), () => {
+        void lockSession();
+      }),
+    );
+  }
   view.append(...(applications.length > 1 ? [row] : []), links);
 }
 
@@ -75,12 +122,15 @@ async function buildCard(application: Application): Promise<HTMLElement> {
 
   const checks = await listChecks(application.id);
   const latest: Check | undefined = checks.at(-1);
-  const previous = latest === undefined ? null : latestStatusBefore(checks, latest);
+  const outstanding = lastChanged(checks, true);
+  // Prefer the unacknowledged change; when everything is acknowledged, the latest historical change is still
+  // worth reopening. A later unchanged check or an error must not hide the change that came before it.
+  const revisit = outstanding ?? lastChanged(checks, false);
+  const actions = el('div', 'row');
 
   if (latest === undefined) {
     card.append(el('p', 'status', t('popup.noChecks')));
   } else {
-    const change = evaluateChange(previous, latest);
     const status = el(
       'p',
       'status',
@@ -88,18 +138,44 @@ async function buildCard(application: Application): Promise<HTMLElement> {
         ? displayStatus(latest.raw, currentLocale().content)
         : t('popup.lastError'),
     );
-    if (change.kind === 'changed' && !latest.acknowledged) {
+    if (outstanding !== undefined) {
       status.append(el('span', 'marker', t('popup.changed')));
     }
     card.append(status, el('p', 'meta', t('popup.checkedOn', { date: formatDate(latest.at) })));
+
+    // A change used to be reachable only in the tab that showed it. This reopens the recorded change itself,
+    // not merely the latest check, so the explanation can be read again.
+    if (revisit !== undefined) {
+      const viewChange = link(t('popup.viewChange'), () => {
+        openPage(`/result.html?check=${encodeURIComponent(revisit.id)}`);
+      });
+      viewChange.classList.add('button', 'quiet');
+      actions.append(viewChange);
+    }
   }
 
-  card.append(
+  actions.append(
     button(t('popup.checkNow'), () => {
       void startRun([application.id]);
     }),
   );
+  card.append(actions);
   return card;
+}
+
+/** The last status check that was a change, optionally only among the unacknowledged ones. */
+export function lastChanged(
+  checks: readonly Check[],
+  onlyUnacknowledged: boolean,
+): Check | undefined {
+  for (let index = checks.length - 1; index >= 0; index -= 1) {
+    const candidate = checks[index];
+    if (candidate === undefined || candidate.outcome !== 'status') continue;
+    if (onlyUnacknowledged && candidate.acknowledged) continue;
+    const previous = latestStatusBefore(checks, candidate);
+    if (evaluateChange(previous, candidate).kind === 'changed') return candidate;
+  }
+  return undefined;
 }
 
 async function startRun(applicationIds?: string[]): Promise<void> {
@@ -107,4 +183,26 @@ async function startRun(applicationIds?: string[]): Promise<void> {
   window.close();
 }
 
-void main();
+async function sessionUnlocked(): Promise<boolean> {
+  try {
+    const response: unknown = await browser.runtime.sendMessage({
+      type: 'naciocheck:session-state',
+    });
+    return (
+      typeof response === 'object' &&
+      response !== null &&
+      'unlocked' in response &&
+      response.unlocked === true
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function lockSession(): Promise<void> {
+  await browser.runtime.sendMessage({ type: 'naciocheck:lock' });
+  window.close();
+}
+
+// The popup page always has #app; tests import this module without a page.
+if (document.getElementById('app') !== null) void main();

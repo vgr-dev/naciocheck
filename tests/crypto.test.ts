@@ -3,7 +3,9 @@ import {
   PBKDF2_ITERATIONS,
   WrongPassphraseError,
   decryptIdentity,
+  deriveKey,
   encryptIdentity,
+  isValidEncryptedPayload,
 } from '../src/core/crypto';
 import type { PlainIdentity } from '../src/core/storage';
 
@@ -83,4 +85,68 @@ describe('encryptIdentity / decryptIdentity', () => {
     expect(Date.now() - started).toBeGreaterThan(20);
     await expect(decryptIdentity(encrypted, 'frase secreta')).resolves.toEqual(IDENTITY);
   }, 20_000);
+});
+
+describe('PBKDF2 parameter bounds', () => {
+  it('accepts the deliberately low iteration count used by the rest of the suite', async () => {
+    const encrypted = await encryptIdentity(IDENTITY, 'frase secreta', FAST);
+
+    await expect(decryptIdentity(encrypted, 'frase secreta')).resolves.toEqual(IDENTITY);
+  });
+
+  it('refuses to encrypt with an out-of-range iteration count', async () => {
+    for (const iterations of [0, -1, 1.5, 2_000_001, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(encryptIdentity(IDENTITY, 'frase secreta', iterations)).rejects.toThrow(
+        /iterations/i,
+      );
+    }
+  });
+
+  it('refuses a payload with out-of-range iterations or wrong salt, IV or ciphertext lengths', async () => {
+    const encrypted = await encryptIdentity(IDENTITY, 'frase secreta', FAST);
+    const payload = JSON.parse(encrypted.payload) as Record<string, unknown>;
+    const tampered = (patch: Record<string, unknown>) => ({
+      kind: 'encrypted' as const,
+      payload: JSON.stringify({ ...payload, ...patch }),
+    });
+
+    for (const patch of [
+      { iterations: 0 },
+      { iterations: 1.5 },
+      { iterations: 2_000_001 },
+      { salt: btoa('short') },
+      { iv: btoa('short') },
+      { ciphertext: btoa('x') },
+    ]) {
+      await expect(decryptIdentity(tampered(patch), 'frase secreta')).rejects.toBeInstanceOf(
+        WrongPassphraseError,
+      );
+    }
+  });
+});
+
+describe('encrypted envelope structure vs plaintext shape', () => {
+  it('accepts a valid envelope and rejects a malformed plaintext only when decrypting', async () => {
+    const salt = new Uint8Array(16).fill(7);
+    const iv = new Uint8Array(12).fill(9);
+    const key = await deriveKey('frase secreta', salt, FAST);
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      new TextEncoder().encode(JSON.stringify({ kind: 'plain' })),
+    );
+    const base64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
+    const payload = JSON.stringify({
+      v: 1,
+      iterations: FAST,
+      salt: base64(salt),
+      iv: base64(iv),
+      ciphertext: base64(new Uint8Array(ciphertext)),
+    });
+
+    expect(isValidEncryptedPayload(payload)).toBe(true);
+    await expect(
+      decryptIdentity({ kind: 'encrypted', payload }, 'frase secreta'),
+    ).rejects.toBeInstanceOf(WrongPassphraseError);
+  });
 });

@@ -40,7 +40,7 @@ export const DEFAULT_LANGUAGE: LanguageSetting = 'auto';
 
 export const DEFAULT_LOCALE: LocaleCode = 'es';
 
-/** Locales a user can pick; `qps` is set by hand from devtools only, see the plan's Phase 9 evidence. */
+/** Locales a user can pick; the development-only `qps` locale is set by hand from devtools. */
 export const SELECTABLE_LOCALES: readonly LocaleCode[] = ['es', 'en'];
 
 const PSEUDO_MARK = '⟦';

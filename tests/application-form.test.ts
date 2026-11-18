@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { browser } from 'wxt/browser';
 import { decryptIdentity, encryptIdentity } from '../src/core/crypto';
 import { DEFAULT_LOCALE, setLocale, t } from '../src/core/i18n';
@@ -113,6 +113,40 @@ beforeEach(async () => {
 });
 
 describe('the application form', () => {
+  it('settles a failed storage write with a recoverable error and no partial save', async () => {
+    const form = await buildApplicationForm(() => undefined);
+    document.body.append(form);
+    fill(form, NEW, 'Prueba');
+    const write = vi
+      .spyOn(browser.storage.local, 'set')
+      .mockRejectedValueOnce(new Error('storage failed'));
+    try {
+      submit(form);
+      await vi.waitFor(() =>
+        expect(form.querySelector('[role="alert"]')?.textContent).toBe(t('form.saveFailed')),
+      );
+      expect((await readStore()).applications).toHaveLength(0);
+      await vi.waitFor(() =>
+        expect(form.querySelector<HTMLButtonElement>('button.primary')?.disabled).toBe(false),
+      );
+    } finally {
+      write.mockRestore();
+    }
+  });
+
+  it('does not save duplicate applications when submitted twice before the first save finishes', async () => {
+    let saves = 0;
+    const form = await buildApplicationForm(() => {
+      saves += 1;
+    });
+    document.body.append(form);
+    fill(form, NEW, 'Prueba');
+    submit(form);
+    submit(form);
+    await vi.waitFor(() => expect(saves).toBe(1));
+    expect((await readStore()).applications).toHaveLength(1);
+  });
+
   it('stores the new application encrypted when the store is already encrypted', async () => {
     await seedEncryptedApplication();
     const form = await buildApplicationForm(() => undefined);

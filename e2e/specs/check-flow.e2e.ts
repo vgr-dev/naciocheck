@@ -318,7 +318,7 @@ describe('check run', () => {
       before,
       'The popup did not open',
     );
-    await popup.$('li.app-card button').click();
+    await popup.$('li.app-card:first-child button').click();
 
     const unlockPage = await waitForNewPage(
       extensionPage('unlock.html'),
@@ -348,6 +348,102 @@ describe('check run', () => {
     await solveStubCaptcha(checkWindow);
     await waitForResult(checkWindow);
     expect(sede.posts).toHaveLength(1);
+  });
+
+  it('checks the encrypted application that was chosen, not every saved one, after unlocking', async () => {
+    await addApplicationThroughUi(FIRST_APPLICATION);
+    await addApplicationThroughUi(SECOND_APPLICATION);
+    await enableEncryptionThroughUi(PASSPHRASE);
+    await lockExtensionSession();
+    const sede = serveFakeSede({ results: [resultPage({ expendiente: 'R500002' })] });
+
+    const before = await openPageUrls();
+    await browser.newWindow(extensionPage('popup.html'));
+    const popup = await waitForNewPage(
+      extensionPage('popup.html'),
+      before,
+      'The popup did not open',
+    );
+    const cards = await popup.$$('li.app-card');
+    expect(cards).toHaveLength(2);
+    const secondCard = cards[1];
+    if (secondCard === undefined) throw new Error('The second application is not in the popup');
+    await secondCard.$('button').click();
+
+    const unlockPage = await waitForNewPage(
+      extensionPage('unlock.html'),
+      before,
+      'The unlock page did not open',
+    );
+    await unlockPage.$('#passphrase').setValue(PASSPHRASE);
+    await unlockPage.$('button.primary').click();
+
+    const checkWindow = await waitForNewPage(
+      SEDE_FORM_URL,
+      before,
+      'The check window did not open after unlock',
+    );
+    expect(await awaitFakePage(checkWindow)).toBe(true);
+    await expect(checkWindow.$('#naciocheck-captcha-only')).toBeExisting();
+    // The selected application, not the first one in the store: unlocking must not start every saved one.
+    expect(await formValues(checkWindow)).toEqual(identityValues(SECOND_APPLICATION));
+
+    await solveStubCaptcha(checkWindow);
+    await waitForResult(checkWindow);
+    expect(sede.posts).toHaveLength(1);
+
+    const store = await readStoredStore();
+    const second = store.applications.find(
+      (application) => application.label === SECOND_APPLICATION.label,
+    );
+    expect(second).toBeDefined();
+    expect(store.checks).toHaveLength(1);
+    expect(store.checks[0]?.applicationId).toBe(second?.id);
+  });
+
+  it('never starts every application from a cancelled or missing unlock selection', async () => {
+    await addApplicationThroughUi(FIRST_APPLICATION);
+    await addApplicationThroughUi(SECOND_APPLICATION);
+    await enableEncryptionThroughUi(PASSPHRASE);
+    await lockExtensionSession();
+    const sede = serveFakeSede({ results: [resultPage()] });
+    const before = await openPageUrls();
+    await browser.newWindow(extensionPage('popup.html'));
+    const popup = await waitForNewPage(
+      extensionPage('popup.html'),
+      before,
+      'The popup did not open',
+    );
+    await popup.$('li.app-card:first-child button').click();
+    const pending = await waitForNewPage(
+      extensionPage('unlock.html'),
+      before,
+      'The unlock page did not open',
+    );
+    await expect(pending.$('#passphrase')).toBeExisting();
+
+    await lockExtensionSession();
+    await browser.waitUntil(
+      async () =>
+        !(await openPageUrls()).some((url) => url.startsWith(extensionPage('unlock.html'))),
+      {
+        timeoutMsg: 'Locking did not close the pending unlock prompt',
+      },
+    );
+
+    // Even reopening an obsolete prompt cannot turn an absent selection into "check all".
+    const afterLock = await openPageUrls();
+    await browser.newWindow(extensionPage('unlock.html'));
+    const stale = await waitForNewPage(
+      extensionPage('unlock.html'),
+      afterLock,
+      'The stale prompt did not open',
+    );
+    await stale.$('#passphrase').setValue(PASSPHRASE);
+    await stale.$('button.primary').click();
+    await expect(stale.$('p.hint:last-of-type')).toHaveText(/No se ha podido desbloquear/);
+    expect((await newPageUrls(before)).filter((url) => url.startsWith(SEDE_FORM_URL))).toEqual([]);
+    expect(sede.posts).toHaveLength(0);
   });
 
   it('checks a second application in the same window after the first', async () => {

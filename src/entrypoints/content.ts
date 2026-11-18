@@ -30,7 +30,11 @@ export default defineContentScript({
   matches: ['https://sede.mjusticia.gob.es/eConsultas/*'],
   runAt: 'document_idle',
   main() {
-    void start();
+    // Any failure after the captcha-only view has hidden the page must put the whole page back. Errors before
+    // that point leave the page untouched, so this is a no-op for them.
+    void start().catch(() => {
+      restoreFullPage();
+    });
   },
 });
 
@@ -49,7 +53,11 @@ async function start(): Promise<void> {
     await showPicker();
     return;
   }
-  await prepareCheck(fill);
+  try {
+    await prepareCheck(fill);
+  } catch {
+    showFallback(fill, 'error');
+  }
 }
 
 /** The background knows this tab belongs to a check run; it may not have registered it yet, hence the retries. */
@@ -76,13 +84,60 @@ async function prepareCheck(fill: FillPayload): Promise<void> {
   if (!result.complete || !hasCaptchaOnlyViewTargets(document) || disabled) {
     // Fallback: the page is not the shape we know (or the debug switch is on). Leave it whole, fields filled,
     // and say what to do.
-    injectStyle(HINT_STYLE_ID, buildHintCss());
-    showHint(t('content.fallbackHint', { label: fill.label }));
+    showFallback(fill, 'manual');
     return;
   }
   injectStyle(CAPTCHA_ONLY_STYLE_ID, buildCaptchaOnlyCss());
-  showHint(t('content.captchaHint', { label: fill.label }));
-  watchCaptcha();
+
+  let timer: number | undefined;
+  const stop = (): void => {
+    if (timer !== undefined) window.clearInterval(timer);
+    timer = undefined;
+  };
+
+  // The escape control is part of the strip and stays usable while the rest of the page is hidden.
+  showHint(t('content.captchaHint', { label: fill.label }), () => {
+    stop();
+    showFallback(fill, 'manual');
+  });
+
+  timer = window.setInterval(() => {
+    try {
+      const decision = submitIfCaptchaSolved(document);
+      if (decision === 'submitted') {
+        stop();
+        return;
+      }
+      if (decision === 'blocked') {
+        // The captcha is solved but the form refused the submission. Polling would never finish and the fields
+        // that need attention would stay hidden, so put the full page back with what the server returned.
+        stop();
+        showFallback(fill, 'blocked');
+      }
+    } catch {
+      // The page changed under us. Stop polling and give the whole page back instead of hiding it forever.
+      stop();
+      showFallback(fill, 'error');
+    }
+  }, POLL_INTERVAL_MS);
+}
+
+/** Puts the whole page back, with the fields as filled, and says what the person has to do next. */
+function showFallback(fill: FillPayload, reason: 'manual' | 'blocked' | 'error'): void {
+  document.getElementById(CAPTCHA_ONLY_STYLE_ID)?.remove();
+  injectStyle(HINT_STYLE_ID, buildHintCss());
+  showHint(
+    reason === 'blocked'
+      ? t('content.submitBlocked')
+      : t('content.fallbackHint', { label: fill.label }),
+  );
+}
+
+/** An unexpected failure after the page was hidden: make it visible again instead of leaving it blank. */
+function restoreFullPage(): void {
+  if (document.getElementById(CAPTCHA_ONLY_STYLE_ID) === null) return;
+  document.getElementById(CAPTCHA_ONLY_STYLE_ID)?.remove();
+  document.getElementById(HINT_ID)?.remove();
 }
 
 /**
@@ -93,14 +148,6 @@ async function prepareCheck(fill: FillPayload): Promise<void> {
 async function isCaptchaOnlyViewDisabled(): Promise<boolean> {
   const stored: Record<string, unknown> = await browser.storage.local.get(DEV_FLAG_KEY);
   return stored[DEV_FLAG_KEY] === true;
-}
-
-function watchCaptcha(): void {
-  const timer = window.setInterval(() => {
-    if (submitIfCaptchaSolved(document) === 'submitted') {
-      window.clearInterval(timer);
-    }
-  }, POLL_INTERVAL_MS);
 }
 
 async function reportOutcome(outcome: ParseOutcome): Promise<void> {
@@ -131,9 +178,19 @@ async function showPicker(): Promise<void> {
       button.title = t('content.pickerEncrypted');
     } else {
       const identity = application.identity;
-      button.addEventListener('click', () => {
+      button.addEventListener('click', (event) => {
+        // The page is somebody else's: a script on it can dispatch a click on our button, but not a trusted
+        // one. Only a real person's pick may drive a fill.
+        if (!event.isTrusted) return;
         panel.remove();
-        void prepareCheck({ applicationId: application.id, label: application.label, identity });
+        const fill: FillPayload = {
+          applicationId: application.id,
+          label: application.label,
+          identity,
+        };
+        void prepareCheck(fill).catch(() => {
+          showFallback(fill, 'error');
+        });
       });
     }
     panel.append(button);
@@ -150,12 +207,25 @@ function injectStyle(id: string, css: string): void {
   document.head.append(style);
 }
 
-function showHint(text: string): void {
-  if (document.getElementById(HINT_ID) !== null) return;
-  const hint = document.createElement('div');
-  hint.id = HINT_ID;
-  hint.textContent = text;
-  document.body.append(hint);
+function showHint(text: string, onShowFullPage?: () => void): void {
+  let hint = document.getElementById(HINT_ID);
+  if (hint === null) {
+    hint = document.createElement('div');
+    hint.id = HINT_ID;
+    document.body.append(hint);
+  }
+  hint.replaceChildren(document.createTextNode(text));
+
+  if (onShowFullPage !== undefined) {
+    const escape = document.createElement('button');
+    escape.type = 'button';
+    escape.className = 'naciocheck-escape';
+    escape.textContent = t('content.showFullPage');
+    escape.addEventListener('click', () => {
+      onShowFullPage();
+    });
+    hint.append(escape);
+  }
 }
 
 function delay(ms: number): Promise<void> {

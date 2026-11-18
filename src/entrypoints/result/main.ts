@@ -30,8 +30,10 @@ async function main(): Promise<void> {
   if (app === null) return;
   await initPageLocale();
   document.title = t('app.title');
+  const checkId = new URLSearchParams(window.location.search).get('check');
   const response: unknown = await browser.runtime.sendMessage({
     type: 'naciocheck:result-request',
+    ...(checkId === null || checkId === '' ? {} : { checkId }),
   });
   if (!isResultPayload(response)) {
     renderEmpty();
@@ -58,7 +60,7 @@ function render(payload: ResultPayload): void {
   if (view.view !== 'changed') app.append(brandHeader());
 
   if (view.view !== 'status') {
-    app.append(buildBanner(view));
+    app.append(buildBanner(view, payload.acknowledged));
   }
 
   // The alert's way out sits under the banner: after the explanation and the sources it was off the first screen.
@@ -138,9 +140,11 @@ function render(payload: ResultPayload): void {
   if (view.view !== 'changed') app.append(actions);
 }
 
-function buildBanner(view: ResultView): HTMLElement {
+function buildBanner(view: ResultView, acknowledged: boolean): HTMLElement {
   const banner = document.createElement('div');
-  banner.className = `banner ${view.view}`;
+  // An acknowledged change keeps its result and its banner, but no longer reads as an unacknowledged alert;
+  // persisted in the payload, so a reload does not bring the alert back.
+  banner.className = view.view === 'changed' && acknowledged ? 'banner' : `banner ${view.view}`;
   if (view.view === 'changed') {
     const icon = document.createElement('img');
     icon.src = '/icon/icon-animated.svg';
@@ -176,9 +180,9 @@ function buildActions(payload: ResultPayload): HTMLElement {
   }
 
   if (payload.hasNext) {
-    const next = element('button', 'primary', t('result.next'));
+    const next = element('button', 'primary', t('result.next')) as HTMLButtonElement;
     next.addEventListener('click', () => {
-      void browser.runtime.sendMessage({ type: 'naciocheck:continue' });
+      void continueRun(next);
     });
     actions.append(next);
   }
@@ -187,12 +191,27 @@ function buildActions(payload: ResultPayload): HTMLElement {
 }
 
 async function acknowledgeChange(payload: ResultPayload): Promise<void> {
+  if (payload.checkId === null) return;
   await browser.runtime.sendMessage({ type: 'naciocheck:acknowledge', checkId: payload.checkId });
-  if (app !== null) {
-    const banner = app.querySelector('.banner.changed');
-    banner?.classList.remove('changed');
-    app.querySelector('.actions')?.replaceChildren();
+  // Render from the acknowledged payload: the cached copy is updated too, so a reload keeps it acknowledged.
+  render({ ...payload, acknowledged: true });
+}
+
+/** Disabled while the message is in flight: a double click must not consume two queue entries. */
+async function continueRun(control: HTMLButtonElement): Promise<void> {
+  control.disabled = true;
+  try {
+    const response: unknown = await browser.runtime.sendMessage({ type: 'naciocheck:continue' });
+    if (!isContinued(response)) control.disabled = false;
+  } catch {
+    control.disabled = false;
   }
+}
+
+function isContinued(value: unknown): boolean {
+  return (
+    typeof value === 'object' && value !== null && 'continued' in value && value.continued === true
+  );
 }
 
 async function retryCheck(payload: ResultPayload): Promise<void> {

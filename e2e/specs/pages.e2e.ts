@@ -328,6 +328,9 @@ describe('extension pages', () => {
       await page.$('#app #passphrase-repeat').setValue(PASSPHRASE);
       await page.$('button=Cifrar los datos').click();
       await expect(page.$('button=Quitar el cifrado')).toBeExisting();
+      await expect(page.$('.encryption + p[role="status"]')).toHaveText(
+        'Datos cifrados. Guarda la contraseña en un sitio seguro.',
+      );
 
       const store = await readStoredStore();
       expect(store.applications.map((application) => application.label)).toEqual([
@@ -770,11 +773,25 @@ describe('extension pages', () => {
       await page.$('#passphrase-repeat').setValue(PASSPHRASE);
       await page.$('button=Cifrar los datos').click();
       await expect(page.$('button=Quitar el cifrado')).toBeExisting();
+      await expect(page.$('.encryption + p[role="status"]')).toHaveText(
+        'Datos cifrados. Guarda la contraseña en un sitio seguro.',
+      );
 
       const store = await readStoredStore();
       expect(store.applications.map((application) => application.identity.kind)).toEqual([
         'encrypted',
       ]);
+
+      await page.$('#passphrase').setValue(PASSPHRASE);
+      await page.execute('window.confirm = () => false;');
+      await page.$('button=Quitar el cifrado').click();
+      expect((await readStoredStore()).applications[0]?.identity.kind).toBe('encrypted');
+      // The storage helper navigates this shared context, so the password field is new again.
+      await page.$('#passphrase').setValue(PASSPHRASE);
+      await page.execute('window.confirm = () => true;');
+      await page.$('button=Quitar el cifrado').click();
+      await expect(page.$('.encryption + p[role="status"]')).toHaveText('Cifrado desactivado.');
+      expect((await readStoredStore()).applications[0]?.identity.kind).toBe('plain');
     });
 
     it('edits a plain application, cancels an edit and deletes one', async () => {
@@ -808,6 +825,10 @@ describe('extension pages', () => {
       await expect(reopened.$('#field-label')).not.toBeExisting();
       await expect(reopened.$('.label')).toHaveText('Solicitud renombrada');
 
+      await page.execute('window.confirm = () => false;');
+      await reopened.$('button=Borrar').click();
+      expect((await readStoredStore()).applications).toHaveLength(1);
+      await page.execute('window.confirm = () => true;');
       await reopened.$('button=Borrar').click();
       await browser.waitUntil(async () => !(await page.$('ul.apps').isExisting()), {
         timeoutMsg: 'The application was not deleted',

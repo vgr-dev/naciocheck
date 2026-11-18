@@ -117,7 +117,7 @@ export async function resetExtensionStorage(): Promise<void> {
   });
 }
 
-/** Adds one application through the real form, then reloads: saving only announces, it does not redraw. */
+/** Adds one application through the real form and waits for its asynchronous save before navigating. */
 export async function addApplicationThroughUi(identity: FakeIdentity): Promise<void> {
   const context = await openExtensionPage('options.html');
 
@@ -128,6 +128,16 @@ export async function addApplicationThroughUi(identity: FakeIdentity): Promise<v
   await form.$('#field-year').setValue(identity.year);
   await form.$('#field-birthDate').setValue(identity.birthDate);
   await form.$('button.primary').click();
+
+  await browser.waitUntil(
+    async () => {
+      const confirmation = context.$('p.saved');
+      return (
+        (await confirmation.isExisting()) && (await confirmation.getText()).includes(identity.label)
+      );
+    },
+    { timeoutMsg: 'The application save was not confirmed' },
+  );
 
   await context.refresh();
   await expect(context.$('ul.apps')).toBeExisting();

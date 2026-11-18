@@ -1,5 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { browser } from 'wxt/browser';
+import { exportStore } from '../src/core/backup';
 import { encryptIdentity } from '../src/core/crypto';
 import { DEFAULT_LOCALE, setLocale, t } from '../src/core/i18n';
 import {
@@ -7,6 +8,11 @@ import {
   appendCheck,
   listApplications,
   listChecks,
+  readStore,
+  replaceStore,
+  updateIdentity,
+  emptyStore,
+  type Store,
   type PlainIdentity,
 } from '../src/core/storage';
 import { buildApplicationForm } from '../src/entrypoints/shared/application-form';
@@ -21,6 +27,7 @@ import { renderBackup, renderEncryption } from '../src/entrypoints/shared/encryp
 
 const PASSPHRASE = 'frase de prueba';
 const FAST_ITERATIONS = 1_000;
+const confirmDialog = vi.fn<() => boolean>();
 
 const FIRST: PlainIdentity = {
   kind: 'plain',
@@ -40,8 +47,9 @@ const SECOND: PlainIdentity = {
 
 async function seedMixedStore(): Promise<void> {
   const encrypted = await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS);
-  const one = await addApplication({ label: 'Cifrada', identity: encrypted });
+  const one = await addApplication({ label: 'Cifrada', identity: FIRST });
   const other = await addApplication({ label: 'Sin cifrar', identity: SECOND });
+  await updateIdentity(one.id, encrypted);
 
   for (const application of [one, other]) {
     await appendCheck({
@@ -52,6 +60,23 @@ async function seedMixedStore(): Promise<void> {
       subStatus: null,
     });
   }
+}
+
+/** Simulates a legacy mixed snapshot, not a permitted new plaintext write while encryption is on. */
+async function seedLegacyPlain(label: string): Promise<void> {
+  const store = await readStore();
+  await replaceStore({
+    ...store,
+    applications: [
+      ...store.applications,
+      {
+        id: crypto.randomUUID(),
+        label,
+        identity: SECOND,
+        createdAt: new Date().toISOString(),
+      },
+    ],
+  });
 }
 
 function repairButton(view: HTMLElement): HTMLButtonElement {
@@ -87,9 +112,79 @@ beforeEach(async () => {
   setLocale(DEFAULT_LOCALE);
   await browser.storage.local.clear();
   document.body.replaceChildren();
+  confirmDialog.mockReset().mockReturnValue(true);
+  vi.spyOn(window, 'confirm').mockImplementation(confirmDialog);
 });
 
+afterEach(() => vi.restoreAllMocks());
+
 describe('the encryption section', () => {
+  it('does not partially decrypt when a later identity uses another passphrase', async () => {
+    await addApplication({
+      label: 'Primera',
+      identity: await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS),
+    });
+    await addApplication({
+      label: 'Otra',
+      identity: await encryptIdentity(SECOND, 'otra frase segura', FAST_ITERATIONS),
+    });
+    const before = await readStore();
+    const view = document.createElement('div');
+    document.body.append(view);
+    await renderEncryption(view, () => Promise.resolve());
+    fillPassphrase(view, PASSPHRASE);
+    sectionButton(view, t('encryption.disable')).click();
+    await vi.waitFor(() => expect(view.textContent).toContain(t('encryption.decryptFailed')));
+    expect(await readStore()).toEqual(before);
+  });
+
+  it('does not remove encryption when its confirmation is cancelled', async () => {
+    await addApplication({
+      label: 'Primera',
+      identity: await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS),
+    });
+    const before = await readStore();
+    const view = document.createElement('div');
+    document.body.append(view);
+    await renderEncryption(view, () => Promise.resolve());
+    confirmDialog.mockReturnValue(false);
+    fillPassphrase(view, PASSPHRASE);
+    sectionButton(view, t('encryption.disable')).click();
+    expect(await readStore()).toEqual(before);
+  });
+
+  it.each([
+    ['enable', 'done'],
+    ['repair', 'repaired'],
+    ['disable', 'disabled'],
+  ] as const)('keeps the %s confirmation after a full page redraw', async (action, outcome) => {
+    if (action === 'repair') await seedMixedStore();
+    else {
+      await addApplication({
+        label: 'Prueba',
+        identity:
+          action === 'enable' ? FIRST : await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS),
+      });
+    }
+    const view = document.createElement('div');
+    document.body.append(view);
+    const redraw = async (): Promise<void> => {
+      view.replaceChildren();
+      await renderEncryption(view, redraw);
+    };
+    await redraw();
+    fillPassphrase(view, PASSPHRASE);
+    sectionButton(view, t(`encryption.${action}`)).click();
+    await vi.waitFor(
+      () => {
+        expect(view.querySelector('.encryption + p[role="status"]')?.textContent).toBe(
+          t(`encryption.${outcome}`),
+        );
+      },
+      { timeout: 5_000 },
+    );
+  });
+
   it('lists the identities still in clear and encrypts them without losing a check', async () => {
     await seedMixedStore();
     const view = document.createElement('div');
@@ -291,7 +386,7 @@ describe('when the store changes after the section was drawn', () => {
     document.body.append(view);
     await renderEncryption(view, () => Promise.resolve());
 
-    await addApplication({ label: 'Añadida después', identity: SECOND });
+    await seedLegacyPlain('Añadida después');
 
     fillPassphrase(view, PASSPHRASE);
     sectionButton(view, t('encryption.disable')).click();
@@ -313,7 +408,7 @@ describe('when the store changes after the section was drawn', () => {
     const section = await renderEncryption(view, () => Promise.resolve());
     expect(view.textContent).not.toContain(t('encryption.repair'));
 
-    await addApplication({ label: 'Añadida después', identity: SECOND });
+    await seedLegacyPlain('Añadida después');
     await section.refresh();
 
     expect(view.textContent).toContain('Añadida después');
@@ -324,13 +419,96 @@ describe('when the store changes after the section was drawn', () => {
 });
 
 describe('the backup section', () => {
+  async function importView(incoming: Store, mode: 'merge' | 'replace'): Promise<HTMLElement> {
+    const view = document.createElement('div');
+    document.body.append(view);
+    const redraw = (): Promise<void> => {
+      view.replaceChildren();
+      renderBackup(view, redraw);
+      return Promise.resolve();
+    };
+    await redraw();
+    const input = view.querySelector<HTMLInputElement>('#import-file');
+    const select = view.querySelector<HTMLSelectElement>('#backup-mode');
+    if (input === null || select === null) throw new Error('Missing import controls');
+    Object.defineProperty(input, 'files', {
+      value: [{ text: () => Promise.resolve(exportStore(incoming)) }],
+    });
+    select.value = mode;
+    return view;
+  }
+
+  it.each(['merge', 'replace'] as const)(
+    'cancelling %s leaves all saved data untouched',
+    async (mode) => {
+      await addApplication({ label: 'Conservar', identity: FIRST });
+      const before = await readStore();
+      const view = await importView(emptyStore(), mode);
+      confirmDialog.mockReturnValue(false);
+      sectionButton(view, t('backup.import')).click();
+      await vi.waitFor(() => expect(confirmDialog).toHaveBeenCalled());
+      expect(await readStore()).toEqual(before);
+      expect(view.textContent).not.toContain(t('backup.replaced'));
+    },
+  );
+
+  it.each(['merge', 'replace'] as const)(
+    'refuses plaintext %s into an encrypted store',
+    async (mode) => {
+      await addApplication({ label: 'Copia antigua', identity: FIRST });
+      const incoming = await readStore();
+      await updateIdentity(
+        incoming.applications[0]?.id ?? '',
+        await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS),
+      );
+      const before = await readStore();
+      const view = await importView(incoming, mode);
+      sectionButton(view, t('backup.import')).click();
+      await vi.waitFor(() => expect(view.textContent).toContain(t('backup.encryptionRequired')));
+      expect(await readStore()).toEqual(before);
+    },
+  );
+
+  it('replaces only after confirmation, redraws and requests lock and rescheduling', async () => {
+    await addApplication({ label: 'Eliminar', identity: FIRST });
+    const incoming = emptyStore();
+    const send = vi.spyOn(browser.runtime, 'sendMessage');
+    const view = await importView(incoming, 'replace');
+    sectionButton(view, t('backup.import')).click();
+    await vi.waitFor(() =>
+      expect(view.querySelector('.backup + p[role="status"]')?.textContent).toBe(
+        t('backup.replaced'),
+      ),
+    );
+    expect(await readStore()).toEqual(incoming);
+    expect(confirmDialog).toHaveBeenCalledWith(
+      t('backup.confirmReplace', { applications: 1, checks: 0 }),
+    );
+    expect(send).toHaveBeenCalledWith({ type: 'naciocheck:lock' });
+    expect(send).toHaveBeenCalledWith({ type: 'naciocheck:reschedule' });
+  });
+
+  it('does not overwrite a change made while the import confirmation is open', async () => {
+    await addApplication({ label: 'Conservar', identity: FIRST });
+    const view = await importView(emptyStore(), 'replace');
+    let concurrent: Promise<unknown> = Promise.resolve();
+    confirmDialog.mockImplementation(() => {
+      concurrent = addApplication({ label: 'Guardada durante el diálogo', identity: SECOND });
+      return true;
+    });
+    sectionButton(view, t('backup.import')).click();
+    await vi.waitFor(() => expect(view.textContent).toContain(t('backup.changed')));
+    await concurrent;
+    expect((await readStore()).applications).toHaveLength(2);
+  });
+
   it('exports the store as it is now and warns about a plain identity added since', async () => {
     const encrypted = await encryptIdentity(FIRST, PASSPHRASE, FAST_ITERATIONS);
     await addApplication({ label: 'Cifrada', identity: encrypted });
 
     const view = document.createElement('div');
     document.body.append(view);
-    renderBackup(view);
+    renderBackup(view, () => Promise.resolve());
 
     // jsdom has no download and no dialog: the question is answered here and the Blob is kept instead of being
     // handed to an anchor. Captured through `Reflect` because the lint rules call an extracted method one that
@@ -343,7 +521,7 @@ describe('the backup section', () => {
     };
     let asked = 0;
     const files: Blob[] = [];
-    Reflect.set(window, 'confirm', () => {
+    confirmDialog.mockImplementation(() => {
       asked += 1;
       return true;
     });
@@ -356,13 +534,15 @@ describe('the backup section', () => {
 
     try {
       // In clear, and added after the section was drawn: this is the identity the warning is for.
-      await addApplication({ label: 'Añadida después', identity: SECOND });
+      await seedLegacyPlain('Añadida después');
       sectionButton(view, t('backup.export')).click();
 
       const deadline = Date.now() + 5_000;
       while (files.length === 0 && Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
+      // Keep the object-URL mocks alive until the deferred browser cleanup has run.
+      await new Promise((resolve) => setTimeout(resolve, 1_050));
     } finally {
       Reflect.set(window, 'confirm', original.confirm);
       Reflect.set(URL, 'createObjectURL', original.createObjectURL);

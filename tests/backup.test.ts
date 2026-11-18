@@ -43,6 +43,15 @@ const PLAIN_STORE: Store = {
   },
 };
 
+/** A structurally valid, deliberately fast envelope; nobody decrypts this fixture. */
+const FAST_ENVELOPE = JSON.stringify({
+  v: 1,
+  iterations: 1000,
+  salt: 'MDEyMzQ1Njc4OWFiY2RlZg==',
+  iv: 'MDEyMzQ1Njc4OWFi',
+  ciphertext: 'MDEyMzQ1Njc4OWFiY2RlZg==',
+});
+
 const ENCRYPTED_STORE: Store = {
   ...PLAIN_STORE,
   applications: [
@@ -50,7 +59,7 @@ const ENCRYPTED_STORE: Store = {
       ...PLAIN_STORE.applications[0]!,
       identity: {
         kind: 'encrypted',
-        payload: '{"v":1,"iterations":1000,"salt":"a","iv":"b","ciphertext":"c"}',
+        payload: FAST_ENVELOPE,
       },
     },
   ],
@@ -126,5 +135,97 @@ describe('mergeStores', () => {
 
     expect(merged.settings.reminders).toEqual(PLAIN_STORE.settings.reminders);
     expect(merged.settings.language).toBe(PLAIN_STORE.settings.language);
+  });
+});
+
+describe('import validation', () => {
+  it('refuses a backup whose application has no usable identity', () => {
+    const store = {
+      ...PLAIN_STORE,
+      applications: [{ ...PLAIN_STORE.applications[0], identity: { kind: 'plain' } }],
+    };
+
+    expect(() => parseBackup(JSON.stringify({ format: BACKUP_FORMAT, store }))).toThrow(
+      /identity/i,
+    );
+  });
+
+  it('refuses a backup with a check for an application it does not carry', () => {
+    const store = {
+      ...PLAIN_STORE,
+      checks: [{ ...PLAIN_STORE.checks[0], applicationId: 'no-existe' }],
+    };
+
+    expect(() => parseBackup(JSON.stringify({ format: BACKUP_FORMAT, store }))).toThrow(
+      /application/i,
+    );
+  });
+
+  it('refuses a backup with duplicate application ids', () => {
+    const [application] = PLAIN_STORE.applications;
+    if (application === undefined) throw new Error('The fixture has no application');
+    const store = {
+      ...PLAIN_STORE,
+      applications: [application, { ...application, label: 'Otra' }],
+    };
+
+    expect(() => parseBackup(JSON.stringify({ format: BACKUP_FORMAT, store }))).toThrow(
+      /duplicate/i,
+    );
+  });
+
+  it('still defaults legacy settings when the backup has none', () => {
+    const store = { version: 1, applications: [], checks: [] };
+
+    expect(parseBackup(JSON.stringify({ format: BACKUP_FORMAT, store })).settings).toEqual({
+      reminders: DEFAULT_REMINDER,
+      language: 'auto',
+    });
+  });
+});
+
+describe('encrypted envelope import validation', () => {
+  function storeWith(payload: string): Store {
+    const [application] = ENCRYPTED_STORE.applications;
+    if (application === undefined) throw new Error('The encrypted fixture has no application');
+    return {
+      ...ENCRYPTED_STORE,
+      applications: [{ ...application, identity: { kind: 'encrypted', payload } }],
+    };
+  }
+
+  function envelope(patch: Record<string, unknown>): string {
+    const parsed = JSON.parse(FAST_ENVELOPE) as Record<string, unknown>;
+    return JSON.stringify({ ...parsed, ...patch });
+  }
+
+  it('refuses a malformed envelope before it can reach storage', () => {
+    for (const payload of ['locked', '{}', envelope({ salt: 'c2hvcnQ=' }), envelope({ v: 2 })]) {
+      expect(() =>
+        parseBackup(JSON.stringify({ format: BACKUP_FORMAT, store: storeWith(payload) })),
+      ).toThrow(/encrypted identity payload/i);
+    }
+  });
+
+  it('refuses oversized PBKDF2 parameters before it can reach storage', () => {
+    expect(() =>
+      parseBackup(
+        JSON.stringify({
+          format: BACKUP_FORMAT,
+          store: storeWith(envelope({ iterations: 2_000_001 })),
+        }),
+      ),
+    ).toThrow(/encrypted identity payload/i);
+  });
+
+  it('still accepts the structurally valid fast envelope used by the fixture', () => {
+    const parsed = parseBackup(
+      JSON.stringify({ format: BACKUP_FORMAT, store: storeWith(FAST_ENVELOPE) }),
+    );
+
+    expect(parsed.applications[0]?.identity).toEqual({
+      kind: 'encrypted',
+      payload: FAST_ENVELOPE,
+    });
   });
 });

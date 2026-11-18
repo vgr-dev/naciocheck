@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   autofillForm,
   buildCaptchaOnlyCss,
+  buildHintCss,
   CAPTCHA_CHALLENGE_SELECTOR,
   hasCaptchaOnlyViewTargets,
   readCaptchaToken,
@@ -119,7 +120,7 @@ describe('submitIfCaptchaSolved', () => {
     expect(submissions()).toBe(0);
   });
 
-  it('submits once the token exists', () => {
+  it('submits once the token exists and the form validates', () => {
     const doc = loadForm();
     const submissions = countSubmissions(doc);
     // The site marks every field required, so a real submit also needs the fields filled in.
@@ -130,6 +131,47 @@ describe('submitIfCaptchaSolved', () => {
 
     expect(submitIfCaptchaSolved(doc)).toBe('submitted');
     expect(submissions()).toBe(1);
+  });
+
+  it('does not count a validation-blocked click as submitted', () => {
+    const doc = loadForm();
+    const submissions = countSubmissions(doc);
+    const token = doc.querySelector<HTMLInputElement>('input[name="gRecaptchaResponse"]');
+    if (token === null) throw new Error('no token input');
+    // The captcha is solved, but the page's required fields are still empty: a click would be swallowed and
+    // polling would stop with the fields hidden.
+    token.value = 'token-del-humano';
+
+    expect(submitIfCaptchaSolved(doc)).toBe('blocked');
+    expect(submissions()).toBe(0);
+  });
+
+  it('asks the browser to report the invalid fields', () => {
+    const doc = loadForm();
+    const target = form(doc);
+    const report = vi.spyOn(target, 'reportValidity');
+    const token = doc.querySelector<HTMLInputElement>('input[name="gRecaptchaResponse"]');
+    if (token === null) throw new Error('no token input');
+    token.value = 'token-del-humano';
+
+    expect(submitIfCaptchaSolved(doc)).toBe('blocked');
+    expect(report).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a checkValidity rejection as blocked even if the click would fire', () => {
+    const doc = loadForm();
+    const submissions = countSubmissions(doc);
+    const target = form(doc);
+    autofillForm(doc, IDENTITY);
+    const token = doc.querySelector<HTMLInputElement>('input[name="gRecaptchaResponse"]');
+    if (token === null) throw new Error('no token input');
+    token.value = 'token-del-humano';
+    vi.spyOn(target, 'checkValidity').mockReturnValue(false);
+    const report = vi.spyOn(target, 'reportValidity');
+
+    expect(submitIfCaptchaSolved(doc)).toBe('blocked');
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(submissions()).toBe(0);
   });
 });
 
@@ -147,6 +189,24 @@ describe('captcha-only view', () => {
     expect(css).toContain('visibility: hidden');
     expect(css).toContain('#captchaTramite');
     expect(css).toContain('#naciocheck-hint');
+  });
+
+  it('keeps the escape control inside the hint usable', () => {
+    // `html body *` hides every descendant, including the button inside the strip; the hint itself is re-shown
+    // but the button would stay invisible without its own rule.
+    const hintCss = buildHintCss();
+
+    expect(hintCss).toContain('#naciocheck-hint *');
+    expect(ruleOf(hintCss, '#naciocheck-hint *')).toContain('visibility: visible !important');
+    expect(buildCaptchaOnlyCss()).toContain('#naciocheck-hint *');
+  });
+
+  it('keeps the escape strip above the challenge bubble', () => {
+    const css = buildCaptchaOnlyCss();
+    const strip = /z-index: (\d+)/.exec(ruleOf(css, '#naciocheck-hint') ?? '');
+    const challenge = /z-index: (\d+)/.exec(ruleOf(css, CAPTCHA_CHALLENGE_SELECTOR) ?? '');
+
+    expect(Number(strip?.[1])).toBeGreaterThan(Number(challenge?.[1]));
   });
 
   it('re-shows the challenge, which reCAPTCHA appends outside the captcha block', () => {

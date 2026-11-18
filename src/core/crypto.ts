@@ -12,8 +12,16 @@ import type { EncryptedIdentity, PlainIdentity } from './storage';
 /** OWASP Password Storage Cheat Sheet: PBKDF2-HMAC-SHA256 → 600 000 iterations. */
 export const PBKDF2_ITERATIONS = 600_000;
 
+/**
+ * What an imported payload may ask for. The lower bound stays at 1 so deliberately fast test payloads remain
+ * readable; the upper bound is far above the shipped count and stops a tampered file from burning CPU forever.
+ */
+export const PBKDF2_MIN_ITERATIONS = 1;
+export const PBKDF2_MAX_ITERATIONS = 2_000_000;
+
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
+const GCM_TAG_BYTES = 16;
 const KEY_BITS = 256;
 const ENCODING_VERSION = 1;
 
@@ -62,11 +70,33 @@ function fromBase64(text: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+function isIterationCount(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= PBKDF2_MIN_ITERATIONS &&
+    value <= PBKDF2_MAX_ITERATIONS
+  );
+}
+
+function decodeBase64Field(text: string): Uint8Array<ArrayBuffer> {
+  try {
+    return fromBase64(text);
+  } catch {
+    throw new WrongPassphraseError();
+  }
+}
+
 export async function deriveKey(
   passphrase: string,
   salt: Uint8Array<ArrayBuffer>,
   iterations: number,
 ): Promise<CryptoKey> {
+  if (!isIterationCount(iterations)) {
+    throw new Error(
+      `PBKDF2 iterations must be an integer between ${PBKDF2_MIN_ITERATIONS} and ${PBKDF2_MAX_ITERATIONS}`,
+    );
+  }
   const material = await subtle().importKey('raw', encodeUtf8(passphrase), 'PBKDF2', false, [
     'deriveKey',
   ]);
@@ -84,6 +114,11 @@ export async function encryptIdentity(
   passphrase: string,
   iterations: number = PBKDF2_ITERATIONS,
 ): Promise<EncryptedIdentity> {
+  if (!isIterationCount(iterations)) {
+    throw new Error(
+      `PBKDF2 iterations must be an integer between ${PBKDF2_MIN_ITERATIONS} and ${PBKDF2_MAX_ITERATIONS}`,
+    );
+  }
   const salt = randomBytes(SALT_BYTES);
   const iv = randomBytes(IV_BYTES);
   const key = await deriveKey(passphrase, salt, iterations);
@@ -100,7 +135,14 @@ export async function encryptIdentity(
   return { kind: 'encrypted', payload: JSON.stringify(payload) };
 }
 
-function readPayload(encrypted: EncryptedIdentity): Payload {
+interface DecodedPayload {
+  iterations: number;
+  salt: Uint8Array<ArrayBuffer>;
+  iv: Uint8Array<ArrayBuffer>;
+  ciphertext: Uint8Array<ArrayBuffer>;
+}
+
+function readPayload(encrypted: EncryptedIdentity): DecodedPayload {
   let parsed: unknown;
   try {
     parsed = JSON.parse(encrypted.payload);
@@ -110,14 +152,53 @@ function readPayload(encrypted: EncryptedIdentity): Payload {
   const payload = parsed as Partial<Payload>;
   if (
     payload.v !== ENCODING_VERSION ||
-    typeof payload.iterations !== 'number' ||
+    !isIterationCount(payload.iterations) ||
     typeof payload.salt !== 'string' ||
     typeof payload.iv !== 'string' ||
     typeof payload.ciphertext !== 'string'
   ) {
     throw new WrongPassphraseError();
   }
-  return payload as Payload;
+
+  const salt = decodeBase64Field(payload.salt);
+  const iv = decodeBase64Field(payload.iv);
+  const ciphertext = decodeBase64Field(payload.ciphertext);
+  if (salt.length !== SALT_BYTES || iv.length !== IV_BYTES || ciphertext.length < GCM_TAG_BYTES) {
+    throw new WrongPassphraseError();
+  }
+  return { iterations: payload.iterations, salt, iv, ciphertext };
+}
+
+/**
+ * Structural check for a stored or imported envelope, with no passphrase and no authentication.
+ *
+ * It proves the payload has a supported version, an iteration count in range, and correctly sized salt, IV and
+ * ciphertext, so importing it cannot produce a store that later fails to open for a structural reason. Whether
+ * the passphrase is right, and whether the ciphertext is authentic, is still decided by `decryptIdentity`.
+ */
+export function isValidEncryptedPayload(payload: string): boolean {
+  try {
+    readPayload({ kind: 'encrypted', payload });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isPlainIdentityPayload(value: unknown): value is PlainIdentity {
+  if (typeof value !== 'object' || value === null) return false;
+  const identity = value as Partial<PlainIdentity>;
+  return (
+    identity.kind === 'plain' &&
+    typeof identity.nie === 'string' &&
+    identity.nie.trim() !== '' &&
+    typeof identity.birthDate === 'string' &&
+    identity.birthDate.trim() !== '' &&
+    typeof identity.numero === 'string' &&
+    identity.numero.trim() !== '' &&
+    typeof identity.year === 'string' &&
+    identity.year.trim() !== ''
+  );
 }
 
 /** Throws `WrongPassphraseError` for a wrong passphrase and for tampered ciphertext alike. */
@@ -126,20 +207,26 @@ export async function decryptIdentity(
   passphrase: string,
 ): Promise<PlainIdentity> {
   const payload = readPayload(encrypted);
-  const key = await deriveKey(passphrase, fromBase64(payload.salt), payload.iterations);
+  const key = await deriveKey(passphrase, payload.salt, payload.iterations);
 
   let plaintext: ArrayBuffer;
   try {
     plaintext = await subtle().decrypt(
-      { name: 'AES-GCM', iv: fromBase64(payload.iv) },
+      { name: 'AES-GCM', iv: payload.iv },
       key,
-      fromBase64(payload.ciphertext),
+      payload.ciphertext,
     );
   } catch {
     // AES-GCM cannot tell a wrong key from altered data, and neither do we: both mean "cannot open".
     throw new WrongPassphraseError();
   }
 
-  const identity = JSON.parse(new TextDecoder().decode(plaintext)) as PlainIdentity;
+  let identity: unknown;
+  try {
+    identity = JSON.parse(new TextDecoder().decode(plaintext));
+  } catch {
+    throw new WrongPassphraseError();
+  }
+  if (!isPlainIdentityPayload(identity)) throw new WrongPassphraseError();
   return identity;
 }

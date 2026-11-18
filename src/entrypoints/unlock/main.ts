@@ -8,7 +8,8 @@ import { button, el, root } from '../shared/ui';
  * The unlock prompt a check run opens when the identities are encrypted and no passphrase is held.
  *
  * The passphrase is kept in session storage by the background: it never touches disk and disappears when the
- * browser closes.
+ * browser closes. The applications the person asked to check are remembered by the background and come back
+ * in the unlock response, so unlocking starts exactly that selection.
  */
 
 async function main(): Promise<void> {
@@ -39,18 +40,35 @@ async function main(): Promise<void> {
     t('unlock.submit'),
     () => {
       void (async () => {
-        const response: unknown = await browser.runtime.sendMessage({
-          type: 'naciocheck:unlock',
-          passphrase: input.value,
-        });
+        if (submit.disabled) return;
+        submit.disabled = true;
+        try {
+          const response: unknown = await browser.runtime.sendMessage({
+            type: 'naciocheck:unlock',
+            passphrase: input.value,
+          });
 
-        if (!isUnlocked(response)) {
+          const selection = unlockedSelection(response);
+          if (selection === null) {
+            // No remembered selection means this prompt no longer belongs to a check the person asked for
+            // (for example, an old unlock tab left open after locking). Never fall back to every application.
+            message.textContent = t('unlock.failed');
+            return;
+          }
+          // The typed passphrase has served its purpose: leave it nowhere, not even in this field.
+          input.value = '';
+          // The background now finds the passphrase in session and opens the check window itself, for the
+          // selection the person asked to check before unlocking.
+          await browser.runtime.sendMessage({
+            type: 'naciocheck:start-check-run',
+            applicationIds: selection,
+          });
+          window.close();
+        } catch {
           message.textContent = t('unlock.failed');
-          return;
+        } finally {
+          submit.disabled = false;
         }
-        // The background now finds the passphrase in session and opens the check window itself.
-        await browser.runtime.sendMessage({ type: 'naciocheck:start-check-run' });
-        window.close();
       })();
     },
     'button primary',
@@ -65,10 +83,19 @@ function finish(text: string): void {
   root().append(el('p', 'hint', text));
 }
 
-function isUnlocked(value: unknown): boolean {
-  return (
-    typeof value === 'object' && value !== null && 'unlocked' in value && value.unlocked === true
-  );
+/**
+ * The explicit application selection the background remembered for this prompt. `null` means there is none
+ * or it is malformed; an unlock response is never allowed to fall back to every saved application.
+ */
+export function unlockedSelection(value: unknown): string[] | null {
+  if (typeof value !== 'object' || value === null) return null;
+  if (!('unlocked' in value) || value.unlocked !== true) return null;
+  if (!('applicationIds' in value)) return null;
+  const ids = value.applicationIds;
+  if (!Array.isArray(ids) || ids.length === 0) return null;
+  if (!ids.every((id): id is string => typeof id === 'string' && id !== '')) return null;
+  return ids;
 }
 
-void main();
+// The unlock page always has #app; tests import this module without a page.
+if (document.getElementById('app') !== null) void main();

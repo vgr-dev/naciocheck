@@ -74,7 +74,7 @@ export const en: Record<MessageKey, string> = {
   // Options ----------------------------------------------------------------------------------------------------
   'options.title': 'NacioCheck · Options',
   'options.disclaimer':
-    'All data stays in this browser. Nothing is sent to any server, not even the browser vendor servers. NacioCheck is not an official Ministry of Justice tool.',
+    'Saved data stays in this browser, never in browser sync or telemetry. When you check, the official form sends your details to the Ministry site. NacioCheck is not an official Ministry of Justice tool.',
   'options.applications': 'Applications',
   'options.empty': 'No application saved yet.',
   'options.addAnother': 'Add another',
@@ -85,6 +85,9 @@ export const en: Record<MessageKey, string> = {
   'options.cancelEdit': 'Cancel',
   'options.editedOn': 'Edited on {date}',
   'options.delete': 'Delete',
+  'form.saveFailed': 'Could not save the application. Reload the page and try again.',
+  'options.deleteConfirm':
+    'Delete application “{label}” and all its history? This cannot be undone.',
   'options.reminders': 'Reminders',
   'options.remindersHint':
     'Pick an hour when you are usually with your phone or computer: you are the one who ticks the captcha.',
@@ -114,6 +117,23 @@ export const en: Record<MessageKey, string> = {
   'popup.checkAll': 'Check all',
   'popup.options': 'Options',
   'popup.whatMeans': 'What each status means',
+  'popup.lockNow': 'Lock now',
+  'popup.viewChange': 'View change',
+  'background.deletedApplication': 'The application was deleted: this check was not saved.',
+  'background.checkFailed': 'The check could not be saved.',
+  'content.showFullPage': 'Show the full page',
+  'content.submitBlocked':
+    'The query was not submitted because a required field is missing. The full page is shown so you can complete it.',
+  'recovery.title': 'NacioCheck cannot read its stored data',
+  'recovery.description':
+    'Your data is still in this browser and has not been changed. Download a copy before deciding what to do.',
+  'recovery.error': 'Details: {error}',
+  'recovery.download': 'Download the stored data',
+  'recovery.downloaded': 'A copy of the stored data was downloaded.',
+  'recovery.reset': 'Delete the stored data and start over',
+  'recovery.resetConfirm':
+    'Delete all applications and check history stored by NacioCheck in this browser? This cannot be undone.',
+  'recovery.resetDone': 'The stored data was deleted. Reload this page to start over.',
 
   // Unlock page ------------------------------------------------------------------------------------------------
   'unlock.title': 'Unlock',
@@ -134,6 +154,11 @@ export const en: Record<MessageKey, string> = {
   'encryption.enable': 'Encrypt the data',
   'encryption.disable': 'Remove the encryption',
   'encryption.unlockSession': 'Unlock for this session',
+  'encryption.lockNow': 'Lock now',
+  'encryption.locked': 'Session locked.',
+  'encryption.disableConfirm':
+    'Remove encryption? Identifying details will be stored without encryption.',
+  'encryption.failed': 'Could not change encryption. No identifying details were changed.',
   'encryption.tooShort': 'Use a passphrase of at least 8 characters.',
   'encryption.mismatch': 'The two passphrases do not match.',
   'encryption.done': 'Data encrypted. Keep the passphrase somewhere safe.',
@@ -151,18 +176,25 @@ export const en: Record<MessageKey, string> = {
   // Backup section (options) -----------------------------------------------------------------------------------
   'backup.title': 'Backup',
   'backup.hint':
-    'Export everything to a file so you can keep it or move it to another browser. The file stays on your machine: nothing leaves this page.',
+    'Export everything to a file so you can keep it or move it to another browser. The file stays on your machine. Merge keeps your current reminder and language; replace restores them from the file.',
   'backup.export': 'Export',
   'backup.exported': 'Backup exported.',
   'backup.filename': 'naciocheck-backup.json',
   'backup.fileLabel': 'Backup file',
   'backup.import': 'Import the chosen file',
   'backup.chooseFirst': 'Choose a file first.',
-  'backup.mergeQuestion':
-    'Accept = add whatever you are missing. Cancel = replace everything with the file.',
+  'backup.mode': 'Import mode',
+  'backup.merge': 'Merge (keep current settings)',
+  'backup.replace': 'Replace everything',
+  'backup.confirmMerge': 'Merge the chosen backup with your saved data?',
+  'backup.confirmReplace':
+    'Replace {applications} saved application(s) and {checks} check(s), including settings? This cannot be undone.',
+  'backup.encryptionRequired':
+    'This backup contains unencrypted identities. Encrypt it first, or explicitly remove the current encryption before importing it.',
   'backup.merged': 'Imported and merged.',
   'backup.replaced': 'Imported, replacing what was there.',
   'backup.importFailed': 'Could not import it: {error}',
+  'backup.changed': 'Saved data changed while you confirmed the import. Review it and try again.',
   'backup.plainWarning':
     'The backup will include the NIE and the date of birth in the clear. Continue?',
   'backup.errorJson': 'The file is not valid JSON.',

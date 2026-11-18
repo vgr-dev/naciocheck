@@ -78,7 +78,7 @@ export const es = {
   // Options ----------------------------------------------------------------------------------------------------
   'options.title': 'NacioCheck · Opciones',
   'options.disclaimer':
-    'Todos los datos se guardan en este navegador. Nada se envía a ningún servidor, ni siquiera a los del navegador. NacioCheck no es una herramienta oficial del Ministerio de Justicia.',
+    'Los datos guardados se quedan en este navegador, sin sincronización ni telemetría. Al comprobar, el formulario oficial envía tus datos a la sede del Ministerio. NacioCheck no es una herramienta oficial del Ministerio de Justicia.',
   'options.applications': 'Solicitudes',
   'options.empty': 'Todavía no hay ninguna solicitud guardada.',
   'options.addAnother': 'Añadir otra',
@@ -89,6 +89,10 @@ export const es = {
   'options.cancelEdit': 'Cancelar',
   'options.editedOn': 'Editada el {date}',
   'options.delete': 'Borrar',
+  'form.saveFailed':
+    'No se ha podido guardar la solicitud. Recarga la página e inténtalo de nuevo.',
+  'options.deleteConfirm':
+    '¿Borrar la solicitud «{label}» y todo su historial? No se puede deshacer.',
   'options.reminders': 'Recordatorios',
   'options.remindersHint':
     'Elige una hora a la que suelas estar con el móvil o el ordenador: el captcha lo tienes que marcar tú.',
@@ -118,6 +122,25 @@ export const es = {
   'popup.checkAll': 'Comprobar todo',
   'popup.options': 'Opciones',
   'popup.whatMeans': 'Qué significa cada estado',
+  'popup.lockNow': 'Bloquear ahora',
+  'popup.viewChange': 'Ver el cambio',
+  'background.deletedApplication':
+    'La solicitud se ha borrado: esta comprobación no se ha guardado.',
+  'background.checkFailed': 'No se ha podido guardar la comprobación.',
+  'content.showFullPage': 'Ver la página completa',
+  'content.submitBlocked':
+    'No se envió la consulta porque falta un campo obligatorio. Se muestra la página completa para que la completes.',
+  'recovery.title': 'NacioCheck no puede leer los datos guardados',
+  'recovery.description':
+    'Tus datos siguen en este navegador y no se han modificado. Descarga una copia antes de decidir qué hacer.',
+  'recovery.error': 'Detalles: {error}',
+  'recovery.download': 'Descargar los datos guardados',
+  'recovery.downloaded': 'Se ha descargado una copia de los datos guardados.',
+  'recovery.reset': 'Borrar los datos guardados y empezar de cero',
+  'recovery.resetConfirm':
+    '¿Borrar todas las solicitudes y el historial de comprobaciones que NacioCheck guarda en este navegador? No se puede deshacer.',
+  'recovery.resetDone':
+    'Se han borrado los datos guardados. Recarga esta página para empezar de cero.',
 
   // Unlock page ------------------------------------------------------------------------------------------------
   'unlock.title': 'Desbloquear',
@@ -138,6 +161,12 @@ export const es = {
   'encryption.enable': 'Cifrar los datos',
   'encryption.disable': 'Quitar el cifrado',
   'encryption.unlockSession': 'Desbloquear para esta sesión',
+  'encryption.lockNow': 'Bloquear ahora',
+  'encryption.locked': 'Sesión bloqueada.',
+  'encryption.disableConfirm':
+    '¿Quitar el cifrado? Los datos identificativos se guardarán sin cifrar.',
+  'encryption.failed':
+    'No se ha podido cambiar el cifrado. No se han cambiado los datos identificativos.',
   'encryption.tooShort': 'Usa una contraseña de al menos 8 caracteres.',
   'encryption.mismatch': 'Las dos contraseñas no coinciden.',
   'encryption.done': 'Datos cifrados. Guarda la contraseña en un sitio seguro.',
@@ -155,18 +184,26 @@ export const es = {
   // Backup section (options) -----------------------------------------------------------------------------------
   'backup.title': 'Copia de seguridad',
   'backup.hint':
-    'Exporta todo a un archivo para guardarlo o moverlo a otro navegador. El archivo se queda en tu equipo: nada sale de aquí.',
+    'Exporta todo a un archivo para guardarlo o moverlo a otro navegador. El archivo se queda en tu equipo. Combinar mantiene tu recordatorio e idioma actuales; reemplazar los restaura del archivo.',
   'backup.export': 'Exportar',
   'backup.exported': 'Copia exportada.',
   'backup.filename': 'naciocheck-copia.json',
   'backup.fileLabel': 'Archivo de copia',
   'backup.import': 'Importar el archivo elegido',
   'backup.chooseFirst': 'Elige antes un archivo.',
-  'backup.mergeQuestion':
-    'Aceptar = añadir lo que falte a lo que ya tienes. Cancelar = reemplazar todo por el archivo.',
+  'backup.mode': 'Modo de importación',
+  'backup.merge': 'Combinar (mantener los ajustes actuales)',
+  'backup.replace': 'Reemplazar todo',
+  'backup.confirmMerge': '¿Combinar la copia elegida con tus datos guardados?',
+  'backup.confirmReplace':
+    '¿Reemplazar {applications} solicitudes y {checks} comprobaciones guardadas, incluidos los ajustes? No se puede deshacer.',
+  'backup.encryptionRequired':
+    'Esta copia contiene identidades sin cifrar. Cífrala antes o quita explícitamente el cifrado actual antes de importarla.',
   'backup.merged': 'Importado y combinado.',
   'backup.replaced': 'Importado, reemplazando lo anterior.',
   'backup.importFailed': 'No se ha podido importar: {error}',
+  'backup.changed':
+    'Los datos guardados han cambiado mientras confirmabas la importación. Revísalos e inténtalo de nuevo.',
   'backup.plainWarning':
     'La copia incluirá el NIE y la fecha de nacimiento sin cifrar. ¿Continuar?',
   'backup.errorJson': 'El archivo no es un JSON válido.',

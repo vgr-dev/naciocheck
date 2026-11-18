@@ -23,6 +23,7 @@ import {
 import { buildApplicationForm } from '../shared/application-form';
 import { renderBackup, renderEncryption } from '../shared/encryption-sections';
 import { initPageLocale } from '../shared/locale';
+import { isStoreRecoveryNeeded, renderStoreRecovery } from '../shared/recovery';
 import {
   announceAfter,
   button,
@@ -59,7 +60,7 @@ async function main(): Promise<void> {
   refreshEncryption = (): void => {
     void encryption.refresh();
   };
-  renderBackup(view);
+  renderBackup(view, () => redraw(view));
   await renderHistory(view);
 
   view.append(el('p', 'disclaimer', t('options.disclaimer')));
@@ -160,6 +161,7 @@ function renderCardSummary(card: HTMLElement, application: Application, view: HT
       t('options.delete'),
       () => {
         void (async () => {
+          if (!window.confirm(t('options.deleteConfirm', { label: application.label }))) return;
           await deleteApplication(application.id);
           await redraw(view);
         })();
@@ -335,4 +337,22 @@ async function redraw(view: HTMLElement): Promise<void> {
   await main();
 }
 
-void main();
+void main().catch((error: unknown) => {
+  void (async () => {
+    if (!(await isStoreRecoveryNeeded())) throw error;
+    await renderStoreRecovery(root(), {
+      error,
+      labels: {
+        title: t('recovery.title'),
+        description: t('recovery.description'),
+        error: (detail) => t('recovery.error', { error: detail }),
+        download: t('recovery.download'),
+        downloaded: t('recovery.downloaded'),
+        reset: t('recovery.reset'),
+        resetConfirm: t('recovery.resetConfirm'),
+        resetDone: t('recovery.resetDone'),
+      },
+      onReset: () => window.location.reload(),
+    });
+  })();
+});

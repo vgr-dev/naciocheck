@@ -94,10 +94,17 @@ export function hasCaptchaOnlyViewTargets(doc: Document): boolean {
   return doc.querySelector(CAPTCHA_BLOCK_SELECTOR) !== null;
 }
 
-export type SubmitDecision = 'submitted' | 'waiting';
+/**
+ * `blocked` means the captcha is solved but the form's own validation refused the submission: a click would look
+ * successful while nothing was sent, so the caller must show the page again instead of polling forever.
+ */
+export type SubmitDecision = 'submitted' | 'blocked' | 'waiting';
 
 /**
  * Submits only once the token exists — never before, and never with a token this code produced.
+ *
+ * The form is asked before clicking, not after: a `required` field that the page added would otherwise swallow the
+ * click, leave the captcha-only view in place and stop the user from reaching the field.
  */
 export function submitIfCaptchaSolved(doc: Document): SubmitDecision {
   if (readCaptchaToken(doc) === null) return 'waiting';
@@ -106,7 +113,10 @@ export function submitIfCaptchaSolved(doc: Document): SubmitDecision {
     doc.querySelector<HTMLInputElement>(SUBMIT_SELECTOR) ??
     doc.querySelector<HTMLInputElement>('input[name="action:enviarDatosNacionalidad"]');
   if (form === null || submitter === null) return 'waiting';
-  // The browser runs the form's own `required` checks on click, so an incomplete form is not forced through.
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return 'blocked';
+  }
   submitter.click();
   return 'submitted';
 }
@@ -130,6 +140,21 @@ export function buildHintCss(): string {
       background: #f0fdfa;
       border-block-end: 1px solid #99f6e4;
     }
+    /* The escape control lives inside the strip, so it must survive the captcha-only rule that hides every
+       body descendant. The strip itself is only re-shown above; without this its children stay hidden. */
+    #${HINT_ID} * {
+      visibility: visible !important;
+    }
+    #${HINT_ID} button {
+      margin-inline-start: 8px;
+      padding: 4px 10px;
+      border: 1px solid #0f766e;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #0f766e;
+      font: inherit;
+      cursor: pointer;
+    }
   `;
 }
 
@@ -149,7 +174,8 @@ export function buildCaptchaOnlyCss(): string {
     ${CAPTCHA_CHALLENGE_SELECTOR},
     ${CAPTCHA_CHALLENGE_SELECTOR} * { visibility: visible !important; }
     ${CAPTCHA_CHALLENGE_SELECTOR} {
-      z-index: 2147483647 !important;
+      /* One below the strip: the escape control must stay reachable even while the challenge bubble is open. */
+      z-index: 2147483646 !important;
     }
     /* The bubble ships a full-viewport dimming layer (position: fixed; inset: 0; opacity: .05) that has no
        pointer-events rule of its own. With the page hidden it dims nothing and only eats clicks, so every
