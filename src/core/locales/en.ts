@@ -62,6 +62,7 @@ export const en: Record<MessageKey, string> = {
   'onboarding.applicationTitle': 'Your application',
   'onboarding.encryptionOptional':
     'Optional step: you can protect the data now or later from Options.',
+  'onboarding.savedTitle': 'Saved applications',
   'onboarding.reminderTitle': 'When should I remind you?',
   'onboarding.reminderHint':
     'Pick an hour when you are usually with the device: you are the one who ticks the captcha.',
@@ -78,6 +79,7 @@ export const en: Record<MessageKey, string> = {
   'options.empty': 'No application saved yet.',
   'options.addAnother': 'Add another',
   'options.addedOn': 'Added on {date}',
+  'options.justAdded': 'Just added',
   'options.saved': 'Application “{label}” saved.',
   'options.edit': 'Edit',
   'options.cancelEdit': 'Cancel',

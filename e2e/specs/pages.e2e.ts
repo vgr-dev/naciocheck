@@ -214,6 +214,56 @@ describe('extension pages', () => {
     });
 
     /**
+     * The same silence on the first page a person sees: nothing showed that the application was kept. A list of what
+     * is saved sits under the form with the newest marked, and the confirmations sit next to the control that caused
+     * them, not at the end of the page (Phase 14).
+     */
+    it('lists what was saved under the form and confirms next to the buttons', async () => {
+      const page = await openExtensionContext('onboarding.html');
+      const form = page.$('#app form.fields');
+      await expect(form).toBeExisting();
+      await expect(page.$('.saved-applications li')).not.toBeExisting();
+
+      await fillFields(page, FIRST_APPLICATION);
+      await form.$('button.primary').click();
+      await expect(page.$('.saved-applications li .label')).toHaveText(
+        expect.stringContaining(FIRST_APPLICATION.label),
+      );
+      await expect(page.$('.saved-applications .badge')).toHaveText('Recién añadida');
+
+      await fillFields(page, SECOND_APPLICATION);
+      await form.$('button.primary').click();
+      await expect(page.$$('.saved-applications li')).toBeElementsArrayOfSize(2);
+      await expect(page.$$('.saved-applications .badge')).toBeElementsArrayOfSize(1);
+
+      const placement = await page.execute(() => {
+        const note = document.querySelector('p.saved');
+        const list = document.querySelector('.saved-applications');
+        if (note === null || list === null) throw new Error('No confirmation or no list');
+        const box = list.getBoundingClientRect();
+        return {
+          noteAfterForm: note.previousElementSibling?.tagName === 'FORM',
+          role: note.getAttribute('role'),
+          listAfterNote: note.nextElementSibling === list,
+          inView: box.top >= 0 && box.top <= window.innerHeight,
+        };
+      });
+      expect(placement.noteAfterForm).toBe(true);
+      expect(placement.listAfterNote).toBe(true);
+      expect(placement.role).toBe('status');
+      expect(placement.inView).toBe(true);
+
+      // The reminder's confirmation sits under the presets, not at the bottom of the page.
+      await page.$('button=Laborables a las 10:00').click();
+      await expect(page.$('p.saved')).toHaveText(/Recordatorio guardado/);
+      const afterPresets = await page.execute(() => {
+        const note = document.querySelector('p.saved');
+        return note?.previousElementSibling?.classList.contains('row') ?? false;
+      });
+      expect(afterPresets).toBe(true);
+    });
+
+    /**
      * Five solid buttons on one page told a person nothing about which one finishes the flow. The two reminder
      * presets are choices, drawn like the secondary buttons of options; Save and Finish stay solid.
      */
@@ -427,6 +477,55 @@ describe('extension pages', () => {
   describe('options', () => {
     beforeEach(async () => {
       await resetExtensionStorage();
+    });
+
+    /**
+     * Saving used to write a one-line note at the very end of the page and leave the list as it was: nothing on the
+     * screen said the application had been added. Now the list gains the card at once, marked and in view, and the
+     * confirmation sits right under the form it came from (Phase 14).
+     */
+    it('puts a saved application in the list at once, marked and in view', async () => {
+      const page = await openExtensionContext('options.html');
+      const form = page.$('form.fields:has(#field-label)');
+      await expect(form).toBeExisting();
+      await fillFields(page, FIRST_APPLICATION);
+      await form.$('button.primary').click();
+
+      // No reload: the card is there because the page drew it.
+      await expect(page.$('ul.apps .app-card .label')).toHaveText(
+        expect.stringContaining(FIRST_APPLICATION.label),
+      );
+      await expect(page.$('ul.apps .app-card .badge')).toHaveText('Recién añadida');
+
+      const placement = await page.execute(() => {
+        const card = document.querySelector('ul.apps .app-card');
+        const note = document.querySelector('p.saved');
+        if (card === null || note === null) throw new Error('No card or no confirmation');
+        const box = card.getBoundingClientRect();
+        return {
+          marked: card.classList.contains('just-added'),
+          inView: box.top >= 0 && box.bottom <= window.innerHeight,
+          noteAfterForm: note.previousElementSibling?.tagName === 'FORM',
+          role: note.getAttribute('role'),
+        };
+      });
+      expect(placement.marked).toBe(true);
+      expect(placement.inView).toBe(true);
+      expect(placement.noteAfterForm).toBe(true);
+      expect(placement.role).toBe('status');
+
+      // A second one joins the first; only the newest is marked.
+      await fillFields(page, SECOND_APPLICATION);
+      await form.$('button.primary').click();
+      await expect(page.$$('ul.apps .app-card')).toBeElementsArrayOfSize(2);
+      await expect(page.$$('ul.apps .app-card .badge')).toBeElementsArrayOfSize(1);
+      const labels = await page.execute(() =>
+        // The label's own text: the newest card also carries its badge inside the label.
+        [...document.querySelectorAll('ul.apps .app-card .label')].map(
+          (label) => label.firstChild?.textContent,
+        ),
+      );
+      expect(labels).toEqual([FIRST_APPLICATION.label, SECOND_APPLICATION.label]);
     });
 
     /**

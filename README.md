@@ -177,7 +177,7 @@ certificate (`tls/`) and the files the backup spec exports (`backup/`).
 
 The `visual` spec photographs every extension page in its main states, in Spanish and English, at desktop
 (1280×800), phone (412×915) and popup (380×600) sizes, and three long pages, onboarding, options and the changed-status alert, whole at
-both widths: 92 images. The approved ones are **tracked** in [`e2e/baselines/`](e2e/baselines), because an image
+both widths: 100 images. The approved ones are **tracked** in [`e2e/baselines/`](e2e/baselines), because an image
 that changes is a change to review. A run fails when more than 0.01 % of an image's pixels differ. Chrome runs with
 reduced motion forced, so the animated logo is at rest and two runs on one machine agree to the pixel.
 
@@ -188,7 +188,7 @@ have nothing to do with the code; check with `fc-match system-ui` before trustin
 After a deliberate UI change:
 
 ```sh
-npm run test:e2e:update-baselines   # deletes e2e/baselines/ and writes all 92 again
+npm run test:e2e:update-baselines   # deletes e2e/baselines/ and writes all 100 again
 git diff --stat e2e/baselines       # review what changed, then commit it with the code that caused it
 ```
 

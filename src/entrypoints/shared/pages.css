@@ -104,6 +104,38 @@ li.app-card {
   font-size: 0.8125rem;
 }
 
+/* The confirmation after a save, next to the control that caused it. */
+p.saved {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-inline-start: 3px solid var(--teal-700);
+  background: var(--teal-50);
+  color: var(--gray-900);
+  font-weight: 600;
+}
+
+/* The application that was just saved: a colour and a word, so it does not depend on motion. */
+li.app-card.just-added {
+  border-color: var(--teal-700);
+  background: var(--teal-50);
+}
+
+.badge {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--teal-700);
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.saved-applications {
+  margin-block-start: 12px;
+}
+
 .marker {
   display: inline-block;
   margin-inline-start: 6px;

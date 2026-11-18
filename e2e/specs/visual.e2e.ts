@@ -103,6 +103,16 @@ async function shoot(
   viewport: Viewport,
 ): Promise<void> {
   await browser.setViewport(VIEWPORTS[viewport]);
+  await compareCurrent(page, state, locale, viewport);
+}
+
+/** Compares what is on screen, without touching the viewport: a state reached by clicking must keep its scroll. */
+async function compareCurrent(
+  page: string,
+  state: string,
+  locale: Locale,
+  viewport: Viewport,
+): Promise<void> {
   const tag = screenTag(page, state, locale, viewport);
   const shot = await compareScreen(tag, viewport.startsWith('full'));
   comparisons.push({ name: `${tag}.png`, mismatch: shot.misMatchPercentage });
@@ -126,6 +136,38 @@ async function capturePage(
 /** Opens one of the extension's own pages and compares all of it, at both widths. */
 async function captureWholePage(page: string, state: string, locale: Locale): Promise<void> {
   await capturePage(page, state, locale, WHOLE_PAGE);
+}
+
+/**
+ * Saves one application through the page's own form and waits for the page to say so.
+ *
+ * The state worth photographing is the moment after the click: the confirmation under the form and the new card
+ * marked in the list, wherever the page scrolled to show them.
+ */
+async function saveThroughForm(): Promise<void> {
+  const form = $('form.fields:has(#field-label)');
+  await form.$('#field-label').setValue(FIRST_APPLICATION.label);
+  await form.$('#field-nie').setValue(FIRST_APPLICATION.nie);
+  await form.$('#field-numero').setValue(FIRST_APPLICATION.numero);
+  await form.$('#field-year').setValue(FIRST_APPLICATION.year);
+  await form.$('#field-birthDate').setValue(FIRST_APPLICATION.birthDate);
+  await form.$('button.primary').click();
+  await expect($('.just-added .badge')).toBeExisting();
+}
+
+/**
+ * The card of a fresh save shows the minute it was saved, and a clock in an image is a baseline that never matches
+ * twice: the date is replaced, in the page, by a fixed one.
+ */
+async function maskSavedDates(): Promise<void> {
+  await browser.execute(() => {
+    for (const meta of document.querySelectorAll('.app-card .meta')) {
+      meta.textContent = (meta.textContent ?? '').replace(
+        /\d{1,2} \S+ \d{4}, \d{2}:\d{2}/,
+        '1 Jan 2026, 10:00',
+      );
+    }
+  });
 }
 
 /** Runs `capture` once per locale, with the page in that language. */
@@ -203,6 +245,37 @@ describe('screenshots', () => {
     await enableEncryptionThroughUi(PASSPHRASE);
     await perLocale(async (locale) => {
       await capturePage('onboarding', 'encrypted', locale, EVERYWHERE);
+    });
+  });
+
+  it('onboarding: an application just saved', async () => {
+    await perLocale(async (locale) => {
+      for (const viewport of EVERYWHERE) {
+        // One save per image: the page is photographed at the moment after the click, so each starts from nothing.
+        await resetExtensionStorage();
+        await setStoredLanguage(locale);
+        await browser.setViewport(VIEWPORTS[viewport]);
+        await browser.url(fresh(extensionPage('onboarding')));
+        await expect($('#app')).toBeExisting();
+        await saveThroughForm();
+        await maskSavedDates();
+        await compareCurrent('onboarding', 'saved', locale, viewport);
+      }
+    });
+  });
+
+  it('options: an application just saved', async () => {
+    await perLocale(async (locale) => {
+      for (const viewport of EVERYWHERE) {
+        await resetExtensionStorage();
+        await setStoredLanguage(locale);
+        await browser.setViewport(VIEWPORTS[viewport]);
+        await browser.url(fresh(extensionPage('options')));
+        await expect($('#app')).toBeExisting();
+        await saveThroughForm();
+        await maskSavedDates();
+        await compareCurrent('options', 'added', locale, viewport);
+      }
     });
   });
 
@@ -428,8 +501,8 @@ describe('screenshots', () => {
       'Written by `e2e/specs/visual.e2e.ts` after every run. Baselines are tracked by git (D3): an image that',
       'changes is a change to review, so its new version belongs in the history next to the code that made it.',
       '',
-      `- **Images**: ${comparisons.length} — 2 locales × 46: onboarding 2 states × 2 viewports (4), popup 4 × 3 (12),`,
-      '  options 4 × 2 (8), statuses 1 × 2 (2), result 3 × 2 (6), unlock 1 × 2 (2), the fake form 3 overlays × 2 (6),',
+      `- **Images**: ${comparisons.length} — 2 locales × 50: onboarding 3 states × 2 viewports (6), popup 4 × 3 (12),`,
+      '  options 5 × 2 (10), statuses 1 × 2 (2), result 3 × 2 (6), unlock 1 × 2 (2), the fake form 3 overlays × 2 (6),',
       '  and the long pages whole: onboarding (empty), options (two applications) and the changed-status alert,',
       '  × 2 widths (6).',
       '- **Viewports**: desktop 1280×800, phone 412×915, popup 380×600 (popup only); `full1280` and `full412` are the',

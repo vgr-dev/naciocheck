@@ -66,6 +66,7 @@ export const es = {
   'onboarding.applicationTitle': 'Tu solicitud',
   'onboarding.encryptionOptional':
     'Paso opcional: puedes proteger los datos ahora o más tarde desde Opciones.',
+  'onboarding.savedTitle': 'Solicitudes guardadas',
   'onboarding.reminderTitle': '¿Cuándo te aviso?',
   'onboarding.reminderHint':
     'Elige una hora a la que suelas estar con el dispositivo: el captcha lo tienes que marcar tú.',
@@ -82,6 +83,7 @@ export const es = {
   'options.empty': 'Todavía no hay ninguna solicitud guardada.',
   'options.addAnother': 'Añadir otra',
   'options.addedOn': 'Añadida el {date}',
+  'options.justAdded': 'Recién añadida',
   'options.saved': 'Solicitud «{label}» guardada.',
   'options.edit': 'Editar',
   'options.cancelEdit': 'Cancelar',

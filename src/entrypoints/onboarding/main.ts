@@ -4,7 +4,7 @@ import { listApplications, setReminder } from '../../core/storage';
 import { buildApplicationForm } from '../shared/application-form';
 import { renderEncryption } from '../shared/encryption-sections';
 import { initPageLocale } from '../shared/locale';
-import { button, el, openPage, root } from '../shared/ui';
+import { announceAfter, button, el, formatDate, markJustAdded, openPage, root } from '../shared/ui';
 
 /**
  * First run: what the extension does, what it deliberately does not do, one application, the optional
@@ -54,12 +54,21 @@ async function main(): Promise<void> {
   // The form is drawn before the section, but the section reads the store the form writes, so a save draws it
   // again. Refreshing the section alone keeps the save announcement on screen.
   let refreshEncryption = (): void => undefined;
-  view.append(
-    await buildApplicationForm((label) => {
-      announce(view, t('options.saved', { label }));
+  const form = await buildApplicationForm((label) => {
+    void (async () => {
+      const added = await renderSaved(saved);
+      announceAfter(form, t('options.saved', { label }));
+      if (added !== null) markJustAdded(added);
       refreshEncryption();
-    }),
-  );
+    })();
+  });
+  view.append(form);
+
+  // What is stored so far, under the form: a save used to leave no trace on the page. Drawn from the store, so the
+  // list is also there when the page is drawn again (the encryption step does that).
+  const saved = el('div', 'saved-applications');
+  view.append(saved);
+  await renderSaved(saved);
 
   // The optional step, with the same section as options: enabling it here encrypts what is already saved, and
   // the form above asks for the passphrase for anything added afterwards.
@@ -79,7 +88,7 @@ async function main(): Promise<void> {
         void (async () => {
           await setReminder(preset.config);
           await browser.runtime.sendMessage({ type: 'naciocheck:reschedule' });
-          announce(view, t('onboarding.reminderSaved', { time: preset.config.time }));
+          announceAfter(presets, t('onboarding.reminderSaved', { time: preset.config.time }));
         })();
       }),
     );
@@ -109,9 +118,25 @@ async function main(): Promise<void> {
   view.append(el('h2', 'section', t('onboarding.readyTitle')), finish);
 }
 
-function announce(view: HTMLElement, text: string): void {
-  view.querySelector('.saved')?.remove();
-  view.append(el('p', 'hint saved', text));
+/** The saved applications, one card each; returns the last card (the newest), or `null` when there are none. */
+async function renderSaved(container: HTMLElement): Promise<HTMLElement | null> {
+  const applications = await listApplications();
+  container.replaceChildren();
+  if (applications.length === 0) return null;
+
+  container.append(el('h2', 'section', t('onboarding.savedTitle')));
+  const list = el('ul', 'apps');
+  const cards = applications.map((application) => {
+    const card = el('li', 'app-card');
+    card.append(
+      el('p', 'label', application.label),
+      el('p', 'meta', t('options.addedOn', { date: formatDate(application.createdAt) })),
+    );
+    return card;
+  });
+  list.append(...cards);
+  container.append(list);
+  return cards.at(-1) ?? null;
 }
 
 /** Renders the page again from the store, which is what the encryption section needs after it changes it. */

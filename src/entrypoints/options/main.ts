@@ -23,7 +23,16 @@ import {
 import { buildApplicationForm } from '../shared/application-form';
 import { renderBackup, renderEncryption } from '../shared/encryption-sections';
 import { initPageLocale } from '../shared/locale';
-import { button, el, formatDate, link, openPage, root } from '../shared/ui';
+import {
+  announceAfter,
+  button,
+  el,
+  formatDate,
+  link,
+  markJustAdded,
+  openPage,
+  root,
+} from '../shared/ui';
 
 /**
  * Options: the applications, the reminder, the language and the history. Everything is stored locally; nothing
@@ -99,22 +108,37 @@ async function renderLanguage(view: HTMLElement): Promise<void> {
 async function renderApplications(view: HTMLElement, onSaved: () => void): Promise<void> {
   view.append(el('h2', 'section', t('options.applications')));
 
-  const applications = await listApplications();
-  if (applications.length === 0) {
-    view.append(el('p', 'hint', t('options.empty')));
-  } else {
-    const list = el('ul', 'apps');
-    for (const application of applications) list.append(buildApplicationCard(application, view));
-    view.append(list);
-  }
+  // The list lives in a container of its own, so a save can draw it again without touching the rest of the page.
+  const list = el('div', 'applications');
+  view.append(list);
+  await fillApplications(list, view);
 
   view.append(el('h2', 'section', t('options.addAnother')));
-  view.append(
-    await buildApplicationForm((label) => {
-      announce(view, t('options.saved', { label }));
+  const form = await buildApplicationForm((label) => {
+    void (async () => {
+      const cards = await fillApplications(list, view);
+      announceAfter(form, t('options.saved', { label }));
+      const added = cards.at(-1);
+      if (added !== undefined) markJustAdded(added);
       onSaved();
-    }),
-  );
+    })();
+  });
+  view.append(form);
+}
+
+/** Draws the applications, or the line that says there are none; returns the cards, in order. */
+async function fillApplications(container: HTMLElement, view: HTMLElement): Promise<HTMLElement[]> {
+  const applications = await listApplications();
+  container.replaceChildren();
+  if (applications.length === 0) {
+    container.append(el('p', 'hint', t('options.empty')));
+    return [];
+  }
+  const list = el('ul', 'apps');
+  const cards = applications.map((application) => buildApplicationCard(application, view));
+  list.append(...cards);
+  container.append(list);
+  return cards;
 }
 
 function buildApplicationCard(application: Application, view: HTMLElement): HTMLElement {
@@ -304,13 +328,6 @@ async function renderHistory(view: HTMLElement): Promise<void> {
     }
     view.append(card);
   }
-}
-
-function announce(view: HTMLElement, text: string): void {
-  const previous = view.querySelector('.saved');
-  previous?.remove();
-  const note = el('p', 'hint saved', text);
-  view.append(note);
 }
 
 async function redraw(view: HTMLElement): Promise<void> {
