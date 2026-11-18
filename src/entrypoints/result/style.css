@@ -94,6 +94,22 @@ body {
   font-size: 0.875rem;
 }
 
+.site-label {
+  margin-inline-end: 0.15rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.site-said {
+  margin: 1rem 0 0;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.site-said + .errors {
+  margin-block-start: 0.25rem;
+}
+
 .errors {
   margin: 1rem 0 0;
   padding-inline-start: 1.25rem;

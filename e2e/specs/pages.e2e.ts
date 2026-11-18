@@ -352,6 +352,40 @@ describe('extension pages', () => {
       expect(width).toBeLessThanOrEqual(480);
     });
 
+    /** "Check all" and the card's own "Check now" did the same with one application: it appears from two up (13.17). */
+    it('offers "Check all" only when there is more than one application', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const one = await openExtensionContext('popup.html');
+      await expect(one.$('ul.apps')).toBeExisting();
+      await expect(one.$('div.row > button.primary')).not.toBeExisting();
+      await expect(one.$('.links')).toBeExisting();
+
+      await addApplicationThroughUi(SECOND_APPLICATION);
+      const two = await openExtensionContext('popup.html');
+      await expect(two.$('ul.apps')).toBeExisting();
+      await expect(two.$('div.row > button.primary')).toBeExisting();
+    });
+
+    /** Left-aligned in a wide window the 380 px popup looked pushed into a corner; it is centred like the other pages. */
+    it('centres the popup column in a window wider than the popup', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const popup = await openExtensionContext('popup.html');
+      await expect(popup.$('ul.apps')).toBeExisting();
+      const box = await popup.execute(() => {
+        const app = document.getElementById('app');
+        if (app === null) throw new Error('Missing #app');
+        const own = app.getBoundingClientRect();
+        return {
+          left: own.left,
+          right: window.innerWidth - own.right,
+          wide: window.innerWidth > 420,
+        };
+      });
+      expect(box.wide).toBe(true);
+      expect(box.left).toBeGreaterThan(0);
+      expect(Math.abs(box.left - box.right)).toBeLessThanOrEqual(1);
+    });
+
     /**
      * "Options" and "What each status means" used to share the button's line, about 8 px apart: in English they
      * read as one phrase, and in Spanish the second one wrapped. They sit on a row of their own, apart from each
@@ -359,6 +393,7 @@ describe('extension pages', () => {
      */
     it('keeps the links on a row of their own, apart and tap-sized', async () => {
       await addApplicationThroughUi(FIRST_APPLICATION);
+      await addApplicationThroughUi(SECOND_APPLICATION);
       const popup = await openExtensionContext('popup.html');
       await expect(popup.$('ul.apps')).toBeExisting();
 
@@ -468,6 +503,31 @@ describe('extension pages', () => {
      * Seven single letters, two of them T and two S, tell a screen reader nothing: each box carries the full name of
      * its day, and the label shows it as a tooltip.
      */
+    it('lines the reminder checkboxes up with the fields, and leaves no gap for an empty message', async () => {
+      const page = await openExtensionContext('options.html');
+      await expect(page.$('.checks')).toBeExisting();
+      const layout = await page.execute(() => {
+        const edge =
+          document.querySelector('input[type="time"]')?.getBoundingClientRect().left ?? -1;
+        const first = (selector: string) =>
+          document.querySelector(selector)?.getBoundingClientRect().left ?? -1;
+        return {
+          edge,
+          notify: first('form.fields > .check input'),
+          days: first('.checks input'),
+          hidden: [...document.querySelectorAll('p.hint')]
+            .filter((note) => (note.textContent ?? '') === '')
+            .map((note) => getComputedStyle(note).display),
+        };
+      });
+      expect(layout.edge).toBeGreaterThan(0);
+      expect(Math.abs(layout.notify - layout.edge)).toBeLessThanOrEqual(1);
+      expect(Math.abs(layout.days - layout.edge)).toBeLessThanOrEqual(1);
+      // The message lines under the forms are empty until something happens; empty, they take no room.
+      expect(layout.hidden.length).toBeGreaterThan(0);
+      for (const display of layout.hidden) expect(display).toBe('none');
+    });
+
     it('names every reminder day in full for assistive technology', async () => {
       const page = await openExtensionContext('options.html');
       await expect(page.$('.checks')).toBeExisting();
@@ -776,6 +836,13 @@ describe('extension pages', () => {
         return anchor === null ? null : getComputedStyle(anchor).textDecorationLine;
       });
       expect(underline).toContain('underline');
+      // A heading that wraps on a phone does not leave one word alone on its second line (13.17).
+      const wrap = await page.execute(() => {
+        const heading = document.querySelector('#app h1.title');
+        if (heading === null) throw new Error('No heading');
+        return getComputedStyle(heading).getPropertyValue('text-wrap');
+      });
+      expect(wrap).toContain('balance');
       await expect(page.$('#app h1.title')).toHaveText('NacioCheck · Qué significa cada estado');
 
       const sections: string[] = [];
@@ -896,6 +963,30 @@ describe('extension pages', () => {
       expect(note.rule).toBeGreaterThanOrEqual(1);
     });
 
+    /**
+     * The status name is translated, but the sentence under it and the page's error messages are the site's own
+     * words, kept verbatim (13.16, D12). They carry a label that says so, in the language of the page, so they read
+     * as deliberate and can be matched to what the official page printed.
+     */
+    it("labels the site's own sentence, in the language of the page", async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const sede = serveFakeSede({ results: [resultPage()] });
+
+      const result = await runOneCheck(sede);
+      await expect(result.$('p.sub-status .site-label')).toHaveText('Tal como la muestra la sede:');
+      await expect(result.$('p.sub-status')).toHaveText(
+        /Su expediente ha sido registrado correctamente/,
+      );
+
+      await setStoredLanguage('en');
+      await result.refresh();
+      // The label is drawn by the page, in its language; the status text was built when the check ran.
+      await expect(result.$('p.sub-status .site-label')).toHaveText('As the site printed it:');
+      await expect(result.$('p.sub-status')).toHaveText(
+        /Su expediente ha sido registrado correctamente/,
+      );
+    });
+
     it('retries a failed check and finishes the run', async () => {
       await addApplicationThroughUi(FIRST_APPLICATION);
       const sede = serveFakeSede({
@@ -907,6 +998,7 @@ describe('extension pages', () => {
       const failed = await waitForResult(checkWindow);
       await expect(failed.$('.banner.error')).toBeExisting();
       await expect(failed.$('.brand .brand-name')).toHaveText('NacioCheck');
+      await expect(failed.$('p.site-said')).toHaveText('Tal como la muestra la sede:');
       // The result page has its own button style; its buttons are tap-sized like the rest (13.4).
       expect(await failed.$('button=Volver a intentarlo').getSize('height')).toBeGreaterThanOrEqual(
         44,

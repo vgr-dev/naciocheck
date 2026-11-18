@@ -44,6 +44,7 @@ async function main(): Promise<void> {
   }
   view.append(list);
 
+  // "Check all" does what the card's own button does when there is one application: it starts at two.
   const row = el('div', 'row');
   row.append(
     button(
@@ -65,7 +66,7 @@ async function main(): Promise<void> {
       openPage('/statuses.html');
     }),
   );
-  view.append(row, links);
+  view.append(...(applications.length > 1 ? [row] : []), links);
 }
 
 async function buildCard(application: Application): Promise<HTMLElement> {

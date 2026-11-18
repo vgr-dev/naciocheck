@@ -175,6 +175,7 @@ export const en: Record<MessageKey, string> = {
   'result.retry': 'Try again',
   'result.next': 'Continue with the next application',
   'result.observedMeaning': 'Observed on real files, not official: {text}',
+  'result.siteSaid': 'As the site printed it:',
   'result.disclaimer':
     'Informational only, not legal advice. The official decision arrives through DEHú. NacioCheck is not an official Ministry of Justice tool.',
 

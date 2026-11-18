@@ -70,7 +70,13 @@ function render(payload: ResultPayload): void {
   if (view.status !== null) {
     app.append(element('h1', 'status', view.status.title));
     if (view.status.subStatus !== null) {
-      app.append(element('p', 'sub-status', view.status.subStatus));
+      // The site's own sentence, kept as it printed it in every language; the label says so (13.16).
+      const sentence = element('p', 'sub-status', '');
+      sentence.append(
+        element('span', 'site-label', t('result.siteSaid')),
+        document.createTextNode(` ${view.status.subStatus}`),
+      );
+      app.append(sentence);
     }
     if (view.versionLine !== '') {
       app.append(element('p', 'version', view.versionLine));
@@ -82,6 +88,8 @@ function render(payload: ResultPayload): void {
   }
 
   if (view.errorMessages.length > 0) {
+    // The page's error messages are verbatim too (D12), under the same label.
+    app.append(element('p', 'site-said', t('result.siteSaid')));
     const list = document.createElement('ul');
     list.className = 'errors';
     for (const message of view.errorMessages) {

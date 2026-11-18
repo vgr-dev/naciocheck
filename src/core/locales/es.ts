@@ -179,6 +179,7 @@ export const es = {
   'result.retry': 'Volver a intentarlo',
   'result.next': 'Continuar con la siguiente solicitud',
   'result.observedMeaning': 'Observado en expedientes reales, no oficial: {text}',
+  'result.siteSaid': 'Tal como la muestra la sede:',
   'result.disclaimer':
     'Información orientativa, no es asesoramiento jurídico. La resolución oficial llega por DEHú. NacioCheck no es una herramienta oficial del Ministerio de Justicia.',
 

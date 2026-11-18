@@ -38,6 +38,8 @@ body {
 .app.popup {
   inline-size: 23.75rem;
   max-inline-size: 100%;
+  /* In a wider window (a desktop tab, Firefox for Android) it sits in the middle like the other pages. */
+  margin-inline: auto;
 }
 
 .app.wide {
@@ -50,6 +52,8 @@ h1.title {
   margin: 0 0 4px;
   font-size: 1.25rem;
   color: var(--teal-700);
+  /* A title that wraps on a phone splits evenly instead of leaving one word on its second line. */
+  text-wrap: balance;
 }
 
 h2.section {
@@ -62,6 +66,11 @@ p.hint,
 p.subtitle {
   margin: 0 0 12px;
   color: var(--gray-600);
+}
+
+/* The message under a form is empty until something happens: empty, it takes no room (it left a double gap). */
+p.hint:empty {
+  display: none;
 }
 
 ul.apps {
@@ -223,6 +232,12 @@ ul.apps + .row {
   inline-size: 20px;
   block-size: 20px;
   margin: 0;
+}
+
+/* The label's own 6 px of padding is hit area; the box itself lines up with the fields' edge. */
+form.fields > .check,
+.checks {
+  margin-inline-start: -6px;
 }
 
 /* Underlined: the status text beside a link is teal too, so colour alone does not say what is a link. */
