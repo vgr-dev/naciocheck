@@ -67,15 +67,21 @@ describe('the brand tagline', () => {
     expect(read(join(BRAND, 'README.md'))).toContain(DECIDED);
   });
 
-  // `brand/README.md` names the dropped line on purpose, as history; nothing a store reader sees may.
-  it.each(['store/listing.en.md', 'store/listing.es.md', 'README.md'])(
-    '%s no longer names the dropped proposal',
-    (file) => {
-      expect(read(join(ROOT, file))).not.toContain('kept in check');
-    },
-  );
+  // `brand/README.md` names the dropped line on purpose, as history; nothing a store or site reader sees may.
+  it.each([
+    'store/listing.en.md',
+    'store/listing.es.md',
+    'README.md',
+    'site/en/index.html',
+    'site/index.html',
+    'site/en/privacy/index.html',
+    'site/privacy/index.html',
+  ])('%s no longer names the dropped proposal', (file) => {
+    expect(read(join(ROOT, file))).not.toContain('kept in check');
+  });
 
-  it('is the line the English store listing states', () => {
+  it('is the line the English store listing and site state', () => {
     expect(read(join(ROOT, 'store/listing.en.md'))).toContain(DECIDED);
+    expect(read(join(ROOT, 'site/en/index.html'))).toContain(DECIDED);
   });
 });

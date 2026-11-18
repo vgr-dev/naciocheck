@@ -10,7 +10,7 @@ Copy-paste text for the Chrome Web Store and addons.mozilla.org. The limits and 
 ## Short description (Chrome Web Store, taken from the manifest — max 132)
 
 ```
-Check the status of your Spanish nationality-by-residence application. All data stays on your device.
+Check the status of your Spanish nationality-by-residence application. Saved data stays on your device.
 ```
 
 This is the same string as `public/_locales/en/messages.json` (`extensionDescription`). Change one, change the
@@ -19,7 +19,7 @@ other.
 ## Summary (AMO — max 250)
 
 ```
-Tells you when your Spanish nationality-by-residence application changes: it fills in the official form for you, leaves you only the captcha, and keeps every check in your browser. No accounts, no servers, no data sent anywhere.
+Tells you when your Spanish nationality-by-residence application changes: it fills in the official form, leaves you the captcha, and keeps every check in your browser. No accounts or servers of ours; only the official site is used when you check.
 ```
 
 ## Detailed description (Chrome Web Store) and AMO description — no practical limit
@@ -37,7 +37,7 @@ What it does
 
 What it does not do
 - It does not solve the captcha or send it to any service: you tick it.
-- It does not create accounts and does not send your data to any server. Everything stays in this browser.
+- It does not create accounts and has no server of its own. Your saved data stays in this browser; when you start a check, the official form is submitted to the sede electrónica, as if you had filled it in yourself.
 - It is not an official tool and has no relationship with the Ministerio de Justicia.
 
 Your data
@@ -47,7 +47,7 @@ Your data
 - There is no analytics, no advertising, no tracking and no telemetry. The extension only talks to the official site, and only when you start a check.
 
 Languages
-Spanish and English, including Firefox for Android.
+Spanish and English. Firefox for Android is a target and has not been verified on a device yet.
 
 Notice
 NacioCheck is not affiliated with the Ministerio de Justicia or any public body. The statuses and their explanations come from the official site and from what has been observed in real files; they do not replace the official resolution.
@@ -61,11 +61,12 @@ NacioCheck is not affiliated with the Ministerio de Justicia or any public body.
 
 ## Privacy summary (for the listing and for the site's policy)
 
-Nothing leaves the device. The personal details you type (NIE, application number, year and date of birth) are
-stored only in the extension's local storage, and the encryption passphrase, if you use one, only in session
-storage, which the browser clears when it closes. There are no accounts, no servers of our own, no analytics and
-no advertising. The extension only contacts `https://sede.mjusticia.gob.es/eConsultas/*`, the official site, to
-fill in the form and read the result. The backup is a file you choose where to keep.
+Your saved data stays on the device. The personal details you type (NIE, application number, year and date of
+birth) are stored only in the extension's local storage, and the encryption passphrase, if you use one, only in
+session storage, which the browser clears when it closes. There are no accounts, no servers of our own, no
+analytics and no advertising. The extension sends nothing to us; the only request is the official form you submit
+to `https://sede.mjusticia.gob.es/eConsultas/*` when you start a check, plus the captcha that page loads. The
+backup is a file you choose where to keep.
 
 ## The brand tagline
 

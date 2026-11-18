@@ -32,8 +32,9 @@ are an unofficial reading, with their sources, and are labelled as such.
 
 - It **does not solve, bypass or outsource the captcha.** Solving services send your details to third parties and
   break the site's terms; here the human always ticks the box.
-- It **does not send your data anywhere.** There is no server, no account, no analytics and no remote font or
-  configuration.
+- It **does not send your data to any server of its own.** There is no account, no analytics and no remote font
+  or configuration. When you start a check, the official form is submitted to the sede electrónica exactly as if
+  you had filled it in yourself.
 - It does not give legal advice and does not predict when your application will be resolved.
 - It does not replace DEHú: a notification from the administration is the only official communication.
 
@@ -44,8 +45,9 @@ uploads data to Google or Mozilla. The extension makes **no network requests of 
 official page you open and submit yourself, and the captcha that page loads. It asks for three permissions
 (`storage`, `alarms`, `notifications`) and one host, `https://sede.mjusticia.gob.es/eConsultas/*`.
 
-This is enforced, not just promised: `npm run check:privacy` scans the built manifests and bundles for network
-APIs, extra hosts and unlisted URLs and fails the build on any of them. The reasons for each permission are in
+This is enforced by the standalone `npm run check:privacy` gate: it scans the built manifests, scripts, HTML,
+CSS and SVG for network APIs, extra hosts, remote assets and unlisted URLs, and fails on any of them. Run it
+after both browser builds, and treat it as a release requirement. The reasons for each permission are in
 [`store/permissions.md`](store/permissions.md), and the privacy policy is in [`site/`](site/)
 ([English](site/en/privacy/index.html), [Spanish](site/privacy/index.html)).
 
@@ -56,8 +58,8 @@ cannot be recovered.**
 
 ## Install
 
-NacioCheck will be published on the **Chrome Web Store** and on **addons.mozilla.org** (Firefox desktop and
-Firefox for Android), and only there: the store versions are the supported way to install it. Store links will be
+NacioCheck will be published on the **Chrome Web Store** and on **addons.mozilla.org** (Firefox desktop), and
+only there: the store versions are the supported way to install it. Store links will be
 added here when the listings are live. Until then, [build it from source](#build-from-source) and load it as a
 development build.
 
@@ -66,8 +68,8 @@ is not verified on a device yet.
 
 ## Build from source
 
-You need Node.js — the line in [`.nvmrc`](.nvmrc) (24), **24.22.1 or newer**: the end-to-end tooling (WebdriverIO) asks for it, and
-`npm ci` warns on an older 24.x — and npm.
+You need Node.js **24.22.1**, pinned in [`.nvmrc`](.nvmrc), and npm. The end-to-end tooling
+(WebdriverIO) requires that patch level; select it with `nvm use` before installing dependencies.
 
 ```sh
 npm ci                  # installs the dependencies and generates the WXT types
@@ -83,6 +85,10 @@ npm run zip:sources     # the source archive Mozilla's reviewers rebuild from
 ```
 
 Rebuilding the source archive reproduces the Firefox package byte for byte (checked for 0.1.0).
+
+The source archive is for rebuilding the extension, not a full test checkout: WXT excludes unit-test
+files. Use the repository checkout for the complete test suite. The archive includes `.nvmrc` so its
+build uses the same pinned Node runtime.
 
 ### Load a development build
 
@@ -166,6 +172,10 @@ downloads Chrome for Testing and its driver (Chrome 137 and later ignores `--loa
 suite does not use the browser you have installed). Nothing else leaves your machine, and the suite never makes a
 request to the real site.
 
+The suite currently follows WebdriverIO's `stable` Chrome for Testing instead of pinning a browser version. A
+Chrome update can change text rendering or layout and fail the visual baselines without a source change; record
+the downloaded browser version when comparing a baseline failure.
+
 **On WSL.** The suite is developed on Ubuntu in WSL2. Headless runs need no display. `npm run test:e2e:headed`
 opens windows through WSLg, which current WSL on Windows 11 includes. If Chrome for Testing fails to start with a
 missing shared library, install the library the error names.
@@ -207,7 +217,7 @@ package that goes to the store.
 ### Maintainer tasks
 
 ```sh
-npm run logo:outline    # outlines the logo text into brand/ (downloads Nunito once, checks its SHA-256)
+npm run logo:outline    # outlines brand/ text; needs the pinned Nunito and system UI font (see brand/README.md)
 npm run store:images    # renders the store icons and promotional tiles into store/
 npm run deploy:site     # publishes site/ to Cloudflare Workers (needs a Cloudflare login)
 ```
@@ -226,7 +236,9 @@ not tracked.
 ## Licence
 
 NacioCheck is free software under the **GNU General Public License, version 3 or (at your option) any later
-version** (SPDX `GPL-3.0-or-later`); the text of version 3 is in [`LICENSE`](LICENSE).
+version** (SPDX `GPL-3.0-or-later`); the text of version 3 is in [`LICENSE`](LICENSE). The build copies that
+canonical file and [`THIRD-PARTY-NOTICES.txt`](THIRD-PARTY-NOTICES.txt) to the root of both browser packages, so
+the store artefacts carry the same licence and WXT runtime notices as the source archive.
 Copyleft is deliberate: anyone who distributes a fork, including one that adds telemetry, has to publish its
 source. The Nunito typeface in the logo keeps its own licence, the SIL Open Font License 1.1
 ([`brand/OFL.txt`](brand/OFL.txt)).

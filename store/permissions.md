@@ -6,21 +6,22 @@ Web Store and addons.mozilla.org ask for in their privacy and data-use forms. Ta
 
 ## What the manifests declare
 
-Both builds declare the same API permissions and the same one host permission. Chrome additionally has
-`action.default_popup`, `background.service_worker`, `options_ui` and a `content_scripts` entry; Firefox has
-`background.scripts` (an event page, which is what Firefox for Android supports) and the gecko settings.
+Both builds declare the same API permissions, the same one host permission, the `action` popup, the options page
+and a `content_scripts` entry. Chrome uses `background.service_worker`; Firefox uses `background.scripts` (an event
+page, which is what Firefox for Android supports) and the gecko settings.
 
-| Declaration                                                             | Type                           | Why the extension needs it                                                                                                                                                                                  | Where it is used                                                                                                                                                                   |
-| ----------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `storage`                                                               | permission                     | Keeps the applications, the history of checks and the settings on the device, and the passphrase only in session storage. It is the whole database of the extension.                                        | `src/core/storage.ts` (`storage.local`, key `naciocheck`), `src/entrypoints/background.ts` (`storage.session`, key `naciocheck:unlock`)                                            |
-| `alarms`                                                                | permission                     | Schedules the one reminder the user sets; nothing else is scheduled and no timer runs while the browser is closed.                                                                                          | `src/entrypoints/background.ts` (`rescheduleReminder`, `handleAlarm`), `src/core/schedule.ts` (`nextRunWhen`)                                                                      |
-| `notifications`                                                         | permission                     | Tells the user when a status has changed, and when a reminder is due. The notification is created locally; nothing is sent.                                                                                 | `src/entrypoints/background.ts` (`applyAlert`, `handleAlarm`)                                                                                                                      |
-| `https://sede.mjusticia.gob.es/eConsultas/*`                            | host permission                | The official check page is the only site the extension touches: it fills the saved application into the form, hides everything but the captcha, submits when the human has solved it, and reads the result. | `src/entrypoints/content.ts` (`matches`, autofill, parser), `src/entrypoints/background.ts` (the check window opens `https://sede.mjusticia.gob.es/eConsultas/inicioNacionalidad`) |
-| `browser_specific_settings.gecko.data_collection_permissions` (Firefox) | manifest key, not a permission | States, in the form Firefox shows at install time, that no data is collected or transmitted.                                                                                                                | `wxt.config.ts`                                                                                                                                                                    |
+| Declaration                                                             | Type                           | Why the extension needs it                                                                                                                                                                                                                                                       | Where it is used                                                                                                                                                                   |
+| ----------------------------------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                                                               | permission                     | Keeps the applications, the history of checks and the settings on the device, and the passphrase only in session storage. It is the whole database of the extension.                                                                                                             | `src/core/storage.ts` (`storage.local`, key `naciocheck`), `src/entrypoints/background.ts` (`storage.session`, key `naciocheck:unlock`)                                            |
+| `alarms`                                                                | permission                     | Schedules the one reminder the user sets; nothing else is scheduled and no timer runs while the browser is closed.                                                                                                                                                               | `src/entrypoints/background.ts` (`rescheduleReminder`, `handleAlarm`), `src/core/schedule.ts` (`nextRunWhen`)                                                                      |
+| `notifications`                                                         | permission                     | Tells the user when a status has changed, and when a reminder is due. The notification is created locally; nothing is sent.                                                                                                                                                      | `src/entrypoints/background.ts` (`applyAlert`, `handleAlarm`)                                                                                                                      |
+| `https://sede.mjusticia.gob.es/eConsultas/*`                            | host permission                | The settled host scope is the official `eConsultas` subtree used by the nationality procedure. On the nationality form it fills the saved application, hides everything but the captcha, submits when the human has solved it, and reads the result. No other host is requested. | `src/entrypoints/content.ts` (`matches`, autofill, parser), `src/entrypoints/background.ts` (the check window opens `https://sede.mjusticia.gob.es/eConsultas/inicioNacionalidad`) |
+| `browser_specific_settings.gecko.data_collection_permissions` (Firefox) | manifest key, not a permission | States, in the form Firefox shows at install time, that the extension collects and transmits no data.                                                                                                                                                                            | `wxt.config.ts`                                                                                                                                                                    |
 
-No `tabs`, no `cookies`, no `<all_urls>`, no `scripting`, no `webRequest`: none of them is needed, and
-`npm run check:privacy` compares the built manifests against exactly `storage`, `alarms`, `notifications` and the
-one host pattern.
+No `tabs`, no `cookies`, no `<all_urls>`, no `scripting`, no `webRequest` and no web-accessible resources:
+none of them is needed. `npm run check:privacy` compares the built manifests against exactly `storage`, `alarms`,
+`notifications`, the one host pattern and the single content-script match, and rejects external-connect and
+web-resource keys.
 
 ## Chrome Web Store — Privacy practices tab
 
@@ -38,16 +39,18 @@ one host pattern.
   chosen days.
 - **notifications** — Informs the user when a status has changed and when a reminder fires. Both are created
   locally.
-- **Host permission `https://sede.mjusticia.gob.es/eConsultas/*`** — The extension only works on the official
-  nationality check page: it fills that form, leaves only the captcha, submits the query after the user solves
-  the captcha, and reads the result. No other site is requested and no data is sent anywhere else.
+- **Host permission `https://sede.mjusticia.gob.es/eConsultas/*`** — The extension injects only into the official
+  `eConsultas` pages of the nationality procedure (the settled host scope). On the nationality form it fills the
+  form, leaves only the captcha, submits the query after the user solves it, and reads the result. No other site
+  is requested, and no data is sent to the extension's own or third-party servers.
 
 ### Remote code
 
 > No, I am not using remote code.
 
-There is no `eval`, no injected script from a server and no remote import; the privacy gate fails the build if
-`fetch(`, `XMLHttpRequest` or a remote URL appears.
+There is no `eval`, no injected script from a server and no remote import; the standalone privacy gate fails if
+`fetch(`, `XMLHttpRequest`, another network API, a remote URL or an eval-like CSP appears. It is run after both
+browser builds as a release requirement.
 
 ### Data usage
 
@@ -56,25 +59,29 @@ There is no `eval`, no injected script from a server and no remote import; the p
 - Certifications: the extension does not sell or transfer user data to third parties, does not use or transfer
   data for purposes unrelated to its single purpose, and does not use or transfer data to determine
   creditworthiness or for lending purposes.
-- Privacy policy URL: `https://naciocheck.vgr.cat/privacy/` (Phase 9; the listing cannot be submitted before it
-  exists).
+- Privacy policy URL: `https://naciocheck.vgr.cat/privacy/` (the policy is in `site/privacy/`; the listing cannot
+  be submitted before the owner deploys that site).
 
 ## addons.mozilla.org — submission answers
 
 - **Data collection**: `"required": ["none"]` in `browser_specific_settings.gecko.data_collection_permissions`
   (both builds). Nothing is collected, so no optional data types are declared and no consent experience is
   needed.
-- **Privacy policy**: AMO asks for one when data is transmitted. Nothing is transmitted; the field is left empty
-  or pointed at `https://naciocheck.vgr.cat/privacy/` once it exists, whichever the reviewer prefers.
+- **Privacy policy**: AMO asks for one when data is transmitted. The extension transmits nothing itself; when the
+  user checks, the official form goes to the sede. The field is left empty or pointed at
+  `https://naciocheck.vgr.cat/privacy/` once it exists, whichever the reviewer prefers.
 - **Source code**: yes. WXT bundles and minifies, so the source package (`npm run zip:sources`, with
   `package-lock.json`) goes with the build.
-- **Notes for reviewers**: the extension only runs on `https://sede.mjusticia.gob.es/eConsultas/*`. The captcha
-  is reCAPTCHA's, solved by the person using it; the extension never solves it and never calls a solving service.
+- **Notes for reviewers**: the extension injects only into `https://sede.mjusticia.gob.es/eConsultas/*`. The
+  captcha is reCAPTCHA's, solved by the person using it; the extension never solves it and never calls a solving
+  service.
   A check needs a real application, so nothing has to be tested against a live account — the review can be
   static: `npm ci && npm run test && npm run build:firefox` reproduce the package, and `npm run check:privacy`
   shows that the built manifests request only `storage`, `alarms`, `notifications` and the one host.
 - **Licence**: `GPL-3.0-or-later` (the AMO form takes the SPDX identifier or the licence's name; the full text is
-  `LICENSE`, shipped in the source package). Decided 2026-11-18 (D8).
+  `LICENSE`, copied to the root of both browser packages by the build and included in the source package).
+  `THIRD-PARTY-NOTICES.txt` carries the MIT notice for the WXT and `@wxt-dev/browser` runtime code in the bundles.
+  Decided 2026-11-18 (D8).
 
 ## Cross-check
 

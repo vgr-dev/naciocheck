@@ -81,8 +81,16 @@ The English tagline is longer, so those two files have a wider `viewBox` instead
 How the outlining stays reproducible:
 
 - The wordmark is Nunito ExtraBold. Google Fonts ships one variable file, so the script instances it at weight
-  800 (its default instance is ExtraLight, which is not this logo). The file is downloaded once into `.cache/`
-  (git-ignored) and its SHA-256 is checked; [`OFL.txt`](OFL.txt) is its licence and stays in this folder.
+  800 (its default instance is ExtraLight, which is not this logo). Before running `npm run logo:outline`, place
+  the pinned variable font at `.cache/fonts/Nunito[wght].ttf` (git-ignored). The known-good file is 276,932 bytes
+  with SHA-256 `bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207`; the script checks it and stops
+  if it is absent or different. It does not download the file itself. [`OFL.txt`](OFL.txt) is its licence and
+  stays in this folder.
+
+  ```sh
+  curl -sSLo '.cache/fonts/Nunito[wght].ttf' \
+    'https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/Nunito%5Bwght%5D.ttf'
+  ```
 - The tagline is the system UI face, which in the shipped files is **DejaVu Sans Regular**: what `system-ui`
   resolves to on the machine that generated them, and what the screenshots show. A shipped logo cannot depend on
   the reader's fonts, so the glyphs are baked. The script checks that face's SHA-256 too and stops if the

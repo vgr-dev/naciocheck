@@ -10,7 +10,7 @@ Textos para copiar tal cual en la Chrome Web Store y en addons.mozilla.org. Los 
 ## Descripción corta (Chrome Web Store, sale del manifiesto — máximo 132)
 
 ```
-Comprueba el estado de tu solicitud de nacionalidad española por residencia. Todos los datos se quedan en tu dispositivo.
+Comprueba el estado de tu solicitud de nacionalidad española por residencia. Los datos guardados se quedan en tu dispositivo.
 ```
 
 Es la misma cadena que `public/_locales/es/messages.json` (`extensionDescription`). Si cambia una, cambia la otra.
@@ -18,7 +18,7 @@ Es la misma cadena que `public/_locales/es/messages.json` (`extensionDescription
 ## Resumen (AMO — máximo 250)
 
 ```
-Te avisa cuando cambia el estado de tu solicitud de nacionalidad por residencia: rellena el formulario oficial por ti, te deja solo el captcha y guarda cada comprobación en tu navegador. Sin cuentas, sin servidores y sin enviar nada a ningún sitio.
+Te avisa cuando cambia el estado de tu solicitud de nacionalidad por residencia: rellena el formulario oficial, deja el captcha y guarda cada comprobación en tu navegador. Sin cuentas ni servidores propios; solo consulta la sede oficial al comprobar.
 ```
 
 ## Descripción detallada (Chrome Web Store) y descripción de AMO — sin límite práctico
@@ -36,7 +36,7 @@ Qué hace
 
 Qué no hace
 - No resuelve el captcha ni lo envía a ningún servicio: lo marcas tú.
-- No crea cuentas y no envía tus datos a ningún servidor. Todo se queda en este navegador.
+- No crea cuentas y no tiene servidores propios. Tus datos guardados se quedan en este navegador; cuando lanzas una comprobación, el formulario oficial se envía a la sede electrónica, igual que si lo rellenaras a mano.
 - No es una herramienta oficial y no tiene ninguna relación con el Ministerio de Justicia.
 
 Tus datos
@@ -46,7 +46,7 @@ Tus datos
 - No hay analítica, ni publicidad, ni rastreo, ni telemetría. La extensión solo habla con la sede electrónica, y solo cuando tú lanzas una comprobación.
 
 Idiomas
-Español e inglés, también en Firefox para Android.
+Español e inglés. Firefox para Android es un objetivo y aún no se ha verificado en un dispositivo.
 
 Aviso
 NacioCheck no está afiliado al Ministerio de Justicia ni a ningún organismo público. Los estados y sus explicaciones se basan en la propia web oficial y en lo observado en expedientes reales, y no sustituyen a la resolución oficial.
@@ -61,12 +61,12 @@ NacioCheck no está afiliado al Ministerio de Justicia ni a ningún organismo p�
 
 ## Resumen de privacidad (para la ficha y para la política del sitio)
 
-Nada sale del dispositivo. Los datos personales que escribes (NIE, número de expediente, año y fecha de
-nacimiento) se guardan solo en el almacenamiento local de la extensión, y la contraseña del cifrado, si la usas,
-solo en el almacenamiento de sesión, que el navegador borra al cerrarse. No hay cuentas, ni servidores propios,
-ni analítica, ni publicidad. La extensión solo contacta con `https://sede.mjusticia.gob.es/eConsultas/*`, la web
-oficial, para rellenar el formulario y leer el resultado. La copia de seguridad es un archivo que eliges tú
-donde guardarlo.
+Tus datos guardados se quedan en el dispositivo. Los datos personales que escribes (NIE, número de expediente,
+año y fecha de nacimiento) se guardan solo en el almacenamiento local de la extensión, y la contraseña del
+cifrado, si la usas, solo en el almacenamiento de sesión, que el navegador borra al cerrarse. No hay cuentas, ni
+servidores propios, ni analítica, ni publicidad. La extensión no envía nada a nosotros; la única petición es el
+formulario oficial que tú envías a `https://sede.mjusticia.gob.es/eConsultas/*` al comprobar, y el captcha que
+carga esa página. La copia de seguridad es un archivo que eliges tú donde guardarlo.
 
 ## Cómo se comprueba
 

@@ -1,6 +1,6 @@
 # Store screenshots
 
-Five images per language, taken from the visual matrix in `e2e/baselines/chrome/` (Phase 6) and copied unchanged:
+Five images per language, taken from the visual matrix in `e2e/baselines/chrome/` and copied unchanged:
 they are already `1280×800` PNG, the size both stores ask for, so nothing is resampled and no quality is lost.
 
 | Order | File (`es/` and `en/`)                    | What it shows                                    | Baseline                                  |
@@ -19,8 +19,8 @@ they are already `1280×800` PNG, the size both stores ask for, so nothing is re
   `X0000000X`, and the dates are frozen at February 2026 by `freezeStoredDates()` in the visual spec. Nothing in
   these files identifies a person.
 - **The popup is deliberately not here.** Its page is built for the 380×600 popup window, so at 1280×800 it is a
-  small card in a large empty frame. If a popup image is wanted for the listing it has to be composed — a device
-  or window mockup — which is a promo asset (10.3), not a screenshot.
+  small card in a large empty frame. If a popup image is wanted for the listing it has to be composed as a device
+  or window mockup and added to the `store:images` promo pipeline; it is not a screenshot.
 - **No image is of the official site.** The visual matrix has three (`form-captcha`, `form-hint`, `form-picker`),
   and they are excluded on purpose: they are somebody else's page, they carry the test captcha stub, and a store
   listing should not look as if that page were ours.

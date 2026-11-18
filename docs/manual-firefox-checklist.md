@@ -1,6 +1,6 @@
 # Manual Firefox checklist (desktop)
 
-The automated end-to-end suite runs in Chrome only (D1, see the plan's Run and Evidence). This list is what
+The automated end-to-end suite runs in Chrome only (see `AGENTS.md`, settled decisions). This list is what
 replaces it on Firefox desktop: run it before every release against the same package that goes to AMO.
 
 Out of scope here: Chrome (automated in `e2e/`), Firefox for Android (device, see the README), the deployed
@@ -81,6 +81,26 @@ Choose a `raw` that differs from the status the real check returns, or there is 
 catalogue values include `Abierto - Registrado.`, `Abierto - En tramitación.`, `Abierto - En calificación.`
 and `Finalizado - Concedido. Notificado.`. The flag is removed again by the last line; leaving it set does not
 enable anything on its own, but do not ship a profile with it.
+
+## Audit Retest
+
+The observations above describe the earlier package, not the audit-remediated candidate. Repeat the full
+checklist against the new package; do not carry its old hash or PASS results into a release sign-off.
+Additional regressions to verify manually after the 2026-11-18 audit:
+
+- Delete: Cancel preserves the application and history; confirm removes both.
+- Encryption: enable, repair and disable confirmations survive redraw; cancelled disable changes nothing;
+  **Lock now** ends the session and the next selected check asks to unlock only that application.
+- Backup: export produces a real downloadable JSON file; import that actual file in a disposable profile;
+  cancelled merge/replace preserves data; plain import while encrypted is refused; successful import
+  redraws the application list, language and reminders. Never use real data in a recorded artifact.
+- Alerts: two outstanding changes keep the badge until both are acknowledged; later unchanged/error
+  checks do not hide an earlier unacknowledged change; notification and popup links revisit it.
+- Full form: **Ver la página completa** restores hidden fields; a missing required field cannot leave
+  the user trapped behind the captcha-only view. The human alone solves the real CAPTCHA.
+
+Status: **NOT RUN** on the audit-remediated Firefox package. Firefox for Android remains a separate,
+unverified device gate. See `docs/pre-release-audit-2026-11-18.md` for automated evidence and limitations.
 
 ## Sign-off
 
