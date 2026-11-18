@@ -139,6 +139,22 @@ form.fields {
   margin-block: 12px;
 }
 
+/*
+ * Outside a `form.fields` grid (which spaces its own children) a field, a row of buttons or the list of
+ * applications is a plain block: without this a button sits flush against the input or the card above it.
+ */
+:not(form.fields) > .field + .field,
+:not(form.fields) > .field + .row,
+:not(form.fields) > .row + .field,
+ul.apps + .row {
+  margin-block-start: 10px;
+}
+
+/* A message under a row of buttons; not the subtitle under a page's first row (the logo and name). */
+.row:not(:first-child) + p.hint {
+  margin-block-start: 8px;
+}
+
 .field {
   display: grid;
   gap: 4px;

@@ -205,7 +205,9 @@ async function fillEncryption(view: HTMLElement, redraw: () => Promise<void>): P
     );
   }
 
-  view.append(field, encrypted.length === 0 ? confirmation : el('div'), actions, message);
+  view.append(field);
+  if (encrypted.length === 0) view.append(confirmation);
+  view.append(actions, message);
 }
 
 export function renderBackup(view: HTMLElement): void {
@@ -254,7 +256,13 @@ export function renderBackup(view: HTMLElement): void {
   fileLabel.htmlFor = 'import-file';
   fileField.append(fileLabel, input);
 
-  view.append(el('div', 'row', ''), exportButton, fileField, importButton, message);
+  // Each button in a row of its own, so the page's spacing rules (not stray line boxes) keep it clear of the
+  // content above and below.
+  const exportRow = el('div', 'row');
+  exportRow.append(exportButton);
+  const importRow = el('div', 'row');
+  importRow.append(importButton);
+  view.append(exportRow, fileField, importRow, message);
 }
 
 function isUnlocked(value: unknown): boolean {

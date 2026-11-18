@@ -55,7 +55,9 @@ async function main(): Promise<void> {
     'button primary',
   );
 
-  view.append(field, submit, message);
+  const actions = el('div', 'row');
+  actions.append(submit);
+  view.append(field, actions, message);
 }
 
 function finish(text: string): void {
