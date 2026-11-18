@@ -73,8 +73,8 @@ There is no `eval`, no injected script from a server and no remote import; the p
   A check needs a real application, so nothing has to be tested against a live account — the review can be
   static: `npm ci && npm run test && npm run build:firefox` reproduce the package, and `npm run check:privacy`
   shows that the built manifests request only `storage`, `alarms`, `notifications` and the one host.
-- **Licence**: `TODO(D8)` — the choice between `GPL-3.0-only` and `GPL-3.0-or-later` is the user's, and the field
-  stays empty until then.
+- **Licence**: `GPL-3.0-or-later` (the AMO form takes the SPDX identifier or the licence's name; the full text is
+  `LICENSE`, shipped in the source package). Decided 2026-11-18 (D8).
 
 ## Cross-check
 

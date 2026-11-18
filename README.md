@@ -66,7 +66,8 @@ is not verified on a device yet.
 
 ## Build from source
 
-You need Node.js — the version in [`.nvmrc`](.nvmrc) (currently 24) — and npm.
+You need Node.js — the line in [`.nvmrc`](.nvmrc) (24), **24.22.1 or newer**: the end-to-end tooling (WebdriverIO) asks for it, and
+`npm ci` warns on an older 24.x — and npm.
 
 ```sh
 npm ci                  # installs the dependencies and generates the WXT types
@@ -224,7 +225,8 @@ not tracked.
 
 ## Licence
 
-NacioCheck is free software under the **GNU General Public License v3.0**; the text is in [`LICENSE`](LICENSE).
+NacioCheck is free software under the **GNU General Public License, version 3 or (at your option) any later
+version** (SPDX `GPL-3.0-or-later`); the text of version 3 is in [`LICENSE`](LICENSE).
 Copyleft is deliberate: anyone who distributes a fork, including one that adds telemetry, has to publish its
 source. The Nunito typeface in the logo keeps its own licence, the SIL Open Font License 1.1
 ([`brand/OFL.txt`](brand/OFL.txt)).

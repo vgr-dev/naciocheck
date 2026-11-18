@@ -1,6 +1,7 @@
 {
   "name": "naciocheck",
   "version": "0.1.0",
+  "license": "GPL-3.0-or-later",
   "private": true,
   "type": "module",
   "description": "NacioCheck — a local-only browser extension that checks the status of Spanish nationality-by-residence applications. Not affiliated with the Ministerio de Justicia.",
