@@ -107,3 +107,47 @@ feat(worker): add pure request checks for the feedback endpoint
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site` -> pass (27 files, 605 tests; check:site 4 pages)
 - **Commit proposal:** one commit per step, one for the plan and progress updates
 - **Open issues:** step 10 must cap the body read (checks ignore a malformed `Content-Length`); step 9 must typecheck `worker/checks.ts` under the Workers tsconfig; step 11 updates the site check's success message
+
+## 2026-11-23 - Step 5: Carry the report input in the result payload
+
+- **Status:** done
+- **Changed:** `src/entrypoints/background.ts`, `tests/background.test.ts`
+- **Verified:** `npx vitest run tests/background.test.ts` -> pass (45); `npm run typecheck` -> clean; `npx eslint src/entrypoints/background.ts tests/background.test.ts` -> clean
+- **Commit:** uncommitted, proposed "feat(background): carry the report input in the result payload"
+- **Open issues:**
+  - `reportOf(check)` copies `outcome` and `statusKey` by name; set for status, error, unknown (`unknown`/`unknown`), deleted (`null`) and both `resultForCheck` branches.
+  - Beyond the plan: `report: null` also in the save-failed catch branch of `handleOutcome` (no check to report on); `resultFor` is now exported for the history-reopen tests.
+  - `isResultPayload` accepts a missing or `null` `report` and rejects a malformed one; `resultForCached` reads a pre-change cached payload as `report: null`.
+  - `src/entrypoints/result/main.ts` keeps its own `ResultPayload` and guard without `report`; step 7 owns that.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(background): carry the report input in the result payload
+```
+
+## 2026-11-23 - Step 6: Build the report panel
+
+- **Status:** done
+- **Changed:** `src/entrypoints/shared/report-panel.ts` (new), `src/entrypoints/shared/report-panel.css` (new), `tests/report-panel.test.ts` (new)
+- **Verified:** `npx vitest run tests/report-panel.test.ts` -> pass (8); `npx eslint src/entrypoints/shared/report-panel.ts tests/report-panel.test.ts` -> clean
+- **Commit:** uncommitted, proposed "feat(ui): add the report panel with copy and continue buttons"
+- **Open issues:**
+  - Reuses the page classes `.field`, `.row`, `.button`, `.primary`, `p.hint`; steps 7 and 8 must check no page-level rule for `.row` or `.field` conflicts (no scoping added).
+  - Copy failure, including a missing clipboard, selects the textarea and announces `report.copyFailed`.
+  - CSS (44 px summary, `:focus-visible` outlines, logical properties for RTL) is not covered by jsdom; the visual check is Phase 7.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(ui): add the report panel with copy and continue buttons
+```
+
+## 2026-11-23 - Phase 2: Report input and panel
+
+- **Status:** done
+- **Steps:** 5 done, 6 done
+- **File check:** pass (5 changed or new files, each in its step's Files; plus the orchestrator's plan.md and progress.md)
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (28 files, 620 tests)
+- **Commit proposal:** one commit per step, one for the plan and progress updates (which also records the Phase 1 hashes)
+- **Open issues:** step 7 adds `report` to the result page's own `ResultPayload` and guard; steps 7 and 8 check `.row` / `.field` styles on their pages

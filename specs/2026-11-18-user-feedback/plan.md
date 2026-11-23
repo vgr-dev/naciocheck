@@ -15,15 +15,15 @@ numbers are global across phases. -->
 
 **Phase 1: Pure pieces**
 
-- [x] 1. Build and redact the report uncommitted
-- [x] 2. Add the panel and guide texts uncommitted
-- [x] 3. Let the site gate admit the feedback pages uncommitted
-- [x] 4. Write the Worker's request checks as pure functions uncommitted
+- [x] 1. Build and redact the report 0e519be
+- [x] 2. Add the panel and guide texts 0c51155
+- [x] 3. Let the site gate admit the feedback pages b965bbf
+- [x] 4. Write the Worker's request checks as pure functions 5c27198
 
 **Phase 2: Report input and panel**
 
-- [ ] 5. Carry the report input in the result payload
-- [ ] 6. Build the report panel
+- [x] 5. Carry the report input in the result payload uncommitted
+- [x] 6. Build the report panel uncommitted
 
 **Phase 3: Panel on the pages**
 
