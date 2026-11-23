@@ -24,6 +24,7 @@ import {
   lockSession,
   recordOutcome,
   remainingAfter,
+  resultFor,
   startCheckRun,
   unlock,
 } from '../src/entrypoints/background';
@@ -588,7 +589,62 @@ describe('recordOutcome', () => {
     expect(payload).toMatchObject({ acknowledged: true, checkId: null });
     expect(payload.view.view).toBe('error');
     expect(payload.view.errorMessages).toHaveLength(1);
+    expect(payload).toMatchObject({ report: null });
     await expect(readStore()).resolves.toMatchObject({ checks: [] });
+  });
+
+  it('carries only outcome and status key for a status result', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+    await browser.storage.session.set({
+      'naciocheck:run': { id: 'run-1', queue: [application.id] },
+      'naciocheck:fills': { '5': application.id },
+    });
+
+    await recordOutcome(outcome, application.id, 5, 'es');
+
+    const payload = (await browser.storage.session.get('naciocheck:result:5'))[
+      'naciocheck:result:5'
+    ] as { report: unknown };
+    expect(payload.report).toEqual({ outcome: 'status', statusKey: 'abierto-registrado' });
+    expect(Object.keys(payload.report as object).sort()).toEqual(['outcome', 'statusKey']);
+  });
+
+  it('carries only outcome and status key for an error result', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+    await browser.storage.session.set({
+      'naciocheck:run': { id: 'run-1', queue: [application.id] },
+      'naciocheck:fills': { '5': application.id },
+    });
+
+    await recordOutcome(
+      { kind: 'error', messages: ['Datos no válidos.'], raw: 'Datos no válidos.' },
+      application.id,
+      5,
+      'es',
+    );
+
+    const payload = (await browser.storage.session.get('naciocheck:result:5'))[
+      'naciocheck:result:5'
+    ] as { report: unknown };
+    expect(payload.report).toEqual({ outcome: 'error', statusKey: 'unknown' });
+    expect(Object.keys(payload.report as object).sort()).toEqual(['outcome', 'statusKey']);
+  });
+
+  it('reports an unrecognised page as unknown', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+    await browser.storage.session.set({
+      'naciocheck:run': { id: 'run-1', queue: [application.id] },
+      'naciocheck:fills': { '5': application.id },
+    });
+
+    await recordOutcome({ kind: 'unknown' }, application.id, 5, 'es');
+
+    const payload = (await browser.storage.session.get('naciocheck:result:5'))[
+      'naciocheck:result:5'
+    ] as { report: unknown; checkId: string | null };
+    expect(payload.checkId).toBeNull();
+    expect(payload.report).toEqual({ outcome: 'unknown', statusKey: 'unknown' });
+    expect(Object.keys(payload.report as object).sort()).toEqual(['outcome', 'statusKey']);
   });
 });
 
@@ -666,10 +722,83 @@ describe('isResultPayload', () => {
         acknowledged: true,
         hasNext: false,
         runId: '',
+        report: null,
       }),
     ).toBe(true);
     expect(isResultPayload({ applicationId: 'app-1' })).toBe(false);
     expect(isResultPayload(null)).toBe(false);
+  });
+
+  it('accepts a payload cached before report existed and rejects a malformed report', () => {
+    const base = {
+      view: { view: 'status' },
+      applicationId: 'app-1',
+      checkId: null,
+      acknowledged: true,
+      hasNext: false,
+      runId: '',
+    };
+    expect(isResultPayload(base)).toBe(true);
+    expect(isResultPayload({ ...base, report: { outcome: 'status', statusKey: 'unknown' } })).toBe(
+      true,
+    );
+    expect(isResultPayload({ ...base, report: 'status' })).toBe(false);
+    expect(isResultPayload({ ...base, report: { outcome: 'status' } })).toBe(false);
+  });
+});
+
+describe('resultFor', () => {
+  beforeEach(() => {
+    vi.spyOn(browser.i18n, 'getUILanguage').mockReturnValue('es');
+    vi.spyOn(browser.action, 'setBadgeText').mockResolvedValue(undefined);
+    vi.spyOn(browser.action, 'setBadgeBackgroundColor').mockResolvedValue(undefined);
+  });
+
+  it('rebuilds a reopened status check with only outcome and status key', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+    const stored = await appendCheck({
+      applicationId: application.id,
+      outcome: 'status',
+      statusKey: 'abierto-en-tramitacion',
+      raw: 'Abierto - En tramitación.',
+      subStatus: 'Sub-estado de prueba',
+    });
+
+    const payload = (await resultFor(1, stored.id)) as { report: unknown };
+
+    expect(payload.report).toEqual({ outcome: 'status', statusKey: 'abierto-en-tramitacion' });
+    expect(Object.keys(payload.report as object).sort()).toEqual(['outcome', 'statusKey']);
+  });
+
+  it('rebuilds a reopened error check with only outcome and status key', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+    const stored = await appendCheck({
+      applicationId: application.id,
+      outcome: 'error',
+      statusKey: 'unknown',
+      raw: 'Datos no válidos.',
+      subStatus: null,
+    });
+
+    const payload = (await resultFor(1, stored.id)) as { report: unknown };
+
+    expect(payload.report).toEqual({ outcome: 'error', statusKey: 'unknown' });
+    expect(Object.keys(payload.report as object).sort()).toEqual(['outcome', 'statusKey']);
+  });
+
+  it('reads a payload cached before report existed as having none', async () => {
+    await browser.storage.session.set({
+      'naciocheck:result:7': {
+        view: { view: 'status' },
+        applicationId: 'app-1',
+        checkId: null,
+        acknowledged: true,
+        hasNext: false,
+        runId: '',
+      },
+    });
+
+    await expect(resultFor(7)).resolves.toMatchObject({ report: null });
   });
 });
 

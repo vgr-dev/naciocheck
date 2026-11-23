@@ -6,6 +6,7 @@ import { decryptIdentity } from '../core/crypto';
 import { currentLocale, resolveLocaleCode, setLocale, t } from '../core/i18n';
 import { isExtensionMessage } from '../core/messages';
 import type { ParseOutcome } from '../core/parser';
+import type { ReportCheck } from '../core/report';
 import { nextRunWhen } from '../core/schedule';
 import { statusKeyOf } from '../core/statuses';
 import {
@@ -68,6 +69,11 @@ interface ResultPayload {
   hasNext: boolean;
   /** Empty for a result reopened from history, which is not part of a live run. */
   runId: string;
+  /**
+   * The only two fields of a check a problem report may carry; never `raw`, `subStatus` or anything from the
+   * identity. `null` when there is no check to report on (a deleted application, a failed save).
+   */
+  report: ReportCheck | null;
 }
 
 /** Tabs with a Continue message in flight, so a second click cannot shift the queue twice. */
@@ -472,6 +478,7 @@ async function handleOutcome(outcome: ParseOutcome, tabId: number): Promise<void
       acknowledged: true,
       hasNext: false,
       runId: '',
+      report: null,
     }).catch(() => undefined);
   }
 
@@ -506,6 +513,7 @@ export async function recordOutcome(
       acknowledged: true,
       hasNext,
       runId: inRun ? run.id : '',
+      report: null,
     });
     return;
   }
@@ -529,7 +537,7 @@ export async function recordOutcome(
       anomaly: detectAnomaly(previous, check),
       locale,
     });
-    await storeResult(tabId, { ...base, view, checkId: check.id });
+    await storeResult(tabId, { ...base, view, checkId: check.id, report: reportOf(check) });
     await applyAlert(view.view === 'changed', decideAlert(change, label, locale), check.id);
   } else if (outcome.kind === 'error') {
     // D12: the page does not say why, so neither do we — the message is stored and shown verbatim.
@@ -544,6 +552,7 @@ export async function recordOutcome(
       ...base,
       view: buildErrorView({ label, messages: outcome.messages, locale }),
       checkId: check.id,
+      report: reportOf(check),
     });
   } else {
     // `unknown`: nothing is recorded, but the user still needs to be told.
@@ -555,6 +564,7 @@ export async function recordOutcome(
         locale,
       }),
       checkId: null,
+      report: { outcome: 'unknown', statusKey: 'unknown' },
     });
   }
 
@@ -678,6 +688,7 @@ async function resultForCheck(checkId: string): Promise<ResultPayload | null> {
     acknowledged: check.acknowledged,
     hasNext: false,
     runId: '',
+    report: reportOf(check),
   };
 
   if (check.outcome !== 'status') {
@@ -704,6 +715,11 @@ async function resultForCheck(checkId: string): Promise<ResultPayload | null> {
   };
 }
 
+/** Copies the two permitted fields by name, so nothing else of a check can enter a payload. */
+function reportOf(check: ReportCheck): ReportCheck {
+  return { outcome: check.outcome, statusKey: check.statusKey };
+}
+
 async function storeResult(tabId: number, payload: ResultPayload): Promise<void> {
   await browser.storage.session.set({ [`${RESULT_KEY_PREFIX}${tabId}`]: payload });
 }
@@ -715,11 +731,20 @@ export function isResultPayload(value: unknown): value is ResultPayload {
     typeof candidate.applicationId === 'string' &&
     typeof candidate.acknowledged === 'boolean' &&
     typeof candidate.hasNext === 'boolean' &&
-    'view' in candidate
+    'view' in candidate &&
+    isReportCheckOrAbsent(candidate.report)
   );
 }
 
-async function resultFor(tabId: number, checkId?: string): Promise<unknown> {
+/** A payload cached before `report` existed has none; that reads as `null`. */
+function isReportCheckOrAbsent(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value !== 'object') return false;
+  const candidate = value as Partial<ReportCheck>;
+  return typeof candidate.outcome === 'string' && typeof candidate.statusKey === 'string';
+}
+
+export async function resultFor(tabId: number, checkId?: string): Promise<unknown> {
   if (checkId !== undefined) return resultForCheck(checkId);
   return resultForCached(tabId);
 }
@@ -727,7 +752,12 @@ async function resultFor(tabId: number, checkId?: string): Promise<unknown> {
 async function resultForCached(tabId: number): Promise<unknown> {
   const key = `${RESULT_KEY_PREFIX}${tabId}`;
   const stored = await browser.storage.session.get(key);
-  return stored[key] ?? null;
+  const cached: unknown = stored[key] ?? null;
+  // A payload cached before `report` existed is read as having none.
+  if (isResultPayload(cached) && (cached as Partial<ResultPayload>).report === undefined) {
+    return { ...cached, report: null };
+  }
+  return cached;
 }
 
 async function assignFill(tabId: number): Promise<void> {
