@@ -443,3 +443,10 @@ test(e2e): capture the report panel and rewrite the Chrome baselines
 - **Verified:** the user ran row 15 in Firefox: it behaves exactly as in Chrome, nothing to note. Recorded as PASS in `docs/manual-firefox-checklist.md`.
 - **Still open:** the Web Analytics beacon on the live pages.
 - **Commit:** uncommitted
+
+## 2026-11-23 - Spec closed
+
+- **Status:** done
+- **Verified:** every acceptance criterion in `spec.md` is ticked: automated checks (see the review), the live send received at `naciocheck@vgr.cat`, and Firefox checklist row 15 PASS.
+- **Follow-up outside this spec:** the Cloudflare Web Analytics beacon, recorded as a release gate in `docs/pre-release-audit-2026-11-18.md`. Non-blocking notes: the three Low UI findings from step 14, the options-editing E2E flake, `navegador: unknown` in headless runs, no unknown-page E2E fixture, and the literal byte limit in `feedback.js`.
+- **Commit:** uncommitted

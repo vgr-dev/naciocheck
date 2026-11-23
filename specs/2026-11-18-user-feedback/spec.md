@@ -1,5 +1,5 @@
 ---
-status: active # draft | active | done | abandoned
+status: done # draft | active | done | abandoned
 created: 2026-11-18
 status-date: 2026-11-23
 ---
@@ -119,32 +119,35 @@ amendment to ADR 0005.
 
 ## Acceptance criteria
 
-- [ ] `npm test` passes with the new files; a test fails if a field named like an identity field is added to
+- [x] `npm test` passes with the new files; a test fails if a field named like an identity field is added to
       the report.
-- [ ] The panel is absent on a normal status and present on an error and an unknown page; the text contains
+- [x] The panel is absent on a normal status and present on an error and an unknown page; the text contains
       the outcome and status key, and neither the status text nor the sub-status sentence the site printed,
       nor any of the fake identity's values, even when they appear inside a sede error message. Editing it
       changes what Copy would hold. The Continue click calls `tabs.create` with `https://naciocheck.vgr.cat/`
-      plus `feedback/#` and no other host.
-- [ ] The prefilled report fits the Worker request limit with a 2,048-character ASCII Turnstile token that
+      plus `feedback/#` and no other host. (Unknown page: covered by the background payload tests; no E2E
+      fixture ends on an unknown-page result.)
+- [x] The prefilled report fits the Worker request limit with a 2,048-character ASCII Turnstile token that
       needs no JSON escaping. The feedback page measures the actual encoded JSON and keeps an oversized
       draft editable without posting it.
-- [ ] Worker tests: a valid post with a passing token sends one email whose body is the redacted text; a
+- [x] Worker tests: a valid post with a passing token sends one email whose body is the redacted text; a
       missing token, a failed or spent token (`timeout-or-duplicate`), a wrong hostname, a siteverify
       outage, an oversized body, a wrong method or content type, a cross-origin post and a rate-limited
       client are rejected and send nothing; nothing is written to storage or logged; no test reaches a real
       host.
-- [ ] `npm run check:site` passes and still fails on a script on any other page, on any remote address
+- [x] `npm run check:site` passes and still fails on a script on any other page, on any remote address
       other than the exact Turnstile script on the feedback pages and the exact Turnstile privacy link on
       the feedback and privacy pages, and on either of those anywhere else.
-- [ ] `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run check:site && npm run check:privacy`
+- [x] `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run check:site && npm run check:privacy`
       pass, with the E2E guard at 0 unexpected requests.
-- [ ] Privacy policy, README, store data-usage answers and the Firefox checklist state that the extension
+- [x] Privacy policy, README, store data-usage answers and the Firefox checklist state that the extension
       sends nothing by itself, that the feedback page loads Cloudflare Turnstile (with a link to its privacy
       policy), and that a report the person sends from the website goes through Cloudflare to the maintainer
-      by email and is not stored. Every other page still states that it loads nothing from elsewhere.
-- [ ] After the user deploys: the user sends one report from the real extension with a real error and
-      receives it.
+      by email and is not stored. Every other page still states that it loads nothing from elsewhere. (The
+      Cloudflare Web Analytics beacon injected at the edge is a site setting, tracked as a release gate in
+      `docs/pre-release-audit-2026-11-18.md`.)
+- [x] After the user deploys: the user sends one report from the real extension with a real error and
+      receives it. (Live send received 2026-11-23; Firefox checklist row 15 PASS.)
 
 ## Open questions
 
