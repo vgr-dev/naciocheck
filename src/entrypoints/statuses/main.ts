@@ -1,3 +1,4 @@
+import { browser } from 'wxt/browser';
 import { currentLocale, t } from '../../core/i18n';
 import { MAIN_PATH_STATES, PATH_STATES, type PathStateId } from '../../core/paths';
 import {
@@ -8,7 +9,9 @@ import {
   type StatusKey,
   type SubStatusEntry,
 } from '../../core/statuses';
+import { buildGuideReport, type ReportContext } from '../../core/report';
 import { initPageLocale } from '../shared/locale';
+import { reportPanel } from '../shared/report-panel';
 import { el, root } from '../shared/ui';
 
 /**
@@ -86,7 +89,26 @@ function stepsBlock(locale: 'es' | 'en'): HTMLElement {
   return block;
 }
 
-function card(entry: StatusEntry, locale: 'es' | 'en'): HTMLElement {
+/** The browser's name and major version, nothing else: no operating system, no full user agent string. */
+function browserName(): string {
+  const agent = navigator.userAgent;
+  // Order matters: Edge and Opera also say Chrome, and Chrome also says Safari.
+  const known: readonly (readonly [string, RegExp])[] = [
+    ['Edge', /Edg\/(\d+)/],
+    ['Opera', /OPR\/(\d+)/],
+    ['Firefox', /Firefox\/(\d+)/],
+    ['Chrome', /Chrome\/(\d+)/],
+  ];
+  for (const [name, pattern] of known) {
+    const major = pattern.exec(agent)?.[1];
+    if (major !== undefined) return `${name} ${major}`;
+  }
+  return 'unknown';
+}
+
+type GuideContext = Omit<ReportContext, 'errorMessages' | 'anomaly'>;
+
+function card(entry: StatusEntry, locale: 'es' | 'en', context: GuideContext): HTMLElement {
   const node = el('div', 'card');
   // The heading is the name the sede shows, in Spanish; English readers get a gloss beneath it.
   const heading = el('h3', '', entry.es.title);
@@ -104,6 +126,14 @@ function card(entry: StatusEntry, locale: 'es' | 'en'): HTMLElement {
   }
 
   node.append(sourcesOf(entry));
+  // Closed by default: the guide reads as before until someone thinks a text is wrong.
+  node.append(
+    reportPanel(
+      buildGuideReport(entry.key, entry[locale].explanation, context),
+      locale,
+      'statuses.explanationWrong',
+    ),
+  );
   return node;
 }
 
@@ -112,21 +142,26 @@ async function main(): Promise<void> {
   await initPageLocale();
   document.title = t('statuses.pageTitle');
   const locale = currentLocale().content;
+  const context: GuideContext = {
+    version: browser.runtime.getManifest().version,
+    browser: browserName(),
+    locale,
+  };
   view.append(el('h1', 'title', t('statuses.title')));
   view.append(el('p', 'subtitle', STATUS_DISCLAIMER[locale]));
 
   view.append(el('h2', 'section', t('statuses.mainPathTitle')));
-  for (const entry of entriesOf(MAIN_PATH_STATUSES)) view.append(card(entry, locale));
+  for (const entry of entriesOf(MAIN_PATH_STATUSES)) view.append(card(entry, locale, context));
 
   view.append(el('h2', 'section', t('statuses.branchesTitle')));
   for (const entry of entriesOf(BRANCH_STATUSES)) {
-    const node = card(entry, locale);
+    const node = card(entry, locale, context);
     node.append(el('p', 'hint', t('statuses.branchHint')));
     view.append(node);
   }
 
   view.append(el('h2', 'section', t('statuses.othersTitle')));
-  for (const entry of OTHER_ENTRIES) view.append(card(entry, locale));
+  for (const entry of OTHER_ENTRIES) view.append(card(entry, locale, context));
 }
 
 void main();
