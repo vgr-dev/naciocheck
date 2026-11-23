@@ -67,3 +67,61 @@ send from a Worker to verified addresses only. See `specs/2026-11-18-user-feedba
 - Enabling Email Routing on `vgr.cat`, verifying the address, creating the Turnstile widget, setting its
   secret and deploying stay the user's actions.
 - The reporting channel can change by redeploying the site, without an extension release.
+
+## Amendment 2026-11-23: a product landing site in three languages, built from sources
+
+- **Amendment status:** accepted 2026-11-23 (by Claude on the owner's delegation). See `specs/2026-11-23-landing-page/`.
+
+### Context
+
+The landing page at `naciocheck.vgr.cat` is a placeholder. It becomes a product page for applicants, with a
+credit and a block for agencies that points to `vgr.cat`. That needs three languages (Spanish, English,
+Catalan), shared layout and themes, a social card, a favicon, a changelog and a 404 page. Hand-copying that
+across 15 pages would drift, and the store URLs and the repository link do not exist yet. The page has to
+stay static and has to keep the privacy properties of the pages it replaces.
+
+### Decision
+
+- The site is a product page in `es` (`/`), `en` (`/en/`) and `ca` (`/ca/`). Each language has a landing,
+  privacy, feedback and changelog page and a `404.html`, with a language switcher and `hreflang` alternates
+  on every page. Catalan uses the Spanish screenshots until the extension has a Catalan locale.
+- The hand-written pages stay in `site/`. `npm run build:site` (`scripts/build-site.mjs`) writes the
+  deployable site into `.output/site/`, and `wrangler.jsonc` serves that directory. The build copies the
+  pages (not `site/_build/`, which holds its config, strings and partials), expands a fixed set of HTML
+  comment markers (head metadata, inline CSS, header, footer, install buttons, changelog, an optional
+  repository block), renders the changelog from `CHANGELOG.md` and generates the social card, favicon and
+  resized screenshots from `brand/` and `store/screenshots/`. An unknown marker fails the build. It makes no
+  network request.
+- The store URLs and whether the repository is public are set in one place, `site/_build/config.json`. A
+  null store URL renders a "coming soon" button that links nowhere. While the repository is private, the
+  source and per-release GitHub links are left out.
+- Outbound links (`<a href>`) may only start with `https://vgr.cat/`, `https://www.linkedin.com/in/vagonzal/`,
+  `https://github.com/vgr-dev/naciocheck`, `https://chromewebstore.google.com/` or
+  `https://addons.mozilla.org/`, plus the existing Turnstile privacy link on the feedback and privacy pages.
+  The site's own origin, `https://naciocheck.vgr.cat/`, may appear only in canonical and alternate `<link>`
+  elements and in Open Graph and Twitter card `<meta>` content. `https://vgr.cat/` may also appear in
+  `<link rel="me">`. Nothing absolute is ever allowed in `src`, `srcset`, `poster`, `data`, `action`, CSS
+  `url()` or `@import`: no remote resource is loaded, no remote font, no cookie.
+- The landing, privacy, changelog and 404 pages carry no JavaScript. The feedback pages keep their one
+  same-origin script and Turnstile's script, as decided in the feedback amendment above.
+- `npm run deploy:site` builds first, then deploys. It stays the user's action, as do store uploads and
+  changing repository visibility. Cloudflare Web Analytics stays as disclosed above, for the website only.
+
+### Consequences
+
+- `npm run check:site` builds the site and checks `.output/site/`, not the sources. It stays offline. It
+  gains these rules: `lang` may be `es`, `en` or `ca`; every language has the same set of pages; same-origin
+  `.png`, `.webp`, `.svg` and `.ico` files are allowed, and any other file type is not; an SVG may not carry
+  a script, an event attribute, `<foreignObject>` or a reference that is not a `#fragment`; outbound links
+  follow the list above. It does not see the Cloudflare Web Analytics beacon, which is injected at the edge.
+- The sources of the feedback and privacy pages now contain markers where their CSS and navigation were.
+  Tests that read those sources keep working, and the gate sees the expanded pages.
+- The privacy pages keep stating what the site loads and sends, in all three languages, including the
+  Catalan page's disclosure of Turnstile and Cloudflare Web Analytics (website only, not the extension). The
+  user reviews the Catalan wording before release.
+- `CHANGELOG.md` is the single source of release notes, in English. Pages for other languages say so. Each
+  release links to its GitHub release only once the repository is public.
+- The agency block and the credit link to `vgr.cat` only. Pricing, a paid tier and any contact form are not
+  part of this site.
+- Any new outbound link, remote resource or script is a new amendment to this ADR, and the gate fails until
+  it is made.
