@@ -14,6 +14,7 @@ import {
 } from '../src/core/report';
 import { detectAnomaly } from '../src/core/anomaly';
 import type { Check } from '../src/core/storage';
+import { MAX_BODY_BYTES, MAX_TOKEN_CHARS } from '../worker/checks';
 
 function context(overrides: Partial<ReportContext> = {}): ReportContext {
   return {
@@ -113,7 +114,7 @@ describe('buildReport', () => {
       'idioma: es',
       'resultado: error',
       'clave de estado: unknown',
-      'errores: Captcha incorrecto',
+      'errores: captcha',
       'comentario:',
     ]);
   });
@@ -178,7 +179,7 @@ describe('buildReport', () => {
     }
   });
 
-  it('redacts the error messages', () => {
+  it('reduces recognised errors to a safe category', () => {
     const text = buildReport(
       { outcome: 'error', statusKey: 'unknown' },
       context({
@@ -186,29 +187,65 @@ describe('buildReport', () => {
       }),
     );
 
-    expect(text).toContain('errors: El NIE [NIE] no coincide | Nacido el [DATE]');
+    expect(text).toContain('errors: application details | unrecognised error');
     expect(text).not.toContain(FAKE_NIE);
     expect(text).not.toContain('1990');
   });
 
-  it('keeps a message on one line', () => {
+  it('never copies free-form sede error text, even when it contains private text', () => {
+    const privateText = 'Ana Pérez Fake, expediente C123456789, su estado es denegado';
     const text = buildReport(
       { outcome: 'error', statusKey: 'unknown' },
-      context({ errorMessages: ['first\nsecond\r\n\tthird'] }),
+      context({ errorMessages: [privateText] }),
     );
 
-    expect(text).toContain('errors: first second third');
+    expect(text).toContain('errors: unrecognised error\n');
+    for (const value of ['Ana Pérez Fake', 'C123456789', 'denegado']) {
+      expect(text).not.toContain(value);
+    }
+  });
+
+  it('writes each error category once on the same line', () => {
+    const text = buildReport(
+      { outcome: 'error', statusKey: 'unknown' },
+      context({
+        errorMessages: ['Incorrect security\ncode', 'Captcha incorrecto', 'NIE inválido'],
+      }),
+    );
+
+    expect(text).toContain('errors: captcha | application details\n');
   });
 
   it('caps the text with a visible marker and keeps the comment line', () => {
     const text = buildReport(
       { outcome: 'error', statusKey: 'unknown' },
-      context({ errorMessages: ['x'.repeat(REPORT_MAX_CHARS * 2)] }),
+      context({ browser: 'x'.repeat(REPORT_MAX_CHARS * 2) }),
     );
 
     expect(text.length).toBeLessThanOrEqual(REPORT_MAX_CHARS);
     expect(text).toContain(TRUNCATED_MARKER);
     expect(text.endsWith('\ncomment:')).toBe(true);
+  });
+
+  it('fits the Worker JSON byte limit with a maximum token and multibyte input', () => {
+    const text = buildGuideReport('archivado', 'é😀\\'.repeat(4000), {
+      version: '0.4.2',
+      browser: 'Chrome 130',
+      locale: 'en',
+    });
+    expect(text.length).toBeLessThanOrEqual(REPORT_MAX_CHARS);
+    expect(
+      new TextEncoder().encode(JSON.stringify({ text, token: 'x'.repeat(MAX_TOKEN_CHARS) })).length,
+    ).toBeLessThanOrEqual(MAX_BODY_BYTES);
+    expect(text).toContain(TRUNCATED_MARKER);
+    expect(text.endsWith('\ncomment:')).toBe(true);
+    for (let index = 0; index < text.length; index += 1) {
+      const code = text.charCodeAt(index);
+      if (code >= 0xd800 && code <= 0xdbff) {
+        expect(text.charCodeAt(index + 1)).toBeGreaterThanOrEqual(0xdc00);
+        expect(text.charCodeAt(index + 1)).toBeLessThanOrEqual(0xdfff);
+      }
+    }
   });
 
   it('does not cut a text that fits', () => {

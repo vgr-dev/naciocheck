@@ -1266,9 +1266,11 @@ describe('extension pages', () => {
       expect(report).toContain('Informe de NacioCheck');
       expect(report).toContain('resultado: error');
       expect(report).toContain('clave de estado: unknown');
+      expect(report).toContain('errores: datos de la solicitud | captcha');
+      expect(report).not.toContain('Error en la verificación del captcha');
       expect(await text.getAttribute('spellcheck')).toBe('false');
 
-      // Only the outcome and the key: not what the site printed, not one value of the saved application.
+      // The draft excludes the printed result and all values from the saved application.
       const { checks } = await readStoredStore();
       const printed = [checks[0]?.raw, checks[0]?.subStatus, 'Abierto - Registrado.'].filter(
         (value): value is string => value !== undefined && value !== null && value !== '',
