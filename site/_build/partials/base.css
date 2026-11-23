@@ -1,0 +1,606 @@
+/*
+ * NacioCheck site: shared layout and both themes. The build inlines it into every page (the style marker).
+ *
+ * Colours live only in the two token blocks below; every rule after them uses `var()`.
+ * `tests/site-contrast.test.ts` reads both blocks and checks WCAG AA for each text and focus pair, so a
+ * new colour pairing needs a new line in that test. Brand values come from `brand/README.md`.
+ * System fonts only: nothing is ever loaded from elsewhere.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --bg: #ffffff;
+  --band: #f0fdfa;
+  --surface: #ffffff;
+  --code-bg: #f0fdfa;
+
+  /* Text */
+  --fg: #0f172a;
+  --muted: #4b5563;
+  --heading: #115e59;
+  --accent: #0f766e;
+  --accent-hover: #115e59;
+  --accent-soft: #ccfbf1;
+  --accent-soft-fg: #134e4a;
+
+  /* Lines: decorative hairlines never mark a control; controls use --control-border (3:1). */
+  --border: #e2e8f0;
+  --card-border: #99f6e4;
+  --control-border: #64748b;
+
+  /* Buttons and focus */
+  --button-bg: #0f766e;
+  --button-bg-hover: #115e59;
+  --button-fg: #ffffff;
+  --focus: #0f766e;
+
+  /* Decorative edge on the header: teal-700 to teal-500, carries no text. */
+  --edge-start: #0f766e;
+  --edge-end: #14b8a6;
+
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  --page-max: 72rem;
+  --measure: 46rem;
+  --gutter: clamp(1rem, 4vw, 2rem);
+  --radius: 12px;
+  --radius-small: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111827;
+    --band: #0f1f26;
+    --surface: #172130;
+    --code-bg: #0f2a2c;
+
+    --fg: #f1f5f9;
+    --muted: #a3acb9;
+    --heading: #99f6e4;
+    --accent: #5eead4;
+    --accent-hover: #99f6e4;
+    --accent-soft: #134e4a;
+    --accent-soft-fg: #f0fdfa;
+
+    --border: #263244;
+    --card-border: #1f4d4b;
+    --control-border: #6b7280;
+
+    --button-bg: #5eead4;
+    --button-bg-hover: #99f6e4;
+    --button-fg: #042f2e;
+    --focus: #5eead4;
+
+    --edge-start: #14b8a6;
+    --edge-end: #5eead4;
+  }
+}
+
+/* Base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100vh;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--fg);
+  background: var(--bg);
+  overflow-wrap: break-word;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+h1 {
+  margin-block: 0 0.5rem;
+  font-size: clamp(1.85rem, 1.45rem + 1.6vw, 2.5rem);
+  font-weight: 750;
+  color: var(--fg);
+}
+
+h2 {
+  margin-block: 2.5rem 0.6rem;
+  font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.45rem);
+  font-weight: 700;
+  color: var(--heading);
+}
+
+h3 {
+  margin-block: 1.75rem 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+p,
+li {
+  margin-block: 0.6rem;
+}
+
+ul,
+ol {
+  padding-inline-start: 1.35rem;
+}
+
+li::marker {
+  color: var(--accent);
+}
+
+strong {
+  font-weight: 650;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration-thickness: 2px;
+}
+
+code {
+  padding: 0.1em 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  font-weight: 500;
+  line-height: 1.4;
+  background: var(--code-bg);
+  border-radius: 4px;
+}
+
+img,
+svg {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  color: var(--accent-soft-fg);
+  background: var(--accent-soft);
+}
+
+/* The skip link: off screen until it gets keyboard focus. */
+
+.skip-link {
+  position: absolute;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 10;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  color: var(--button-fg);
+  background: var(--button-bg);
+  border-radius: var(--radius-small);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  color: var(--button-fg);
+  transform: none;
+}
+
+/* Header: logo and language switcher, full width with a centred row. */
+
+.site-header {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding-block: 1rem;
+  padding-inline: max(var(--gutter), (100% - var(--page-max)) / 2);
+  background: var(--bg);
+  border-block-end: 1px solid var(--border);
+}
+
+.site-header::before {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 3px;
+  background: linear-gradient(90deg, var(--edge-start), var(--edge-end));
+  content: '';
+}
+
+.site-logo {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-small);
+}
+
+.site-logo img {
+  display: block;
+  inline-size: auto;
+  block-size: 2.25rem;
+}
+
+.lang-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.lang-switch a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.25rem;
+  padding-inline: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: 999px;
+}
+
+.lang-switch a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.lang-switch a[aria-current='page'] {
+  color: var(--accent-soft-fg);
+  background: var(--accent-soft);
+}
+
+/* A phone: the logo and the three languages still share one row down to 360 px. */
+@media (max-width: 26rem) {
+  .site-header {
+    column-gap: 0.5rem;
+  }
+
+  .site-logo img {
+    block-size: 2rem;
+  }
+
+  .lang-switch {
+    gap: 0;
+  }
+
+  .lang-switch a {
+    padding-inline: 0.5rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Page body: a readable column for text pages. */
+
+.page {
+  inline-size: 100%;
+  max-inline-size: calc(var(--measure) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 7vw, 5rem);
+  padding-inline: var(--gutter);
+}
+
+.lead {
+  margin-block: 0 1.5rem;
+  font-size: 1.125rem;
+  color: var(--muted);
+}
+
+.tagline {
+  margin-block: 0 1.5rem;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.hint {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+/* A row of in-page links: the privacy contents and the feedback page's way back. */
+
+.page-links {
+  margin-block: 1.75rem 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--band);
+  border-radius: var(--radius);
+}
+
+.page-links ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.page-links li {
+  margin: 0;
+}
+
+.page-links a {
+  display: inline-block;
+  padding-block: 0.2rem;
+  font-weight: 550;
+}
+
+/* Sections that a page links to sit clear of the top edge. */
+[id] {
+  scroll-margin-block-start: 1.5rem;
+}
+
+.card {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-inline-start: 4px solid var(--accent);
+  border-radius: var(--radius);
+}
+
+/* Form controls: the feedback page. */
+
+label {
+  display: block;
+  margin-block: 1.5rem 0.4rem;
+  font-weight: 650;
+}
+
+textarea {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 16rem;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+
+textarea:focus-visible {
+  outline-offset: 2px;
+  border-color: var(--focus);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+
+button,
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 2.75rem;
+  padding: 0.6rem 1.35rem;
+  font: inherit;
+  font-weight: 650;
+  line-height: 1.2;
+  color: var(--button-fg);
+  text-decoration: none;
+  background: var(--button-bg);
+  border: 1px solid var(--button-bg);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+}
+
+button:hover,
+.button:hover {
+  color: var(--button-fg);
+  background: var(--button-bg-hover);
+  border-color: var(--button-bg-hover);
+}
+
+button.secondary {
+  color: var(--accent);
+  background: var(--surface);
+  border-color: var(--control-border);
+}
+
+button.secondary:hover {
+  color: var(--accent-hover);
+  background: var(--band);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+#status {
+  min-block-size: 1.6rem;
+  font-weight: 550;
+}
+
+/* Install buttons (the install marker): links once a store lists the extension, a label until then. */
+
+.install-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 1.5rem;
+}
+
+.install {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: 3.25rem;
+  padding: 0.55rem 1.35rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--button-fg);
+  text-decoration: none;
+  background: var(--button-bg);
+  border: 1px solid var(--button-bg);
+  border-radius: var(--radius-small);
+}
+
+a.install:hover {
+  color: var(--button-fg);
+  background: var(--button-bg-hover);
+  border-color: var(--button-bg-hover);
+}
+
+.install.is-soon {
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px dashed var(--control-border);
+  cursor: default;
+}
+
+.install-note {
+  font-size: 0.8125rem;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+/* Footer: credit, links and the non-affiliation line. */
+
+.site-footer {
+  padding-block: 2.5rem 2rem;
+  padding-inline: max(var(--gutter), (100% - var(--page-max)) / 2);
+  font-size: 0.9375rem;
+  color: var(--muted);
+  background: var(--band);
+  border-block-start: 1px solid var(--border);
+}
+
+.footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem 3rem;
+}
+
+.footer-brand {
+  margin: 0;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.footer-credit {
+  margin-block: 0.35rem 0;
+}
+
+.site-footer ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer li {
+  margin: 0;
+}
+
+.site-footer a {
+  display: inline-block;
+  padding-block: 0.25rem;
+  font-weight: 550;
+}
+
+.footer-note {
+  margin-block: 2rem 0;
+  padding-block-start: 1.25rem;
+  font-size: 0.875rem;
+  border-block-start: 1px solid var(--border);
+}
+
+/* Motion: only for people who have not asked for less. */
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  .skip-link {
+    transition: transform 0.15s ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast: gradients and tints vanish, real borders keep the shapes. */
+
+@media (forced-colors: active) {
+  .site-header::before {
+    background: CanvasText;
+  }
+
+  .lang-switch a[aria-current='page'] {
+    outline: 2px solid CanvasText;
+  }
+
+  .install,
+  .page-links,
+  .card {
+    border: 1px solid CanvasText;
+  }
+}
+
+@media print {
+  .site-header::before,
+  .lang-switch,
+  .skip-link {
+    display: none;
+  }
+
+  body {
+    color: black;
+    background: white;
+  }
+}

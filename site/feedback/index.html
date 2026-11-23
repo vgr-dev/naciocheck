@@ -8,128 +8,23 @@
       name="description"
       content="Revisa el texto de tu comentario sobre NacioCheck y envíalo, o cópialo, si quieres."
     />
-    <style>
-      :root {
-        color-scheme: light;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        padding: 2.5rem 1.25rem 4rem;
-        font:
-          400 17px/1.6 system-ui,
-          -apple-system,
-          'Segoe UI',
-          sans-serif;
-        color: #0f172a;
-        background: #f8fafc;
-      }
-      main {
-        max-width: 44rem;
-        margin: 0 auto;
-      }
-      h1 {
-        margin: 0 0 0.25rem;
-        font-size: 1.9rem;
-        line-height: 1.2;
-        color: #0f766e;
-      }
-      p {
-        margin: 0.5rem 0;
-      }
-      .lead,
-      .hint,
-      footer {
-        color: #4b5563;
-      }
-      .lead {
-        font-size: 1.05rem;
-      }
-      .hint {
-        font-size: 0.95rem;
-      }
-      nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin: 1.5rem 0;
-      }
-      a {
-        color: #0d9488;
-      }
-      label {
-        display: block;
-        margin: 1.5rem 0 0.35rem;
-        font-weight: 600;
-      }
-      textarea {
-        display: block;
-        width: 100%;
-        min-height: 16rem;
-        padding: 0.75rem 1rem;
-        font:
-          400 0.95rem/1.5 ui-monospace,
-          monospace;
-        color: #0f172a;
-        background: #ffffff;
-        border: 1px solid #99f6e4;
-        border-radius: 12px;
-        resize: vertical;
-      }
-      textarea:focus-visible,
-      button:focus-visible,
-      a:focus-visible {
-        outline: 3px solid #0f766e;
-        outline-offset: 2px;
-      }
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin: 1rem 0;
-      }
-      button {
-        padding: 0.6rem 1.25rem;
-        font: inherit;
-        font-weight: 600;
-        color: #ffffff;
-        background: #0f766e;
-        border: 1px solid #0f766e;
-        border-radius: 8px;
-        cursor: pointer;
-      }
-      button.secondary {
-        color: #0f766e;
-        background: #ffffff;
-      }
-      button:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-      }
-      #status {
-        min-height: 1.6rem;
-        font-weight: 500;
-      }
-      footer {
-        margin-top: 3rem;
-        padding-top: 1rem;
-        font-size: 0.9rem;
-        border-top: 1px solid #e2e8f0;
-      }
-    </style>
+    <!-- @head -->
+    <!-- @style -->
   </head>
   <body>
-    <main>
+    <a class="skip-link" href="#main">Saltar al contenido</a>
+    <!-- @header -->
+    <main id="main" class="page">
       <h1>Enviar un comentario sobre NacioCheck</h1>
       <p class="lead">
         Esto es exactamente lo que se enviará. Léelo, y borra lo que no quieras compartir.
       </p>
 
-      <nav>
-        <a href="/">Inicio</a>
-        <a href="/privacy/">Política de privacidad</a>
+      <nav class="page-links" aria-label="Enlaces">
+        <ul>
+          <li><a href="/">Inicio</a></li>
+          <li><a href="/privacy/">Política de privacidad</a></li>
+        </ul>
       </nav>
 
       <label for="report">Texto del comentario</label>
@@ -169,13 +64,9 @@
         >.
       </p>
 
-      <footer>
-        <p>
-          NacioCheck es un proyecto personal e independiente. No está afiliada al Ministerio de
-          Justicia ni a ningún organismo público, y esta página no es un canal oficial.
-        </p>
-      </footer>
+      <p class="hint">Esta página no es un canal oficial.</p>
     </main>
+    <!-- @footer -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <script src="/feedback/feedback.js" defer></script>
   </body>

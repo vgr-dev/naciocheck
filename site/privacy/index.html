@@ -8,97 +8,27 @@
       name="description"
       content="Qué guarda NacioCheck, dónde lo guarda y qué envía solo cuando tú lanzas una comprobación."
     />
-    <style>
-      :root {
-        color-scheme: light;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        padding: 2.5rem 1.25rem 4rem;
-        font:
-          400 17px/1.6 system-ui,
-          -apple-system,
-          'Segoe UI',
-          sans-serif;
-        color: #0f172a;
-        background: #f8fafc;
-      }
-      main {
-        max-width: 44rem;
-        margin: 0 auto;
-      }
-      h1 {
-        margin: 0 0 0.25rem;
-        font-size: 1.9rem;
-        line-height: 1.2;
-        color: #0f766e;
-      }
-      h2 {
-        margin: 2.25rem 0 0.5rem;
-        font-size: 1.15rem;
-        color: #0f766e;
-      }
-      p,
-      li {
-        margin: 0.5rem 0;
-      }
-      .lead,
-      footer {
-        color: #4b5563;
-      }
-      .lead {
-        font-size: 1.05rem;
-      }
-      nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin: 1.5rem 0;
-      }
-      a {
-        color: #0d9488;
-      }
-      .card {
-        padding: 1rem 1.25rem;
-        background: #ffffff;
-        border: 1px solid #99f6e4;
-        border-radius: 12px;
-      }
-      code {
-        padding: 0.1em 0.35em;
-        font:
-          500 0.95em/1.4 ui-monospace,
-          monospace;
-        background: #f0fdfa;
-        border-radius: 4px;
-      }
-      footer {
-        margin-top: 3rem;
-        padding-top: 1rem;
-        font-size: 0.9rem;
-        border-top: 1px solid #e2e8f0;
-      }
-    </style>
+    <!-- @head -->
+    <!-- @style -->
   </head>
   <body>
-    <main>
+    <a class="skip-link" href="#main">Saltar al contenido</a>
+    <!-- @header -->
+    <main id="main" class="page">
       <h1>Política de privacidad de NacioCheck</h1>
       <p class="lead">
         Se aplica a la extensión NacioCheck 0.1.0 y posteriores. Última revisión: 23 de noviembre de
         2026.
       </p>
 
-      <nav>
-        <a href="#resumen">Resumen</a>
-        <a href="#datos">Qué se guarda y dónde</a>
-        <a href="#no">Qué no hace</a>
-        <a href="#informar">Informar de un problema</a>
-        <a href="#borrar">Exportar y borrar</a>
-        <a href="/en/privacy/">English</a>
-        <a href="/">Inicio</a>
+      <nav class="page-links" aria-label="En esta página">
+        <ul>
+          <li><a href="#resumen">Resumen</a></li>
+          <li><a href="#datos">Qué se guarda y dónde</a></li>
+          <li><a href="#no">Qué no hace</a></li>
+          <li><a href="#informar">Informar de un problema</a></li>
+          <li><a href="#borrar">Exportar y borrar</a></li>
+        </ul>
       </nav>
 
       <h2 id="resumen">Resumen</h2>
@@ -256,13 +186,7 @@
         de ellos. «NacioCheck» no es una herramienta oficial y su información no sustituye a la
         resolución oficial de tu expediente.
       </p>
-
-      <footer>
-        <p>
-          <a href="/">NacioCheck</a> · <a href="/en/privacy/">Privacy policy in English</a> · Última
-          revisión: 23 de noviembre de 2026
-        </p>
-      </footer>
     </main>
+    <!-- @footer -->
   </body>
 </html>
