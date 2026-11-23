@@ -698,21 +698,20 @@ describe('extension pages', () => {
     });
 
     /**
-     * The current status was translated and the rest were the site's Spanish: "Open - In progress" over a history of
-     * "Abierto - Registrado.". Every place that names a status reads it through the catalogue in English and keeps the
-     * site's own text in Spanish (13.9).
+     * Every place that names a status prints the site's own text, whatever the language of the interface: the status
+     * is what the official page showed, and a translation of it could be taken for something the site said.
      */
-    it('names the statuses in English on every page when the language is English', async () => {
+    it("shows the site's own status text on every page when the language is English", async () => {
       await addApplicationThroughUi(FIRST_APPLICATION);
       await seedPreviousCheck(FIRST_APPLICATION.label, 'Abierto - Registrado.', null);
       await setStoredLanguage('en');
 
       const options = await openExtensionContext('options.html');
-      await expect(options.$('ul.history li')).toHaveText(/Open - Registered/);
-      expect(await options.$('ul.history li').getText()).not.toContain('Abierto');
+      await expect(options.$('ul.history li')).toHaveText(/Abierto - Registrado\./);
+      expect(await options.$('ul.history li').getText()).not.toContain('Open - Registered');
 
       const popup = await openExtensionContext('popup.html');
-      await expect(popup.$('.app-card .status')).toHaveText('Open - Registered');
+      await expect(popup.$('.app-card .status')).toHaveText('Abierto - Registrado.');
     });
 
     it('names every bad field and writes nothing', async () => {
@@ -993,6 +992,26 @@ describe('extension pages', () => {
       }
       expect(observed).toContain('Observado en expedientes reales, no oficial');
     });
+
+    it('names each status in Spanish with an English gloss when the language is English', async () => {
+      await setStoredLanguage('en');
+      const page = await openExtensionContext('statuses.html');
+
+      const first = (await page.$$('#app div.card'))[0];
+      if (first === undefined) throw new Error('No status card');
+      await expect(first.$('h3')).toHaveAttribute('lang', 'es');
+      await expect(first.$('h3')).toHaveText('Abierto - Registrado');
+      await expect(first.$('h3 + p.gloss')).toHaveText('Open - Registered');
+    });
+
+    it('has no gloss in Spanish', async () => {
+      const page = await openExtensionContext('statuses.html');
+
+      const headings = await page.$$('#app div.card h3');
+      expect(headings.length).toBeGreaterThan(5);
+      expect(await page.$$('#app p.gloss')).toHaveLength(0);
+      expect(await headings[0]?.getAttribute('lang')).toBeNull();
+    });
   });
 
   describe('result page', () => {
@@ -1050,7 +1069,7 @@ describe('extension pages', () => {
       const sede = serveFakeSede({ results: [resultPage()] });
 
       const result = await runOneCheck(sede);
-      await expect(result.$('h1.status')).toHaveText('Abierto - Registrado');
+      await expect(result.$('h1.status')).toHaveText('Abierto - Registrado.');
       // Every result page but the alert names the product at the top (13.15).
       await expect(result.$('.brand .brand-name')).toHaveText('NacioCheck');
       await expect(result.$('.brand img')).toBeExisting();
@@ -1084,8 +1103,8 @@ describe('extension pages', () => {
     });
 
     /**
-     * The status name is translated, but the sentence under it and the page's error messages are the site's own
-     * words, kept verbatim (13.16, D12). They carry a label that says so, in the language of the page, so they read
+     * The status, the sentence under it and the page's error messages are the site's own words, kept verbatim
+     * (13.16, D12), whatever the language of the interface. The sentence carries a label that says so, in the language of the page, so they read
      * as deliberate and can be matched to what the official page printed.
      */
     it("labels the site's own sentence, in the language of the page", async () => {
@@ -1100,7 +1119,8 @@ describe('extension pages', () => {
 
       await setStoredLanguage('en');
       await result.refresh();
-      // The label is drawn by the page, in its language; the status text was built when the check ran.
+      // The label is drawn by the page, in its language; the status text is the site's, as read when the check ran.
+      await expect(result.$('h1.status')).toHaveText('Abierto - Registrado.');
       await expect(result.$('p.sub-status .site-label')).toHaveText('As the site printed it:');
       await expect(result.$('p.sub-status')).toHaveText(
         /Su expediente ha sido registrado correctamente/,
@@ -1133,7 +1153,7 @@ describe('extension pages', () => {
 
       await solveStubCaptcha(checkWindow);
       const retried = await waitForResult(checkWindow);
-      await expect(retried.$('h1.status')).toHaveText('Abierto - Registrado');
+      await expect(retried.$('h1.status')).toHaveText('Abierto - Registrado.');
       expect(sede.posts).toHaveLength(2);
 
       const { checks } = await readStoredStore();
@@ -1244,7 +1264,7 @@ describe('extension pages', () => {
       await checkWindow.$('#submitNac').click();
 
       const result = await waitForResult(checkWindow);
-      await expect(result.$('h1.status')).toHaveText('Abierto - Registrado');
+      await expect(result.$('h1.status')).toHaveText('Abierto - Registrado.');
       expect(sede.posts).toHaveLength(1);
 
       const { checks } = await readStoredStore();

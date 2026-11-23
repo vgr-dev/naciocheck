@@ -152,7 +152,7 @@ describe('check run', () => {
     await solveStubCaptcha(checkWindow);
 
     const result = await waitForResult(checkWindow);
-    await expect(result.$('h1.status')).toHaveText('Abierto - Registrado');
+    await expect(result.$('h1.status')).toHaveText('Abierto - Registrado.');
     // The first check is not a change, so no alert banner.
     await expect(result.$('.banner')).not.toBeExisting();
     expect(sede.posts).toHaveLength(1);
@@ -197,7 +197,7 @@ describe('check run', () => {
     const result = await runOneCheck(sede);
 
     await expect(result.$('.banner.changed')).toBeExisting();
-    await expect(result.$('h1.status')).toHaveText('Abierto - En tramitación');
+    await expect(result.$('h1.status')).toHaveText('Abierto - En tramitación.');
     await expect(result.$('p.previous')).toHaveText(/Abierto - Registrado\./);
     await expect(result.$('p.observed-meaning')).toHaveText(/Tramitación en curso/);
     await expect(result.$('p.anomaly')).not.toBeExisting();
@@ -469,7 +469,7 @@ describe('check run', () => {
 
     await solveStubCaptcha(firstWindow);
     const secondResult = await waitForResult(firstWindow);
-    await expect(secondResult.$('h1.status')).toHaveText('Abierto - Registrado');
+    await expect(secondResult.$('h1.status')).toHaveText('Abierto - Registrado.');
     expect(sede.posts).toHaveLength(2);
 
     const store = await readStoredStore();
