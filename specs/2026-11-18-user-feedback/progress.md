@@ -229,3 +229,63 @@ feat(worker): add the Worker skeleton, bindings and test harness
 - **Phase verify:** `npm ci && npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site` -> pass (extension 28 files, 630 tests; worker 1 file, 1 test; check:site 4 pages)
 - **Commit proposal:** one commit for step 9, one for the plan and progress updates
 - **Open issues:** before Phase 5, the Turnstile sitekey (Q7) is still needed for step 11; step 10 stubs siteverify through `globalThis.fetch` and checks the structured `send` overload
+
+## 2026-11-23 - Step 10: Handle POST /api/feedback
+
+- **Status:** done (reported partial: its Verify passed, the worker typecheck failed until step 10a)
+- **Changed:** `worker/index.ts`, `worker/feedback.ts` (new), `tests/worker/feedback.test.ts` (new), `worker/checks.ts`, `tests/feedback-checks.test.ts`, `wrangler.jsonc`, `.dev.vars.example` (new), `.gitignore`, `package.json`
+- **Verified:** `npx vitest run -c vitest.worker.config.ts` -> pass (31), also inside `unshare -rn`; `npx vitest run tests/feedback-checks.test.ts` -> pass (64); `npx eslint worker tests/worker tests/feedback-checks.test.ts` -> clean; `git check-ignore .dev.vars` -> `.dev.vars`; `npx tsc --noEmit -p worker/tsconfig.json` -> fail (5 errors from `storage.ts`/`crypto.ts` via `report.ts`), fixed by step 10a
+- **Commit:** uncommitted, proposed "feat(worker): handle POST /api/feedback with Turnstile and mail"
+- **Open issues:**
+  - Order: `checkRequest(request, env.FEEDBACK_ORIGIN)` → rate limit (key `CF-Connecting-IP`, else `unknown`) → streamed body read capped at 8192 bytes (a missing or lying `Content-Length` still gives 413) → `parseBody` → siteverify (`remoteip` omitted when unknown; network error, non-2xx or non-JSON is `502 upstream`) → `readSiteverify` against `env.TURNSTILE_EXPECTED_HOSTNAME` → `redact` → send → `204`.
+  - Mail uses the structured `send({ from, to, subject, text })` overload of `@cloudflare/workers-types` 5.20261123.1, from and to `naciocheck@vgr.cat`, subject `NacioCheck feedback`; no hand-built MIME.
+  - No `console.*` in the Worker; errors are `{"error":"<code>"}` with `Cache-Control: no-store`; other `/api/*` paths are `404 {"error":"not-found"}`.
+  - Tests call `handleFeedback` with stubbed `FEEDBACK_MAIL` and `FEEDBACK_LIMIT`, plus two routing tests through `exports.default.fetch`; siteverify via `vi.spyOn(globalThis, 'fetch')`, any other URL fails the test in `afterEach`.
+  - Not exercised: `wrangler dev` and the local `send_email` simulation (hands-on, the user's).
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(worker): handle POST /api/feedback with Turnstile and mail
+```
+
+## 2026-11-23 - Step 10a: Give redact a module of its own
+
+- **Status:** done
+- **Changed:** `src/core/redact.ts` (new), `src/core/report.ts`, `worker/feedback.ts`, `tests/redact.test.ts` (new)
+- **Verified:** `npm run typecheck` -> clean (root, e2e, worker); `npx vitest run tests/report.test.ts tests/redact.test.ts` -> pass (56); `npx vitest run -c vitest.worker.config.ts` -> pass (31); `npx eslint` on the four files -> clean
+- **Commit:** uncommitted, proposed "refactor(core): move redact into its own module"
+- **Open issues:** none. Added to the plan during Phase 5 after the user chose to split `redact` out rather than add DOM to the worker tsconfig. `redact` and its patterns moved verbatim; `report.ts` re-exports it; the worker tsconfig is unchanged.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+refactor(core): move redact into its own module
+```
+
+## 2026-11-23 - Step 11: Add the feedback pages
+
+- **Status:** done
+- **Changed:** `site/feedback/index.html` (new), `site/en/feedback/index.html` (new), `site/feedback/feedback.js` (new), `scripts/check-site.mjs`, `tests/site-gate.test.ts`, `eslint.config.js`, `tests/feedback-page.test.ts` (new)
+- **Verified:** `npm run check:site` -> pass (6 pages); `npx vitest run tests/feedback-page.test.ts tests/site-gate.test.ts` -> pass (109); `npx eslint site scripts/check-site.mjs tests/feedback-page.test.ts tests/site-gate.test.ts` -> clean
+- **Commit:** uncommitted, proposed "feat(site): add the es and en feedback pages"
+- **Open issues:**
+  - Container `<div id="turnstile" data-sitekey="0x4AAAAAAGPHi96wZq5N-xcv">` without `cf-turnstile`; `feedback.js` renders explicitly with the real key only on `naciocheck.vgr.cat`, the always-pass test key elsewhere; renders once whichever script loads first (`turnstile.ready` when present), shows a message if the widget never loads.
+  - Send needs text and a token; every outcome resets the widget; after a success Send stays disabled until the text changes. Messages in es and en for every contract code, a network error and an unknown body. Copy falls back to `execCommand('copy')`.
+  - Pages carry a `<noscript>` note and a footer saying the page is not an official channel. No language switch link, because the fragment is cleared on load and switching would lose the report.
+  - Site gate: one `data-sitekey` matching `^0x[A-Za-z0-9_-]+$` per feedback page; `feedback.js` may hold only the one always-pass test key; success message now "scripts only on the feedback pages". `eslint.config.js` gives `site/**/*.js` browser globals, `turnstile` readonly, `sourceType: 'script'`.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(site): add the es and en feedback pages
+```
+
+## 2026-11-23 - Phase 5: Endpoint and feedback pages
+
+- **Status:** done
+- **Steps:** 10 done (typecheck fixed by 10a), 10a done (added during the phase), 11 done
+- **File check:** pass (18 changed or new files, each in its step's Files; `worker/feedback.ts` is in both 10 and 10a; plus the orchestrator's plan.md and progress.md)
+- **Phase verify:** first run `npm run typecheck` -> fail (worker project, 5 errors); after step 10a: `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site` -> pass (extension 30 files, 696 tests; worker 2 files, 31 tests; check:site 6 pages)
+- **Commit proposal:** 10a first (so every commit typechecks), then 10, then 11, then the plan and progress updates
+- **Open issues:** hands-on, the user's: `wrangler dev` with `.dev.vars`, enabling Email Routing and verifying that `naciocheck@vgr.cat` can send to itself, restricting the widget hostname, `wrangler secret put TURNSTILE_SECRET`

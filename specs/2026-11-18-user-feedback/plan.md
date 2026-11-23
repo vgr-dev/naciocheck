@@ -33,12 +33,13 @@ numbers are global across phases. -->
 
 **Phase 4: Worker harness**
 
-- [x] 9. Add the Worker, its bindings and its test harness uncommitted
+- [x] 9. Add the Worker, its bindings and its test harness 847ea92
 
 **Phase 5: Endpoint and feedback pages**
 
-- [ ] 10. Handle POST /api/feedback
-- [ ] 11. Add the feedback pages
+- [x] 10. Handle POST /api/feedback uncommitted
+- [x] 10a. Give redact a module of its own uncommitted
+- [x] 11. Add the feedback pages uncommitted
 
 **Phase 6: End-to-end checks and wording**
 
@@ -348,6 +349,25 @@ Needs G4 (Q6 and Q7).
   prints `.dev.vars`.
 - **Out of scope:** the pages, deploying, any real Turnstile secret, running `wrangler dev` against
   Cloudflare (a hands-on check for the user).
+
+### 10a. Give redact a module of its own
+
+Added 2026-11-23 during Phase 5: `worker/feedback.ts` imports `redact` from `src/core/report.ts`, whose
+type imports (`Check` from `storage.ts`) pull `storage.ts` and `crypto.ts` into the Worker typecheck, which
+has no DOM lib (`crypto`, `navigator`, `LockManager` errors). The user chose to split `redact` out.
+
+- **Goal:** `src/core/redact.ts` holds `redact` and the patterns it uses, moved verbatim, with no imports.
+  `src/core/report.ts` imports `redact` from it and re-exports it, so every existing caller and test keeps
+  working unchanged. `worker/feedback.ts` imports from `../src/core/redact`. No behaviour change: the
+  existing `redact` cases in `tests/report.test.ts` still pass, and a small `tests/redact.test.ts` asserts
+  the module has no `import` statements (read its source) and that `report.ts`'s `redact` is the same
+  function.
+- **Files:** `src/core/redact.ts` (new), `src/core/report.ts`, `worker/feedback.ts`, `tests/redact.test.ts`
+  (new)
+- **Verify:** `npm run typecheck`; all three projects clean. `npx vitest run tests/report.test.ts tests/redact.test.ts`;
+  all pass. `npx vitest run -c vitest.worker.config.ts`; all pass offline.
+  `npx eslint src/core/redact.ts src/core/report.ts worker/feedback.ts tests/redact.test.ts`; clean.
+- **Out of scope:** the worker tsconfig (stays without DOM), the report format, any other module.
 
 ### 11. Add the feedback pages
 
