@@ -16,7 +16,8 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip -b chrome && wxt zip -b firefox && npm run check:privacy",
     "zip:sources": "wxt zip -b chrome && wxt zip -b firefox --sources && npm run check:privacy",
-    "test": "vitest run",
+    "test": "vitest run && vitest run -c vitest.worker.config.ts",
+    "test:worker": "vitest run -c vitest.worker.config.ts",
     "test:watch": "vitest",
     "test:e2e": "E2E_BROWSER=chrome wdio run e2e/wdio.conf.ts",
     "test:e2e:chrome": "E2E_BROWSER=chrome wdio run e2e/wdio.conf.ts",
@@ -26,7 +27,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json && tsc --noEmit -p worker/tsconfig.json",
     "check:privacy": "node scripts/check-privacy.mjs",
     "check:site": "node scripts/check-site.mjs",
     "logo:outline": "node scripts/outline-logo.mjs",
@@ -35,6 +36,8 @@
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.9.0",
+    "@cloudflare/workers-types": "^5.20261123.1",
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.6",
     "@wdio/cli": "^10.2.0",

@@ -1,11 +1,32 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "naciocheck-site",
+  "main": "./worker/index.ts",
   "compatibility_date": "2026-11-16",
   "assets": {
     "directory": "./site",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
+    // Only the feedback API runs the Worker; every other path is a static asset.
+    "run_worker_first": ["/api/*"],
+  },
+  // The feedback endpoint keeps no logs of the request (spec Q5).
+  "observability": { "enabled": false },
+  "ratelimits": [
+    {
+      "name": "FEEDBACK_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 2, "period": 60 },
+    },
+  ],
+  "send_email": [
+    {
+      "name": "FEEDBACK_MAIL",
+      "destination_address": "naciocheck@vgr.cat",
+    },
+  ],
+  "vars": {
+    "TURNSTILE_EXPECTED_HOSTNAME": "naciocheck.vgr.cat",
   },
   "routes": [
     {
