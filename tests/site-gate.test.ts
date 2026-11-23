@@ -84,7 +84,7 @@ function withBody(extra: string): string {
 }
 
 const SITEKEY = '0x4AAAAAAGPHi96wZq5N-xcv';
-const WIDGET = `<div id="turnstile" data-sitekey="${SITEKEY}"></div>`;
+const WIDGET = `<div id="feedback-widget" data-sitekey="${SITEKEY}"></div>`;
 
 const FEEDBACK = withBody(`${WIDGET}${TURNSTILE_SCRIPT}${OWN_SCRIPT}`);
 
@@ -163,9 +163,9 @@ describe('site gate: sitekey on the feedback pages', () => {
   });
 
   it.each(FEEDBACK_PAGES)('rejects a missing key on %s', (name) => {
-    expect(pageProblems(name, FEEDBACK.replace(WIDGET, '<div id="turnstile"></div>'))).not.toEqual(
-      [],
-    );
+    expect(
+      pageProblems(name, FEEDBACK.replace(WIDGET, '<div id="feedback-widget"></div>')),
+    ).not.toEqual([]);
   });
 
   it.each(FEEDBACK_PAGES)('rejects a doubled key on %s', (name) => {

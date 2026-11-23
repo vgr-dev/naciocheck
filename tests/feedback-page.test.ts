@@ -139,7 +139,9 @@ describe.each(PAGES)('feedback page ($name)', (page) => {
     expect(document.querySelector('label[for="report"]')?.textContent).toBeTruthy();
     expect(h.textarea.id).toBe('report');
     expect(h.status.getAttribute('aria-live')).toBe('polite');
-    expect(document.getElementById('turnstile')?.getAttribute('data-sitekey')).toBe(REAL_SITEKEY);
+    expect(document.getElementById('feedback-widget')?.getAttribute('data-sitekey')).toBe(
+      REAL_SITEKEY,
+    );
     expect(document.querySelector('.cf-turnstile')).toBeNull();
   });
 
@@ -396,7 +398,7 @@ describe.each(PAGES)('feedback page ($name)', (page) => {
     h.run();
     h.window.dispatchEvent(new Event('load'));
     expect(h.turnstile.render).toHaveBeenCalledOnce();
-    expect(h.turnstile.render.mock.calls[0]?.[0]).toBe(document.getElementById('turnstile'));
+    expect(h.turnstile.render.mock.calls[0]?.[0]).toBe(document.getElementById('feedback-widget'));
   });
 
   it('renders the widget once when turnstile appears after the script runs', () => {
@@ -412,10 +414,34 @@ describe.each(PAGES)('feedback page ($name)', (page) => {
     expect(h.turnstile.render).toHaveBeenCalledOnce();
   });
 
-  it('waits for turnstile.ready when the API offers it, and still renders once', () => {
+  it('ignores a page element named turnstile until the real API arrives', () => {
+    // Browsers expose an element with id="turnstile" as a global of that name; it is not the API.
+    const h = load(page, { turnstile: 'after' });
+    const impostor = document.createElement('div');
+    impostor.id = 'turnstile';
+    document.body.append(impostor);
+    vi.stubGlobal('turnstile', impostor);
+    expect(() => {
+      h.run();
+    }).not.toThrow();
+    expect(h.turnstile.render).not.toHaveBeenCalled();
+
+    vi.stubGlobal('turnstile', h.turnstile);
+    document
+      .querySelector('script[src*="challenges.cloudflare.com"]')
+      ?.dispatchEvent(new Event('load'));
+    expect(h.turnstile.render).toHaveBeenCalledOnce();
+  });
+
+  it('has no element whose id would shadow the turnstile global', () => {
+    load(page);
+    expect(document.getElementById('turnstile')).toBeNull();
+  });
+
+  it('never calls turnstile.ready, which throws for an async api.js, and still renders once', () => {
     const h = load(page, { withReady: true });
     h.run();
-    expect(h.turnstile.ready).toHaveBeenCalledOnce();
+    expect(h.turnstile.ready).not.toHaveBeenCalled();
     expect(h.turnstile.render).toHaveBeenCalledOnce();
   });
 

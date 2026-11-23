@@ -64,7 +64,7 @@
   const texts = TEXTS[language];
 
   const textarea = document.getElementById('report');
-  const container = document.getElementById('turnstile');
+  const container = document.getElementById('feedback-widget');
   const copyButton = document.getElementById('copy');
   const sendButton = document.getElementById('send');
   const status = document.getElementById('status');
@@ -93,19 +93,32 @@
   let renderRequested = false;
   let busy = false;
 
+  // Cloudflare's API, once loaded. Never trust the bare name: any element with id="turnstile" would
+  // already be a global of that name, so only an object with a render function counts.
+  const api = () => {
+    const candidate = globalThis.turnstile;
+    return candidate !== null &&
+      typeof candidate === 'object' &&
+      typeof candidate.render === 'function'
+      ? candidate
+      : undefined;
+  };
+
   const currentToken = () => {
     if (token !== '') return token;
-    if (widgetId === undefined || typeof turnstile === 'undefined') return '';
-    return turnstile.getResponse(widgetId) ?? '';
+    const turnstileApi = api();
+    if (widgetId === undefined || turnstileApi === undefined) return '';
+    return turnstileApi.getResponse(widgetId) ?? '';
   };
 
   const resetWidget = () => {
     token = '';
-    if (widgetId !== undefined && typeof turnstile !== 'undefined') turnstile.reset(widgetId);
+    const turnstileApi = api();
+    if (widgetId !== undefined && turnstileApi !== undefined) turnstileApi.reset(widgetId);
   };
 
   const render = () => {
-    widgetId = turnstile.render(container, {
+    widgetId = api().render(container, {
       sitekey: location.hostname === PRODUCTION_HOST ? container.dataset.sitekey : TEST_SITEKEY,
       language,
       callback: (value) => {
@@ -125,12 +138,12 @@
   };
 
   // api.js is async and this script is deferred, so either may run first, and the API URL may carry no
-  // query (no `?onload=`): render once, as soon as the `turnstile` global exists.
+  // query (no `?onload=`): render once, as soon as the API exists. Never `turnstile.ready()`: Turnstile
+  // throws when it is called while api.js is loaded async or deferred, which the site gate requires.
   const renderOnce = () => {
-    if (renderRequested || typeof turnstile === 'undefined') return;
+    if (renderRequested || api() === undefined) return;
     renderRequested = true;
-    if (typeof turnstile.ready === 'function') turnstile.ready(render);
-    else render();
+    render();
   };
 
   const watchForTurnstile = () => {
