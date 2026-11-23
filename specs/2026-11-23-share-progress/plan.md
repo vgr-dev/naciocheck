@@ -2,7 +2,7 @@
 
 Spec: `spec.md`
 
-**Sign-off:** Approved by Victor Gonzalez on 2026-11-23 for Phases 1 and 2.
+**Sign-off:** Approved by Victor Gonzalez on 2026-11-23 for Phases 1 through 3.
 
 ## Status
 
@@ -18,12 +18,12 @@ Never [x] for partial work. Details live in progress.md. -->
 
 **Phase 2: Share panel in Options**
 
-- [x] 3. Add the share panel to each History card `uncommitted`
+- [x] 3. Add the share panel to each History card `affeac4`
 
 **Phase 3: End-to-end check and manual checklist**
 
-- [ ] 4. Cover the share panel in the Chrome E2E suite
-- [ ] 5. Add a share row to the Firefox manual checklist
+- [x] 4. Cover the share panel in the Chrome E2E suite `uncommitted`
+- [x] 5. Add a share row to the Firefox manual checklist `uncommitted`
 
 **Phase 4: Visual baselines**
 

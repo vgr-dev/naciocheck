@@ -101,3 +101,47 @@ feat(options): add expediente sharing panel
 - **Commit proposal** — `feat(options): add expediente sharing panel` for the panel, Options integration,
   locales, tests and spec records.
 - **Open issues** — Phase 3 is next. Its approval remains pending.
+
+## 2026-11-23 - Step 4: Cover the share panel in the Chrome E2E suite
+
+- **Status** — Done
+- **Run by** — implement-phase using a GPT-6 Luna builder (`gpt-6-luna`)
+- **Changed** — `e2e/specs/pages.e2e.ts`
+- **Verified** — `E2E_SPEC=pages npm run test:e2e` passed all 41 Chrome Pages tests, including preview format,
+  filing-date save and reload, clearing to the original preview, and identical output in the English UI.
+  Chrome for Testing was 158.0.8127.88. The network guard reported 520 fake-site requests and zero outside it.
+  The builder's scoped ESLint, Prettier and E2E type checks also passed.
+- **Commit** — uncommitted, proposed `test(e2e): cover expediente sharing panel`
+- **Open issues** — None
+- **Proposed commit (builder)**
+
+```
+test(e2e): cover expediente sharing panel
+```
+
+## 2026-11-23 - Step 5: Add a share row to the Firefox manual checklist
+
+- **Status** — Done
+- **Run by** — implement-phase using a GPT-6 Luna builder (`gpt-6-luna`)
+- **Changed** — `docs/manual-firefox-checklist.md`
+- **Verified** — `npx prettier --check docs/manual-firefox-checklist.md` passed after formatting. The Firefox
+  desktop and Android row has an observed result of `Not run`.
+- **Commit** — uncommitted, proposed `docs(checklist): add Firefox share progress check`
+- **Open issues** — Manual browser checks are pending for release.
+- **Proposed commit (builder)**
+
+```
+docs(checklist): add Firefox share progress check
+```
+
+## 2026-11-23 - Phase 3: End-to-end check and manual checklist
+
+- **Status** — Done
+- **Steps** — Steps 4 and 5 done. Phase 2 was already committed as `affeac4`.
+- **File check** — Passed. Each builder changed only its assigned file. Separate landing-page work was
+  excluded from the phase.
+- **Phase verify** — `npm test` passed 738 unit and 31 Worker tests. `npm run lint`, `npm run format:check`
+  and `npm run typecheck` passed. Verification used Node 24.22.0. The repository specifies 24.22.1.
+- **Commit proposal** — `test(e2e): cover expediente sharing panel` for the Chrome test and
+  `docs(checklist): add Firefox share progress check` for the checklist and spec records.
+- **Open issues** — Phase 4 visual baselines and manual Firefox release verification remain pending.
