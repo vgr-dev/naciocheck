@@ -163,7 +163,8 @@ function buildReportPanel(report: ReportCheck, view: ResultView): HTMLElement {
     browser: browserLabel(navigator.userAgent),
     locale,
     errorMessages: view.errorMessages,
-    anomaly: view.anomaly,
+    // A view cached before `anomalyMove` existed has none: the report then has no anomaly line.
+    anomaly: view.anomalyMove ?? null,
   });
   return reportPanel(text, locale);
 }

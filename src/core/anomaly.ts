@@ -15,6 +15,9 @@ export interface AnomalyNote {
   kind: AnomalyKind;
   es: string;
   en: string;
+  /** The catalogue states of the move, so a report can name it without quoting the site's text. */
+  from: ResolvedPathStateId;
+  to: ResolvedPathStateId;
   /** Cited only for the move this source documents; the other unusual moves are the observation alone. */
   source: { label: string; url: string } | null;
 }
@@ -49,6 +52,8 @@ export function detectAnomaly(previous: Check | null, current: Check): AnomalyNo
     kind: 'unusual',
     es: `El expediente pasa de «${describe(previous)}» a «${describe(current)}», un cambio que no se había observado hasta ahora. La página no explica el motivo y no significa por sí mismo que algo vaya mal.`,
     en: `The file moves from "${describe(previous)}" to "${describe(current)}", a change not observed so far. The page does not explain why, and it does not by itself mean something is wrong.`,
+    from: before.id,
+    to: after.id,
     source,
   };
 }

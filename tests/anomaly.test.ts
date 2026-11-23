@@ -72,6 +72,7 @@ describe('detectAnomaly', () => {
       '«Abierto - En tramitación. Su expediente se encuentra en tramitación.»',
     );
     expect(note?.source?.url).toContain('parainmigrantes.info');
+    expect([note?.from, note?.to]).toEqual(['K', 'T1']);
   });
 
   it('notes a step backwards inside En tramitación, which the old rule missed', () => {
@@ -84,6 +85,12 @@ describe('detectAnomaly', () => {
     expect(note?.es).toContain(
       '«Abierto - En tramitación. Su expediente se encuentra en tramitación.»',
     );
+    expect([note?.from, note?.to]).toEqual(['T3', 'T1']);
+  });
+
+  it('names the catalogue states of every unusual move it documents', () => {
+    expect(detectAnomaly(FINALIZADO, T1)).toMatchObject({ from: 'F', to: 'T1' });
+    expect(detectAnomaly(CALIFICACION, T4)).toMatchObject({ from: 'K', to: 'T4' });
   });
 
   it('does not cite that source for any other unusual move', () => {

@@ -1,4 +1,4 @@
-import type { AnomalyNote } from './anomaly';
+import type { AnomalyKind, AnomalyNote } from './anomaly';
 import type { Change } from './changes';
 import { translate } from './i18n';
 import { classifyTransition, resolvePathState, type ResolvedPathState } from './paths';
@@ -73,6 +73,11 @@ export interface ResultView {
   /** Verbatim page messages for an error outcome (D12). */
   errorMessages: string[];
   anomaly: string | null;
+  /**
+   * The same anomaly as catalogue ids, for the problem report: no text the site printed. Absent in a view
+   * cached before this field existed, which is read as `null`.
+   */
+  anomalyMove: { kind: AnomalyKind; from: string; to: string } | null;
 }
 
 function formatDate(iso: string, locale: Locale): string {
@@ -104,6 +109,7 @@ export function buildErrorView(input: {
     sources: [],
     errorMessages: [...input.messages],
     anomaly: null,
+    anomalyMove: null,
   };
 }
 
@@ -119,10 +125,12 @@ export function buildResultView(input: {
   const current = change.current;
   const anomaly = input.anomaly ?? null;
   const anomalyText = anomaly === null ? null : locale === 'es' ? anomaly.es : anomaly.en;
+  const anomalyMove =
+    anomaly === null ? null : { kind: anomaly.kind, from: anomaly.from, to: anomaly.to };
 
   if (change.kind === 'error') {
     const view = buildErrorView({ label, messages: input.errorMessages ?? [], locale });
-    return { ...view, anomaly: anomalyText };
+    return { ...view, anomaly: anomalyText, anomalyMove };
   }
 
   const entry = findStatus(current.raw);
@@ -159,6 +167,7 @@ export function buildResultView(input: {
     sources: entry?.sources ?? [],
     errorMessages: [],
     anomaly: anomalyText,
+    anomalyMove,
   };
 }
 

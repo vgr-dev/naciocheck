@@ -21,8 +21,11 @@ export interface ReportContext {
   locale: 'es' | 'en';
   /** The page's error messages, as the site printed them. Redacted before they enter the text. */
   errorMessages: readonly string[];
-  /** The calm anomaly note, when there is one. Redacted before it enters the text. */
-  anomaly: string | null;
+  /**
+   * The anomaly as its kind and the catalogue's state ids, when there is one. Never the note text: that
+   * quotes the status the site printed, which is the person's own result.
+   */
+  anomaly: { kind: string; from: string; to: string } | null;
 }
 
 /** The labelled fields of a report, in the order they appear. */
@@ -136,7 +139,12 @@ export function buildReport(check: ReportCheck, context: ReportContext): string 
     ['outcome', outcome],
     ['statusKey', statusKey],
     ['errors', errors],
-    ['anomaly', context.anomaly === null ? null : redactedLine(context.anomaly)],
+    [
+      'anomaly',
+      context.anomaly === null
+        ? null
+        : redactedLine(`${context.anomaly.kind}, ${context.anomaly.from} → ${context.anomaly.to}`),
+    ],
   ]);
 }
 

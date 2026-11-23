@@ -153,10 +153,42 @@ describe('buildResultView — status', () => {
     const view = buildResultView({
       label: 'Primera',
       change: changeOf('changed'),
-      anomaly: { kind: 'unusual', es: 'Nota en castellano.', en: 'Note.', source: null },
+      anomaly: {
+        kind: 'unusual',
+        es: 'Nota en castellano.',
+        en: 'Note.',
+        from: 'K',
+        to: 'T2',
+        source: null,
+      },
     });
 
     expect(view.anomaly).toBe('Nota en castellano.');
+  });
+
+  it('carries the anomaly as ids, apart from the note text', () => {
+    const view = buildResultView({
+      label: 'Primera',
+      change: changeOf('changed'),
+      anomaly: {
+        kind: 'unusual',
+        es: 'Nota en castellano.',
+        en: 'Note.',
+        from: 'K',
+        to: 'T2',
+        source: null,
+      },
+    });
+
+    expect(view.anomalyMove).toEqual({ kind: 'unusual', from: 'K', to: 'T2' });
+    expect(JSON.stringify(view.anomalyMove)).not.toContain('Nota');
+  });
+
+  it('has no anomaly move without an anomaly, or in an error view', () => {
+    expect(
+      buildResultView({ label: 'Primera', change: changeOf('changed') }).anomalyMove,
+    ).toBeNull();
+    expect(buildErrorView({ label: 'Primera', messages: [] }).anomalyMove).toBeNull();
   });
 
   it('shows the meaning observed for the current state, labelled as not official', () => {
@@ -244,7 +276,7 @@ describe('buildResultView — status', () => {
     const view = buildResultView({
       label: 'Primera',
       change: { kind: 'changed', previous: calificacion, current: CURRENT },
-      anomaly: { kind: 'unusual', es: 'Nota.', en: 'Note.', source: null },
+      anomaly: { kind: 'unusual', es: 'Nota.', en: 'Note.', from: 'K', to: 'T2', source: null },
     });
 
     expect(view.observedMeaning).toBeNull();

@@ -12,6 +12,7 @@ import {
   type ReportCheck,
   type ReportContext,
 } from '../src/core/report';
+import { detectAnomaly } from '../src/core/anomaly';
 import type { Check } from '../src/core/storage';
 
 function context(overrides: Partial<ReportContext> = {}): ReportContext {
@@ -126,17 +127,66 @@ describe('buildReport', () => {
     expect(lines.some((line) => line.startsWith('anomaly note:'))).toBe(false);
   });
 
-  it('redacts the error messages and the anomaly note', () => {
+  it('names the anomaly by its kind and state ids', () => {
+    const anomaly = { kind: 'unusual', from: 'K', to: 'T2' };
+
+    expect(
+      buildReport({ outcome: 'status', statusKey: 'unknown' }, context({ anomaly })),
+    ).toContain('anomaly note: unusual, K → T2');
+    expect(
+      buildReport({ outcome: 'status', statusKey: 'unknown' }, context({ anomaly, locale: 'es' })),
+    ).toContain('nota: unusual, K → T2');
+  });
+
+  it('holds the ids of a real anomaly and nothing the site printed', () => {
+    const previous: Check = {
+      id: 'check-1',
+      applicationId: 'app-1',
+      at: '2026-11-05T10:00:00.000Z',
+      outcome: 'status',
+      statusKey: 'abierto-en-calificacion',
+      raw: 'Abierto - En calificación.',
+      subStatus: 'Su expediente se encuentra en calificación.',
+      acknowledged: false,
+    };
+    const current: Check = {
+      ...previous,
+      id: 'check-2',
+      at: '2026-11-06T10:00:00.000Z',
+      statusKey: 'abierto-en-tramitacion',
+      raw: 'Abierto - En tramitación.',
+      subStatus: 'Pendiente solicitud informes preceptivos oficiales',
+    };
+    const note = detectAnomaly(previous, current);
+    expect(note).not.toBeNull();
+
+    for (const locale of ['es', 'en'] as const) {
+      const text = buildReport(
+        current,
+        context({
+          locale,
+          anomaly: note === null ? null : { kind: note.kind, from: note.from, to: note.to },
+        }),
+      );
+
+      expect(text).toContain('unusual, K → T2');
+      for (const check of [previous, current]) {
+        expect(text).not.toContain(check.raw);
+        expect(text).not.toContain(check.subStatus ?? '\0');
+      }
+      expect(text).not.toContain('«');
+    }
+  });
+
+  it('redacts the error messages', () => {
     const text = buildReport(
       { outcome: 'error', statusKey: 'unknown' },
       context({
         errorMessages: [`El NIE ${FAKE_NIE} no coincide`, `Nacido el ${FAKE_BIRTH_DATE}`, '  '],
-        anomaly: `El expediente 1234567 cambió el 2026-11-05`,
       }),
     );
 
     expect(text).toContain('errors: El NIE [NIE] no coincide | Nacido el [DATE]');
-    expect(text).toContain('anomaly note: El expediente [NUMBER] cambió el [DATE]');
     expect(text).not.toContain(FAKE_NIE);
     expect(text).not.toContain('1990');
   });
@@ -172,7 +222,7 @@ describe('buildReport', () => {
       { outcome: 'error', statusKey: 'unknown' },
       context({
         errorMessages: [`Error ${FAKE_NIE} 12/05/2020`],
-        anomaly: 'Abierto - En tramitación.',
+        anomaly: { kind: 'unusual', from: 'K', to: 'T2' },
       }),
     );
 
