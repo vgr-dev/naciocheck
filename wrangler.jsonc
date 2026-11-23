@@ -4,7 +4,7 @@
   "main": "./worker/index.ts",
   "compatibility_date": "2026-11-16",
   "assets": {
-    "directory": "./site",
+    "directory": "./.output/site",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
     // Only the feedback API runs the Worker; every other path is a static asset.

@@ -1,0 +1,44 @@
+{
+  "es": {
+    "comingSoon": "Próximamente",
+    "installChrome": "Instalar en Chrome",
+    "installFirefox": "Instalar en Firefox",
+    "homeLabel": "NacioCheck, inicio",
+    "logoAlt": "NacioCheck",
+    "languageLabel": "Idioma",
+    "languageNames": { "es": "Español", "en": "English", "ca": "Català" },
+    "changelog": {
+      "noReleases": "Todavía no hay versiones publicadas.",
+      "githubRelease": "Ver esta versión en GitHub",
+      "englishNote": "Las notas de cada versión están en inglés."
+    }
+  },
+  "en": {
+    "comingSoon": "Coming soon",
+    "installChrome": "Install on Chrome",
+    "installFirefox": "Install on Firefox",
+    "homeLabel": "NacioCheck, home",
+    "logoAlt": "NacioCheck",
+    "languageLabel": "Language",
+    "languageNames": { "es": "Español", "en": "English", "ca": "Català" },
+    "changelog": {
+      "noReleases": "No releases have been published yet.",
+      "githubRelease": "View this release on GitHub",
+      "englishNote": "The release notes are written in English."
+    }
+  },
+  "ca": {
+    "comingSoon": "Properament",
+    "installChrome": "Instal·la a Chrome",
+    "installFirefox": "Instal·la a Firefox",
+    "homeLabel": "NacioCheck, inici",
+    "logoAlt": "NacioCheck",
+    "languageLabel": "Idioma",
+    "languageNames": { "es": "Español", "en": "English", "ca": "Català" },
+    "changelog": {
+      "noReleases": "Encara no s'ha publicat cap versió.",
+      "githubRelease": "Veure aquesta versió a GitHub",
+      "englishNote": "Les notes de cada versió estan en anglès."
+    }
+  }
+}

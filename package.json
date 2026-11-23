@@ -29,11 +29,12 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json && tsc --noEmit -p worker/tsconfig.json",
     "check:privacy": "node scripts/check-privacy.mjs",
-    "check:site": "node scripts/check-site.mjs",
+    "build:site": "node scripts/build-site.mjs",
+    "check:site": "npm run build:site && node scripts/check-site.mjs",
     "logo:outline": "node scripts/outline-logo.mjs",
     "store:images": "node scripts/store-images.mjs",
-    "dev:site": "wrangler dev",
-    "deploy:site": "wrangler deploy",
+    "dev:site": "npm run build:site && wrangler dev",
+    "deploy:site": "npm run build:site && wrangler deploy",
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
