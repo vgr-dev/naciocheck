@@ -7,6 +7,7 @@
  */
 (() => {
   const PRODUCTION_HOST = 'naciocheck.vgr.cat';
+  const MAX_BODY_BYTES = 8192;
   // Cloudflare's published always-pass test sitekey: used on any other host (hands-on checks with
   // `wrangler dev`). The real key sits in the page's data-sitekey and is used on the production host only.
   const TEST_SITEKEY = '1x00000000000000000000AA';
@@ -204,6 +205,11 @@
       say('noToken');
       return;
     }
+    const body = JSON.stringify({ text: textarea.value, token: value });
+    if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
+      say('too-large');
+      return;
+    }
     busy = true;
     sendButton.disabled = true;
     say('sending');
@@ -212,7 +218,7 @@
       const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textarea.value, token: value }),
+        body,
       });
       if (response.status === 204) {
         sent = true;

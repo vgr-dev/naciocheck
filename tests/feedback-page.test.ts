@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { runInThisContext } from 'node:vm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MAX_BODY_BYTES } from '../worker/checks';
 
 /**
  * The feedback pages, offline: each page's HTML is loaded into jsdom and `site/feedback/feedback.js` runs
@@ -206,6 +207,52 @@ describe.each(PAGES)('feedback page ($name)', (page) => {
     await flush();
     const [, init] = h.fetch.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(init.body as string)).toMatchObject({ token: 'from-get-response' });
+  });
+
+  it('checks the serialized UTF-8 body size and keeps an oversized draft and token for retry', async () => {
+    const h = load(page);
+    h.run();
+    const token = 'token';
+    h.turnstile.options().callback(token);
+    // Quotes, backslashes, and multibyte characters exercise JSON escaping and UTF-8 byte counting.
+    h.textarea.value = `${'界'.repeat(3000)}\\"😀`;
+    const oversized = JSON.stringify({ text: h.textarea.value, token });
+    expect(new TextEncoder().encode(oversized).byteLength).toBeGreaterThan(MAX_BODY_BYTES);
+
+    h.send.click();
+    await flush();
+
+    expect(h.fetch).not.toHaveBeenCalled();
+    expect(h.textarea.value).toContain('界');
+    expect(h.turnstile.reset).not.toHaveBeenCalled();
+    expect(h.status.textContent).toMatch(/too long|demasiado largo/i);
+    expect(h.send.disabled).toBe(false);
+
+    // The same token can retry after the person shortens the draft.
+    h.textarea.value = 'shortened';
+    h.fetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    h.send.click();
+    await flush();
+    const [, init] = h.fetch.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ text: 'shortened', token });
+  });
+
+  it('posts a body whose serialized UTF-8 representation is exactly the Worker limit', async () => {
+    const h = load(page);
+    h.run();
+    const token = 'token';
+    h.turnstile.options().callback(token);
+    const overhead = new TextEncoder().encode(JSON.stringify({ text: '', token })).byteLength;
+    h.textarea.value = 'a'.repeat(MAX_BODY_BYTES - overhead);
+    const body = JSON.stringify({ text: h.textarea.value, token });
+    expect(new TextEncoder().encode(body).byteLength).toBe(MAX_BODY_BYTES);
+    h.fetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    h.send.click();
+    await flush();
+
+    expect(h.fetch).toHaveBeenCalledOnce();
+    expect((h.fetch.mock.calls[0]?.[1] as RequestInit).body).toBe(body);
   });
 
   it('does not post without a token or without text', async () => {
