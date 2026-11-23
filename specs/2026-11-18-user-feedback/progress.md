@@ -354,3 +354,34 @@ docs: state the feedback channel in the policy and docs
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site` -> pass (extension 30 files, 701 tests; worker 2 files, 31 tests; 6 pages); `npm run test:e2e` -> check-flow 13, pages 40, 2, visual 18 passing; visual 3 failing as expected until Phase 7 (status guide, error result, after-all screenshot hook); network guard 0 outside the fake site in all four workers
 - **Commit proposal:** 12a first (the fix), then 12, then 13, then the plan and progress updates
 - **Open issues:** Firefox checklist row 15 wording (dev helper seeds a status, not an error); headless Chrome reports `navegador: unknown`; no unknown-page result fixture
+
+## 2026-11-23 - Step 14: Capture the panel and rewrite the Chrome baselines
+
+- **Status:** done
+- **Changed:** `e2e/specs/visual.e2e.ts` (`captureResultWithPanelOpen`, state `error-report`; index text 52 images per locale); `e2e/baselines/chrome/`: modified `result-error-{es,en}-{1280x800,412x915}`, `statuses-guide-{es,en}-{1280x800,412x915}`; new `result-error-report-{es,en}-{1280x800,412x915}`; 12 images, no other baseline changed (104 in the folder)
+- **Verified:** `npm run test:e2e:update-baselines` -> first run failed on an untouched flaky test ("options: editing an application", which deleted three options-editing baselines), second run pass (20) and restored them unchanged; `npm run test:e2e` -> pass (13, 40, 2, 20; 0 above tolerance; guard 0 outside the fake site); `npx eslint`, `npx prettier --check` on `visual.e2e.ts`, `npm run typecheck` -> clean
+- **Commit:** uncommitted, proposed "test(e2e): capture the report panel and rewrite the Chrome baselines"
+- **Open issues:** /review-ui findings (nothing fixed, follow-up only):
+  - High / Medium: none. Only invented data; the non-affiliation line stays above the panel; nothing looks official.
+  - Low 1: at 412 px the open-panel capture ends at the textarea label, so the textarea, Continue, its hint and "Volver a intentarlo" are not photographed (`result-error-report-*-412x915`). The panel fits (no overflow); a `full412` capture of the open state would show it.
+  - Low 2: the panel's intro hint is larger and darker than the disclaimer above it and runs 4 to 8 lines; optionally give `.report-panel .hint` the smaller size in `report-panel.css`.
+  - Low 3: a closed panel as the last child of a guide card leaves about 28 px under it (panel `margin-block: 16px` plus card padding); `margin-block-end: 0` when last child of `.card`.
+  - Nested bordered panel inside the guide cards reads as a quiet inner control: acceptable. Focus outlines judged from CSS only (3 px `--teal-700`, 2 px offset), not photographed.
+  - Limits: 10 of 12 changed images opened (not `statuses-guide-es-412x915`, `statuses-guide-en-1280x800`); no focus, hover, dark theme or RTL rendering in the matrix; the guide's own stylesheet not checked for physical properties.
+  - Flake: "options: editing an application" queries `$$('ul.apps .app-card .row button')` with no wait; under `update-baselines` a failure deletes that test's baselines.
+  - Headless Chrome shows `navegador: unknown` in the report text of the new images (known since step 12).
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+test(e2e): capture the report panel and rewrite the Chrome baselines
+```
+
+## 2026-11-23 - Phase 7: Visual baselines
+
+- **Status:** done
+- **Steps:** 14 done
+- **File check:** pass (`e2e/specs/visual.e2e.ts` and 12 baselines, all in step 14's Files; plus the orchestrator's plan.md and progress.md)
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && npm run test:e2e` -> pass (extension 30 files, 701 tests; worker 2 files, 31 tests; 6 pages; E2E 13 + 40 + 2 + 20, network guard 0 outside the fake site in every worker)
+- **Commit proposal:** one commit for step 14, one for the plan and progress updates
+- **Open issues:** three Low UI findings above; the options-editing flake; then the spec's remaining acceptance work: `/spec-review`, the user's deploy and hands-on checks (Email Routing, widget hostname, `TURNSTILE_SECRET`, local `dev:site`, Firefox checklist row 15 and its wording), and the final real report

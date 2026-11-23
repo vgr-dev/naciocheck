@@ -43,13 +43,13 @@ numbers are global across phases. -->
 
 **Phase 6: End-to-end checks and wording**
 
-- [x] 12. Cover the panel in the Chrome E2E suite uncommitted
-- [x] 12a. Report an anomaly by its state ids, never its note text uncommitted
-- [x] 13. State the feedback channel in the policy and docs uncommitted
+- [x] 12. Cover the panel in the Chrome E2E suite ffdbc5f
+- [x] 12a. Report an anomaly by its state ids, never its note text 2f498d2
+- [x] 13. State the feedback channel in the policy and docs e820cca
 
 **Phase 7: Visual baselines**
 
-- [ ] 14. Capture the panel and rewrite the Chrome baselines
+- [x] 14. Capture the panel and rewrite the Chrome baselines uncommitted
 
 ## Before building (gates)
 
