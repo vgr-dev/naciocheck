@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NacioCheck — envia un comentari</title>
+    <meta
+      name="description"
+      content="Revisa el text del teu comentari sobre NacioCheck i envia'l, o copia'l, si vols."
+    />
+    <!-- @head -->
+    <!-- @style -->
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Salta al contingut</a>
+    <!-- @header -->
+    <main id="main" class="page">
+      <h1>Envia un comentari sobre NacioCheck</h1>
+      <p class="lead">
+        Això és exactament el que s'enviarà. Llegeix-ho, i esborra el que no vulguis compartir.
+      </p>
+
+      <nav class="page-links" aria-label="Enllaços">
+        <ul>
+          <li><a href="/ca/">Inici</a></li>
+          <li><a href="/ca/privacy/">Política de privadesa</a></li>
+        </ul>
+      </nav>
+
+      <label for="report">Text del comentari</label>
+      <textarea
+        id="report"
+        name="report"
+        rows="12"
+        placeholder="Escriu aquí el que vulguis explicar-nos."
+        aria-describedby="note"
+      ></textarea>
+      <p id="note" class="hint">
+        S'enviarà només aquest text, amb el que hagis editat, i només quan premis «Envia». No porta
+        el teu nom, el teu correu ni dades de la teva sol·licitud. Si alguna cosa del que hi veus és
+        personal, esborra-ho abans d'enviar. Pots escriure en català, castellà o anglès.
+      </p>
+      <noscript
+        ><p>
+          Aquesta pàgina necessita JavaScript per enviar el comentari. Sense, pots copiar el text i
+          enviar-lo per una altra via.
+        </p></noscript
+      >
+
+      <div id="feedback-widget" data-sitekey="0x4AAAAAAGPHi96wZq5N-xcv"></div>
+
+      <div class="actions">
+        <button type="button" id="copy" class="secondary">Copia</button>
+        <button type="button" id="send">Envia</button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+
+      <p class="hint">
+        Per evitar el correu brossa, aquesta pàgina fa servir Cloudflare Turnstile. En enviar, el
+        text i aquella comprovació passen per Cloudflare fins a arribar a qui manté el projecte, per
+        correu; no es desa en cap altre lloc. Més informació a la
+        <a href="https://www.cloudflare.com/turnstile-privacy-policy/"
+          >política de privadesa de Turnstile</a
+        >.
+      </p>
+
+      <p class="hint">Aquesta pàgina no és un canal oficial.</p>
+    </main>
+    <!-- @footer -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="/feedback/feedback.js" defer></script>
+  </body>
+</html>

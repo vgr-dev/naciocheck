@@ -15,6 +15,7 @@ const SCRIPT = readFileSync(resolve(SITE, 'feedback/feedback.js'), 'utf8');
 const PAGES = [
   { name: 'es', file: 'feedback/index.html', path: '/feedback/' },
   { name: 'en', file: 'en/feedback/index.html', path: '/en/feedback/' },
+  { name: 'ca', file: 'ca/feedback/index.html', path: '/ca/feedback/' },
 ] as const;
 
 const REAL_SITEKEY = '0x4AAAAAAGPHi96wZq5N-xcv';
@@ -227,7 +228,7 @@ describe.each(PAGES)('feedback page ($name)', (page) => {
     expect(h.fetch).not.toHaveBeenCalled();
     expect(h.textarea.value).toContain('界');
     expect(h.turnstile.reset).not.toHaveBeenCalled();
-    expect(h.status.textContent).toMatch(/too long|demasiado largo/i);
+    expect(h.status.textContent).toMatch(/too long|demasiado largo|massa llarg/i);
     expect(h.send.disabled).toBe(false);
 
     // The same token can retry after the person shortens the draft.
@@ -477,8 +478,8 @@ describe.each(PAGES)('feedback page ($name)', (page) => {
 describe('feedback pages: content', () => {
   it.each(PAGES)('$name page links home, privacy and the Turnstile addendum', (page) => {
     const html = readFileSync(resolve(SITE, page.file), 'utf8');
-    const home = page.name === 'es' ? '/' : '/en/';
-    const privacy = page.name === 'es' ? '/privacy/' : '/en/privacy/';
+    const home = { es: '/', en: '/en/', ca: '/ca/' }[page.name];
+    const privacy = { es: '/privacy/', en: '/en/privacy/', ca: '/ca/privacy/' }[page.name];
     expect(html).toContain(`href="${home}"`);
     expect(html).toContain(`href="${privacy}"`);
     expect(html).toContain('href="https://www.cloudflare.com/turnstile-privacy-policy/"');
@@ -488,13 +489,40 @@ describe('feedback pages: content', () => {
   it.each(PAGES)('$name page says comments may be in Catalan, Spanish or English', (page) => {
     const html = readFileSync(resolve(SITE, page.file), 'utf8');
     expect(html).toMatch(
-      page.name === 'es' ? /catalán, castellano o inglés/ : /Catalan, Spanish or English/,
+      {
+        es: /catalán, castellano o inglés/,
+        en: /Catalan, Spanish or English/,
+        ca: /català, castellà o anglès/,
+      }[page.name],
     );
   });
 
   it.each(PAGES)('$name page never claims to be official', (page) => {
     const html = readFileSync(resolve(SITE, page.file), 'utf8');
-    expect(html).toMatch(page.name === 'es' ? /no es un canal oficial/ : /not an official channel/);
+    expect(html).toMatch(
+      {
+        es: /no es un canal oficial/,
+        en: /not an official channel/,
+        ca: /no és un canal oficial/,
+      }[page.name],
+    );
+  });
+
+  it.each(PAGES)('$name page speaks its own language when a code comes back', async (page) => {
+    const h = load(page);
+    h.run();
+    h.fetch.mockResolvedValueOnce(Response.json({ error: 'rate-limited' }, { status: 429 }));
+    h.turnstile.options().callback('token');
+    h.textarea.value = 'text';
+    h.send.click();
+    await flush();
+    expect(h.status.textContent).toMatch(
+      {
+        es: /Demasiados envíos/,
+        en: /Too many sends/,
+        ca: /Massa enviaments/,
+      }[page.name],
+    );
   });
 
   it('feedback.js names no address and exactly one test key', () => {
@@ -502,4 +530,33 @@ describe('feedback pages: content', () => {
     expect(SCRIPT.match(new RegExp(TEST_SITEKEY, 'g'))).toHaveLength(1);
     expect(SCRIPT).toContain("'/api/feedback'");
   });
+});
+
+describe('privacy pages: disclosures', () => {
+  const PRIVACY = [
+    { name: 'es', file: 'privacy/index.html' },
+    { name: 'en', file: 'en/privacy/index.html' },
+    { name: 'ca', file: 'ca/privacy/index.html' },
+  ] as const;
+
+  it.each(PRIVACY)('$name policy names Turnstile, the mailbox and Web Analytics', ({ file }) => {
+    const html = readFileSync(resolve(SITE, file), 'utf8');
+    expect(html).toContain('href="https://www.cloudflare.com/turnstile-privacy-policy/"');
+    expect(html).toContain('naciocheck@vgr.cat');
+    expect(html).toContain('Cloudflare Turnstile');
+    expect(html).toContain('Cloudflare Web Analytics');
+    expect(html).toContain('<code>storage.local</code>');
+  });
+
+  it.each(PRIVACY)(
+    '$name policy is in its own language and carries the markers',
+    ({ name, file }) => {
+      const html = readFileSync(resolve(SITE, file), 'utf8');
+      expect(html).toContain(`<html lang="${name}">`);
+      for (const marker of ['@head', '@style', '@header', '@footer']) {
+        expect(html).toContain(`<!-- ${marker} -->`);
+      }
+      expect(html.match(/<h1>/g)).toHaveLength(1);
+    },
+  );
 });

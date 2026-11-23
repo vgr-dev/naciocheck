@@ -58,9 +58,32 @@
       upstream: 'The service is not available right now. Please try again later.',
       unknown: 'Could not send it. Please try again later.',
     },
+    ca: {
+      sending: 'Enviant…',
+      sent: 'Enviat. Gràcies: el comentari ha arribat a qui manté el projecte.',
+      empty: "Escriu alguna cosa abans d'enviar.",
+      noToken:
+        'La comprovació de Cloudflare Turnstile encara no ha acabat. Espera un moment, o completa-la si es mostra, i torna a prémer Envia.',
+      widgetFailed:
+        "No s'ha pogut carregar la comprovació de Turnstile. Pots copiar el text i enviar-lo per una altra via.",
+      widgetError: 'La comprovació de Turnstile ha fallat. Torna-ho a provar.',
+      copied: 'Copiat.',
+      copyFailed: "No s'ha pogut copiar. Selecciona el text i copia'l a mà.",
+      network: "No s'ha pogut connectar. Revisa la teva connexió i torna-ho a provar.",
+      'bad-body': "El text no és vàlid. Revisa'l i torna-ho a provar.",
+      origin: "L'enviament s'ha rebutjat perquè no ve d'aquest web. Recarrega la pàgina.",
+      turnstile: 'La comprovació de Turnstile no ha estat vàlida o ha caducat. Torna-ho a provar.',
+      method: "L'enviament s'ha rebutjat (mètode no permès).",
+      'too-large': "El text és massa llarg. Escurça'l i torna-ho a provar.",
+      'content-type': "L'enviament s'ha rebutjat (tipus de contingut no admès).",
+      'rate-limited': 'Massa enviaments seguits. Espera un minut i torna-ho a provar.',
+      upstream: 'El servei no està disponible ara mateix. Torna-ho a provar més tard.',
+      unknown: "No s'ha pogut enviar. Torna-ho a provar més tard.",
+    },
   };
 
-  const language = document.documentElement.lang === 'en' ? 'en' : 'es';
+  const lang = document.documentElement.lang;
+  const language = lang === 'en' || lang === 'ca' ? lang : 'es';
   const texts = TEXTS[language];
 
   const textarea = document.getElementById('report');

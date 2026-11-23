@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NacioCheck — privadesa</title>
+    <meta
+      name="description"
+      content="Què desa NacioCheck, on ho desa i què envia només quan tu llances una comprovació."
+    />
+    <!-- @head -->
+    <!-- @style -->
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Salta al contingut</a>
+    <!-- @header -->
+    <main id="main" class="page">
+      <h1>Política de privadesa de NacioCheck</h1>
+      <p class="lead">
+        S'aplica a l'extensió NacioCheck 0.1.0 i posteriors. Darrera revisió: 23 de novembre de
+        2026.
+      </p>
+
+      <nav class="page-links" aria-label="En aquesta pàgina">
+        <ul>
+          <li><a href="#resum">Resum</a></li>
+          <li><a href="#dades">Què es desa i on</a></li>
+          <li><a href="#no">Què no fa</a></li>
+          <li><a href="#informar">Informar d'un problema</a></li>
+          <li><a href="#esborrar">Exportar i esborrar</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="resum">Resum</h2>
+      <div class="card">
+        <p>
+          NacioCheck desa les teves sol·licituds i l'historial de comprovacions
+          <strong>només al teu navegador</strong>. L'extensió no té comptes, ni servidors propis, ni
+          analítica, ni publicitat. No envia res a nosaltres ni a tercers; només surten del
+          navegador el formulari oficial que tu envies a la seu en comprovar i el captcha que
+          carrega aquella pàgina. Si decideixes informar d'un problema, el que escrius només surt
+          quan l'envies tu des del web (vegeu «Informar d'un problema»). Aquest web, a diferència de
+          l'extensió, compta les visites amb Cloudflare Web Analytics.
+        </p>
+      </div>
+
+      <h2 id="dades">Què es desa i on</h2>
+      <p>Tot es desa amb l'API d'emmagatzematge del navegador, dins del perfil de l'extensió:</p>
+      <ul>
+        <li>
+          <strong>Emmagatzematge local</strong> (<code>storage.local</code>, clau
+          <code>naciocheck</code>): les sol·licituds que dones d'alta (el nom amb què les reconeixes
+          i el NIE, el número d'expedient, l'any i la data de naixement, o aquestes mateixes dades
+          xifrades), l'historial de comprovacions (data, resultat, el text de l'estat que va
+          retornar el web i si ja l'has vist) i els ajustos (recordatori i idioma).
+        </li>
+        <li>
+          <strong>Emmagatzematge de sessió</strong> (<code>storage.session</code>): la contrasenya
+          del xifratge, mentre el navegador és obert. El navegador buida aquest emmagatzematge en
+          tancar-se i la contrasenya no s'escriu mai al disc.
+        </li>
+      </ul>
+      <p>
+        L'historial es queda al perfil del navegador: si tanques la sessió del navegador o
+        n'esborres les dades, el pots perdre. La còpia de seguretat serveix per a això.
+      </p>
+
+      <h2 id="no">Què no fa</h2>
+      <ul>
+        <li>No crea comptes i no té servidors propis.</li>
+        <li>
+          No envia dades a servidors propis ni a tercers: no hi ha analítica, ni telemetria, ni
+          publicitat, ni seguiment.
+        </li>
+        <li>
+          No fa servir l'emmagatzematge sincronitzat del navegador, de manera que les teves dades no
+          viatgen a Google ni a Mozilla.
+        </li>
+        <li>
+          No resol el captcha ni l'envia a cap servei: el marques tu. El web oficial carrega
+          reCAPTCHA de Google a la seva pròpia pàgina, i això passa en aquella pàgina, no a
+          l'extensió.
+        </li>
+        <li>
+          Quan llances una comprovació, el teu navegador envia el formulari a la seu electrònica
+          (sede.mjusticia.gob.es) exactament igual que si l'omplissis a mà. Això és la consulta que
+          demanes tu, i va al web oficial, no a nosaltres.
+        </li>
+      </ul>
+
+      <h2 id="informar">Informar d'un problema</h2>
+      <p>
+        L'extensió no envia res per si sola. «Informar d'un problema» et mostra primer el text que
+        es compartiria i no l'envia enlloc: només obre aquest web amb aquell text a la part final de
+        l'adreça (després del <code>#</code>), que els navegadors no envien al servidor.
+      </p>
+      <ul>
+        <li>
+          L'informe porta dades tècniques (versió de l'extensió, navegador i la seva versió major,
+          idioma, tipus de resultat) i el que tu hi afegeixis. <strong>Mai</strong> inclou el teu
+          resultat (el text de l'estat i la frase que va mostrar la seu) ni les teves dades
+          identificatives, i tot el que s'assembli a un identificador s'amaga.
+        </li>
+        <li>
+          La pàgina de comentaris carrega Cloudflare Turnstile per evitar el correu brossa. Quan
+          prems «Envia», el text i aquella comprovació passen per Cloudflare i arriben per correu a
+          qui manté el projecte (naciocheck@vgr.cat). No es desa en cap altre lloc i no se'n
+          conserven registres de la petició. Més informació a la
+          <a href="https://www.cloudflare.com/turnstile-privacy-policy/"
+            >política de privadesa de Turnstile</a
+          >.
+        </li>
+        <li>
+          Aquest web, naciocheck.vgr.cat, compta les visites amb Cloudflare Web Analytics:
+          Cloudflare afegeix un petit script a cada pàgina que informa de la pàgina visitada, la
+          pàgina d'on véns, el teu navegador i quant ha trigat a carregar. No fa servir galetes i,
+          segons Cloudflare, no et segueix entre llocs web (vegeu la política de privadesa de
+          Cloudflare). Només afecta el web: l'extensió no el carrega mai i no envia res. Només la
+          pàgina de comentaris carrega a més Turnstile.
+        </li>
+      </ul>
+
+      <h2 id="xifratge">Xifratge opcional</h2>
+      <p>
+        Pots protegir el NIE, el número d'expedient, l'any i la data de naixement amb una
+        contrasenya teva, des d'Opcions. Es xifren amb AES-GCM i una clau derivada de la teva
+        contrasenya amb PBKDF2-HMAC-SHA-256 (600 000 iteracions). La contrasenya no es desa al disc:
+        sense ella, aquestes dades no es poden llegir.
+      </p>
+      <p>
+        <strong>Si oblides la contrasenya, no es poden recuperar.</strong> L'historial de
+        comprovacions es queda, però hauràs de tornar a escriure les sol·licituds. Ningú, tampoc qui
+        manté el projecte, les pot desxifrar.
+      </p>
+
+      <h2 id="esborrar">Còpia de seguretat, exportar i esborrar</h2>
+      <ul>
+        <li>
+          <strong>Exportar</strong> (Opcions → Còpia de seguretat): descarrega un fitxer JSON amb el
+          que tinguis desat. Si les dades no estan xifrades, l'extensió t'avisa abans. Aquest fitxer
+          el deses tu on vulguis, i és l'única cosa que pot treure les teves dades del navegador.
+        </li>
+        <li>
+          <strong>Importar</strong>: llegeix un fitxer de còpia i el combina amb el que ja tinguis.
+        </li>
+        <li>
+          <strong>Esborrar una sol·licitud</strong> (Opcions → Esborrar): elimina la sol·licitud i
+          les seves comprovacions.
+        </li>
+        <li>
+          <strong>Esborrar-ho tot</strong>: desinstal·la l'extensió, o esborra'n les dades des del
+          navegador (chrome://extensions → NacioCheck → Elimina; about:addons → NacioCheck → Elimina
+          a Firefox). En desinstal·lar-la, el navegador elimina l'emmagatzematge de l'extensió.
+        </li>
+      </ul>
+
+      <h2 id="menors">Menors i tercers</h2>
+      <p>
+        NacioCheck no està pensada per a menors d'edat i no recull dades de ningú: no hi ha a qui
+        cedir-les ni amb qui compartir-les. No es venen ni es transfereixen dades a tercers, perquè
+        no se'n recullen.
+      </p>
+
+      <h2 id="canvis">Canvis en aquesta política</h2>
+      <p>
+        Si canvia el que desa o el que envia l'extensió, aquesta pàgina canvia abans de publicar
+        aquella versió, i la data de revisió de dalt ho dirà. L'historial del projecte és al
+        repositori.
+      </p>
+
+      <h2 id="contacte">Contacte</h2>
+      <p>
+        Per a preguntes sobre privadesa, escriu a la fitxa de l'extensió a la Chrome Web Store o a
+        addons.mozilla.org, o obre una incidència al repositori del projecte
+        (github.com/vgr-dev/naciocheck).
+      </p>
+
+      <h2 id="afiliacio">Avís de no afiliació</h2>
+      <p>
+        NacioCheck és un projecte personal i independent. No està afiliada al Ministerio de
+        Justicia, ni al Govern d'Espanya, ni a cap organisme públic, i no en representa cap.
+        «NacioCheck» no és una eina oficial i la seva informació no substitueix la resolució oficial
+        del teu expedient.
+      </p>
+    </main>
+    <!-- @footer -->
+  </body>
+</html>
