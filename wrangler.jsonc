@@ -26,6 +26,7 @@
     },
   ],
   "vars": {
+    "FEEDBACK_ORIGIN": "https://naciocheck.vgr.cat",
     "TURNSTILE_EXPECTED_HOSTNAME": "naciocheck.vgr.cat",
   },
   "routes": [

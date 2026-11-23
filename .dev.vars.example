@@ -1,0 +1,9 @@
+# Copy to .dev.vars for `npm run dev:site` (wrangler dev, local). .dev.vars is git-ignored.
+# Nothing here is a credential: these are Cloudflare's published Turnstile test values.
+
+# Cloudflare's always-pass Turnstile test secret; for wrangler dev only.
+TURNSTILE_SECRET=1x0000000000000000000000000000000AA
+# Turnstile's test mode always answers with the hostname example.com; for wrangler dev only.
+TURNSTILE_EXPECTED_HOSTNAME=example.com
+# The origin of the local dev server, so the same-origin check passes on localhost; for wrangler dev only.
+FEEDBACK_ORIGIN=http://localhost:8787

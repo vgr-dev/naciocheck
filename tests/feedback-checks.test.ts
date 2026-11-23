@@ -18,27 +18,29 @@ const GOOD: RequestHeaders = {
   contentLength: '120',
 };
 
+const check = (request: RequestHeaders) => checkRequest(request, EXPECTED_ORIGIN);
+
 describe('checkRequest', () => {
   it('accepts a same-origin JSON post', () => {
-    expect(checkRequest(GOOD)).toBeNull();
+    expect(check(GOOD)).toBeNull();
   });
 
   it('accepts a charset parameter and any case in the content type', () => {
-    expect(checkRequest({ ...GOOD, contentType: 'Application/JSON; charset=utf-8' })).toBeNull();
+    expect(check({ ...GOOD, contentType: 'Application/JSON; charset=utf-8' })).toBeNull();
   });
 
   it('accepts a missing Sec-Fetch-Site and a missing Content-Length', () => {
-    expect(checkRequest({ ...GOOD, secFetchSite: null, contentLength: null })).toBeNull();
+    expect(check({ ...GOOD, secFetchSite: null, contentLength: null })).toBeNull();
   });
 
   it.each(['GET', 'PUT', 'OPTIONS', 'post'])('rejects the method %s', (method) => {
-    expect(checkRequest({ ...GOOD, method })).toBe('method');
+    expect(check({ ...GOOD, method })).toBe('method');
   });
 
   it.each([null, 'text/plain', 'application/x-www-form-urlencoded', 'application/jsonp'])(
     'rejects the content type %s',
     (contentType) => {
-      expect(checkRequest({ ...GOOD, contentType })).toBe('content-type');
+      expect(check({ ...GOOD, contentType })).toBe('content-type');
     },
   );
 
@@ -52,26 +54,38 @@ describe('checkRequest', () => {
     'https://www.naciocheck.vgr.cat',
     'https://naciocheck.vgr.cat/',
   ])('rejects the origin %s', (origin) => {
-    expect(checkRequest({ ...GOOD, origin })).toBe('origin');
+    expect(check({ ...GOOD, origin })).toBe('origin');
   });
 
   it.each(['cross-site', 'same-site', 'none', ''])('rejects Sec-Fetch-Site %s', (secFetchSite) => {
-    expect(checkRequest({ ...GOOD, secFetchSite })).toBe('origin');
+    expect(check({ ...GOOD, secFetchSite })).toBe('origin');
   });
 
   it('rejects a declared length over the cap and accepts the cap itself', () => {
-    expect(checkRequest({ ...GOOD, contentLength: String(MAX_BODY_BYTES + 1) })).toBe('too-large');
-    expect(checkRequest({ ...GOOD, contentLength: String(MAX_BODY_BYTES) })).toBeNull();
+    expect(check({ ...GOOD, contentLength: String(MAX_BODY_BYTES + 1) })).toBe('too-large');
+    expect(check({ ...GOOD, contentLength: String(MAX_BODY_BYTES) })).toBeNull();
   });
 
   it('leaves a malformed Content-Length to the capped body read', () => {
-    expect(checkRequest({ ...GOOD, contentLength: 'abc' })).toBeNull();
-    expect(checkRequest({ ...GOOD, contentLength: '-5' })).toBeNull();
+    expect(check({ ...GOOD, contentLength: 'abc' })).toBeNull();
+    expect(check({ ...GOOD, contentLength: '-5' })).toBeNull();
+  });
+
+  it('takes the expected origin as a parameter', () => {
+    const local = 'http://localhost:8787';
+    expect(checkRequest({ ...GOOD, origin: local }, local)).toBeNull();
+    expect(checkRequest(GOOD, local)).toBe('origin');
+  });
+
+  it('rejects the production origin when another one is expected', () => {
+    expect(checkRequest({ ...GOOD, origin: EXPECTED_ORIGIN }, 'http://localhost:8787')).toBe(
+      'origin',
+    );
   });
 
   it('reports the method before every other problem', () => {
     expect(
-      checkRequest({
+      check({
         method: 'GET',
         contentType: 'text/plain',
         origin: null,

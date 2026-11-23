@@ -32,6 +32,7 @@
     "check:site": "node scripts/check-site.mjs",
     "logo:outline": "node scripts/outline-logo.mjs",
     "store:images": "node scripts/store-images.mjs",
+    "dev:site": "wrangler dev",
     "deploy:site": "wrangler deploy",
     "postinstall": "wxt prepare"
   },

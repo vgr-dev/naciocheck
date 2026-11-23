@@ -4,6 +4,7 @@
  * the plain Vitest project.
  */
 
+/** The production defaults; the Worker reads the live values from `vars` in `wrangler.jsonc`. */
 export const EXPECTED_ORIGIN = 'https://naciocheck.vgr.cat';
 export const EXPECTED_HOSTNAME = 'naciocheck.vgr.cat';
 /** Largest accepted request body, in bytes (the report itself is capped far below this). */
@@ -24,11 +25,14 @@ export interface RequestHeaders {
   contentLength: string | null;
 }
 
-/** `null` when the request may go on, otherwise the first failing code. */
-export function checkRequest(request: RequestHeaders): RequestError | null {
+/**
+ * `null` when the request may go on, otherwise the first failing code. `expectedOrigin` comes from the
+ * environment (`EXPECTED_ORIGIN` in production, a localhost origin under `wrangler dev`).
+ */
+export function checkRequest(request: RequestHeaders, expectedOrigin: string): RequestError | null {
   if (request.method !== 'POST') return 'method';
   // A browser always sends Origin on a cross-origin or same-origin POST; a missing one is not our page.
-  if (request.origin !== EXPECTED_ORIGIN) return 'origin';
+  if (request.origin !== expectedOrigin) return 'origin';
   if (request.secFetchSite !== null && request.secFetchSite !== 'same-origin') return 'origin';
   if (!isJson(request.contentType)) return 'content-type';
   if (request.contentLength !== null && /^\d+$/.test(request.contentLength.trim())) {

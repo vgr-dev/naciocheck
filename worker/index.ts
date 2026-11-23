@@ -1,8 +1,9 @@
 /**
  * The Worker behind `naciocheck.vgr.cat`. `wrangler.jsonc` runs it first only for `/api/*`; every other
- * path is served from `site/` without invoking it. The feedback endpoint arrives in a later step, so for
- * now every request it sees is unknown.
+ * path is served from `site/` without invoking it. Only `/api/feedback` exists; every other `/api/*` path
+ * is a 404.
  */
+import { errorResponse, handleFeedback } from './feedback';
 
 // Types `env` from `cloudflare:workers` and `exports.default` in the tests; the names match `wrangler.jsonc`.
 declare global {
@@ -11,6 +12,8 @@ declare global {
     interface Env {
       FEEDBACK_LIMIT: RateLimit;
       FEEDBACK_MAIL: SendEmail;
+      /** The one origin allowed to post (`wrangler dev` sets it to localhost through `.dev.vars`). */
+      FEEDBACK_ORIGIN: string;
       TURNSTILE_EXPECTED_HOSTNAME: string;
       /** Set with `wrangler secret put`; never committed. */
       TURNSTILE_SECRET: string;
@@ -24,7 +27,8 @@ declare global {
 export type Env = Cloudflare.Env;
 
 export default {
-  fetch(): Response {
-    return new Response('Not found', { status: 404 });
+  fetch(request, env): Promise<Response> | Response {
+    if (new URL(request.url).pathname === '/api/feedback') return handleFeedback(request, env);
+    return errorResponse('not-found');
   },
 } satisfies ExportedHandler<Env>;
