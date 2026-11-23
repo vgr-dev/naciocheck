@@ -145,3 +145,40 @@ docs(checklist): add Firefox share progress check
 - **Commit proposal** — `test(e2e): cover expediente sharing panel` for the Chrome test and
   `docs(checklist): add Firefox share progress check` for the checklist and spec records.
 - **Open issues** — Phase 4 visual baselines and manual Firefox release verification remain pending.
+
+## 2026-11-23 - Step 6: Rewrite the Chrome baselines and review them
+
+- **Status** — Done
+- **Run by** — implement-phase, with a builder using the orchestrator's model for visual review and CSS,
+  and the orchestrator running WebdriverIO.
+- **Changed** — `src/entrypoints/shared/share-panel.css` and four `options-several` full-page screenshots
+  under `e2e/baselines/chrome/`, desktop and phone in both languages.
+- **Visual review** — The builder reviewed all 24 Options screenshots. The initial closed share control
+  lacked a visible disclosure marker. The scoped CSS fix restored the native marker while keeping the
+  44 px minimum target. The builder reopened all four final captures and saw legible labels, consistent
+  spacing and no clipping or overlap. The matrix covers the closed disclosure. The RTL source scan passed.
+- **Verified** — `npm run test:e2e:update-baselines` regenerated the 104-image matrix with zero unexpected
+  requests. After the CSS fix, the two-application Options scenario recaptured the four affected baselines.
+  `npm run test:e2e` then passed all 4 Chrome specs and 76 tests. All 104 screenshot comparisons were within
+  tolerance, and all four network summaries reported zero requests outside the fake site. Chrome for Testing
+  was 158.0.8127.88 and the screenshot index records DejaVu Sans Book.
+- **Commit** — uncommitted, proposed `test(e2e): refresh share progress visual baselines`
+- **Open issues** — Firefox desktop and Android manual verification is pending for release.
+- **Proposed commit (builder)**
+
+```
+test(e2e): refresh share progress visual baselines
+```
+
+## 2026-11-23 - Phase 4: Visual baselines
+
+- **Status** — Done
+- **Steps** — Step 6 done. Phase 3 was already committed as `07424b5` and `c22cf6a`.
+- **File check** — Passed. Only the four expected Options images, the share panel stylesheet and these
+  workflow records changed for this phase.
+- **Phase verify** — `npm test` passed 738 unit and 31 Worker tests. `npm run lint`, `npm run format:check`,
+  `npm run typecheck`, `npm run test:e2e` and `npm run check:privacy` passed. The privacy gate confirmed the
+  existing permissions and host scope. Verification used Node 24.22.0. The repository specifies 24.22.1.
+- **Commit proposal** — `test(e2e): refresh share progress visual baselines` for the stylesheet, regenerated
+  Options images and spec records.
+- **Open issues** — All four implementation phases are complete. The Firefox checklist still records `Not run`.

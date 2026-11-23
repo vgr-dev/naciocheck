@@ -8,8 +8,8 @@ details.share-panel {
 
 details.share-panel > summary {
   min-block-size: 44px;
-  display: flex;
-  align-items: center;
+  display: list-item;
+  padding-block: 11px;
   color: var(--teal-700);
   font-weight: 600;
   cursor: pointer;

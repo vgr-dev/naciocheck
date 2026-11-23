@@ -2,7 +2,7 @@
 
 Spec: `spec.md`
 
-**Sign-off:** Approved by Victor Gonzalez on 2026-11-23 for Phases 1 through 3.
+**Sign-off:** Approved by Victor Gonzalez on 2026-11-23 for Phases 1 through 4.
 
 ## Status
 
@@ -22,12 +22,12 @@ Never [x] for partial work. Details live in progress.md. -->
 
 **Phase 3: End-to-end check and manual checklist**
 
-- [x] 4. Cover the share panel in the Chrome E2E suite `uncommitted`
-- [x] 5. Add a share row to the Firefox manual checklist `uncommitted`
+- [x] 4. Cover the share panel in the Chrome E2E suite `07424b5`
+- [x] 5. Add a share row to the Firefox manual checklist `c22cf6a`
 
 **Phase 4: Visual baselines**
 
-- [ ] 6. Rewrite the Chrome baselines and review them
+- [x] 6. Rewrite the Chrome baselines and review them `uncommitted`
 
 ## Phase 1: Summary builder and stored filing date
 
