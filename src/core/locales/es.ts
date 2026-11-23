@@ -226,6 +226,22 @@ export const es = {
   'result.disclaimer':
     'Información orientativa, no es asesoramiento jurídico. La resolución oficial llega por DEHú. NacioCheck no es una herramienta oficial del Ministerio de Justicia.',
 
+  // Share progress (Options) ----------------------------------------------------------------------------------
+  'share.summary': 'Compartir el progreso',
+  'share.intro': 'Este texto incluye únicamente fechas y estados del expediente.',
+  'share.dateLabel': 'Fecha de presentación (opcional)',
+  'share.dateHint': 'Si la guardas, sustituye la fecha del primer estado «Abierto - Registrado».',
+  'share.saveDate': 'Guardar la fecha',
+  'share.clearDate': 'Quitar la fecha',
+  'share.dateSaved': 'Fecha de presentación guardada.',
+  'share.dateCleared': 'Fecha de presentación quitada.',
+  'share.saveFailed': 'No se ha podido guardar la fecha. Inténtalo de nuevo.',
+  'share.previewLabel': 'Texto para compartir',
+  'share.copy': 'Copiar',
+  'share.copied': 'Texto copiado.',
+  'share.copyFailed': 'No se ha podido copiar: selecciona el texto y cópialo a mano.',
+  'share.nothing': 'Todavía no hay nada que compartir.',
+
   // Report a problem (result page) ----------------------------------------------------------------------------
   'report.summary': 'Informar de un problema',
   'report.intro':

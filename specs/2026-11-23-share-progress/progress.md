@@ -67,3 +67,37 @@ feat(storage): store optional filing date
 - **Commit proposal** — `feat(share): build expediente progress summary` for the formatter and its tests.
   `feat(storage): store optional filing date` for storage, validation, locales, tests and the spec records.
 - **Open issues** — Phase 2 is next. Its approval remains pending.
+
+## 2026-11-23 - Step 3: Add the share panel to each History card
+
+- **Status** — Done
+- **Run by** — implement-phase using a GPT-6 Luna builder (`gpt-6-luna`)
+- **Changed** — `src/entrypoints/shared/share-panel.ts`, `src/entrypoints/shared/share-panel.css`,
+  `src/entrypoints/options/main.ts`, `src/core/locales/es.ts`, `src/core/locales/en.ts`,
+  `tests/share-panel.test.ts`
+- **Behavior** — Options History has a closed share disclosure with an optional filing date, a read-only
+  preview, and Copy with a manual selection fallback. Newly added expedientes get the disclosure immediately.
+  History refreshes from one local store snapshot and ignores an older render when it overlaps a newer one.
+- **Verified** — `npx vitest run tests/share-panel.test.ts tests/i18n.test.ts tests/viewport.test.ts` passed
+  35 tests with local port binding. Scoped ESLint and `npm run typecheck` passed. The first scoped test run
+  exposed a test that read storage before save finished. The final run passed after waiting for the UI's
+  save confirmation.
+- **Commit** — uncommitted, proposed `feat(options): add expediente sharing panel`
+- **Open issues** — None for this step. Browser and screenshot verification remain in Phases 3 and 4.
+- **Proposed commit (builder)**
+
+```
+feat(options): add expediente sharing panel
+```
+
+## 2026-11-23 - Phase 2: Share panel in Options
+
+- **Status** — Done
+- **Steps** — Step 3 done. Phase 1 was already committed as `f80f784` and `34ae4a2`.
+- **File check** — Passed. The separate landing-page changes were excluded from the phase.
+- **Phase verify** — `npm test` passed 738 unit and 31 Worker tests. `npm run lint`, `npm run format:check`,
+  `npm run typecheck`, `npm run build:chrome`, `npm run build:firefox` and `npm run check:privacy` passed.
+  Verification used Node 24.22.0. The repository specifies 24.22.1.
+- **Commit proposal** — `feat(options): add expediente sharing panel` for the panel, Options integration,
+  locales, tests and spec records.
+- **Open issues** — Phase 3 is next. Its approval remains pending.

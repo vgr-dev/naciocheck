@@ -216,6 +216,22 @@ export const en: Record<MessageKey, string> = {
   'result.disclaimer':
     'Informational only, not legal advice. The official decision arrives through DEHú. NacioCheck is not an official Ministry of Justice tool.',
 
+  // Share progress (Options) ----------------------------------------------------------------------------------
+  'share.summary': 'Share progress',
+  'share.intro': 'This text contains only dates and application statuses.',
+  'share.dateLabel': 'Filing date (optional)',
+  'share.dateHint': 'Saving it replaces the date of the first “Abierto - Registrado” status.',
+  'share.saveDate': 'Save date',
+  'share.clearDate': 'Clear date',
+  'share.dateSaved': 'Filing date saved.',
+  'share.dateCleared': 'Filing date cleared.',
+  'share.saveFailed': 'Could not save the date. Try again.',
+  'share.previewLabel': 'Text to share',
+  'share.copy': 'Copy',
+  'share.copied': 'Text copied.',
+  'share.copyFailed': 'Could not copy: select the text and copy it by hand.',
+  'share.nothing': 'There is nothing to share yet.',
+
   // Report a problem (result page) ----------------------------------------------------------------------------
   'report.summary': 'Report a problem',
   'report.intro':

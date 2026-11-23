@@ -2,7 +2,7 @@
 
 Spec: `spec.md`
 
-**Sign-off:** Approved by Victor Gonzalez on 2026-11-23 for Phase 1.
+**Sign-off:** Approved by Victor Gonzalez on 2026-11-23 for Phases 1 and 2.
 
 ## Status
 
@@ -13,12 +13,12 @@ Never [x] for partial work. Details live in progress.md. -->
 
 **Phase 1: Summary builder and stored filing date**
 
-- [x] 1. Build the share summary from the checks `uncommitted`
-- [x] 2. Store and validate the optional filing date `uncommitted`
+- [x] 1. Build the share summary from the checks `f80f784`
+- [x] 2. Store and validate the optional filing date `34ae4a2`
 
 **Phase 2: Share panel in Options**
 
-- [ ] 3. Add the share panel to each History card
+- [x] 3. Add the share panel to each History card `uncommitted`
 
 **Phase 3: End-to-end check and manual checklist**
 

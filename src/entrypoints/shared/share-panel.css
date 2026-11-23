@@ -1,0 +1,43 @@
+/* The share disclosure follows the compact report panel, using page tokens and logical properties for RTL. */
+details.share-panel {
+  margin-block: 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+}
+
+details.share-panel > summary {
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--teal-700);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+details.share-panel > summary:focus-visible,
+details.share-panel textarea:focus-visible,
+details.share-panel input:focus-visible,
+details.share-panel button:focus-visible {
+  outline: 3px solid var(--teal-700);
+  outline-offset: 2px;
+}
+
+details.share-panel[open] > summary {
+  margin-block-end: 8px;
+}
+
+details.share-panel textarea {
+  inline-size: 100%;
+  min-block-size: 4rem;
+  padding: 7px 9px;
+  border: 1px solid var(--gray-500);
+  border-radius: 8px;
+  font: inherit;
+  white-space: pre-wrap;
+  resize: vertical;
+}
+
+details.share-panel .row {
+  margin-block-start: 10px;
+}

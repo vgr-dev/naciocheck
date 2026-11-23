@@ -14,11 +14,12 @@ import {
   deleteApplication,
   getSettings,
   listApplications,
-  listChecks,
+  readStore,
   setLanguage,
   setReminder,
 } from '../../core/storage';
 import { buildApplicationForm } from '../shared/application-form';
+import { sharePanel } from '../shared/share-panel';
 import { renderBackup, renderEncryption } from '../shared/encryption-sections';
 import { initPageLocale } from '../shared/locale';
 import { isStoreRecoveryNeeded, renderStoreRecovery } from '../shared/recovery';
@@ -50,16 +51,29 @@ async function main(): Promise<void> {
   // The encryption section is drawn after the application form but reads the store that form changes, so the
   // page draws it again after a save.
   let refreshEncryption = (): void => undefined;
+  const historyView = el('div');
+  let historyRenderId = 0;
+  const renderCurrentHistory = async (): Promise<void> => {
+    const renderId = ++historyRenderId;
+    await renderHistory(historyView, () => renderId === historyRenderId);
+  };
+  const refreshHistory = (): void => {
+    void renderCurrentHistory();
+  };
 
   await renderLanguage(view);
-  await renderApplications(view, () => refreshEncryption());
+  await renderApplications(view, () => {
+    refreshEncryption();
+    refreshHistory();
+  });
   await renderReminder(view);
   const encryption = await renderEncryption(view, () => redraw(view));
   refreshEncryption = (): void => {
     void encryption.refresh();
   };
   renderBackup(view, () => redraw(view));
-  await renderHistory(view);
+  await renderCurrentHistory();
+  view.append(historyView);
 
   view.append(el('p', 'disclaimer', t('options.disclaimer')));
 }
@@ -285,21 +299,29 @@ function applyPreset(
   for (const [day, input] of dayInputs) input.checked = config.weekdays.includes(day);
 }
 
-async function renderHistory(view: HTMLElement): Promise<void> {
-  const applications = await listApplications();
-  if (applications.length === 0) return;
+async function renderHistory(view: HTMLElement, isCurrent: () => boolean): Promise<void> {
+  const store = await readStore();
+  if (!isCurrent()) return;
+  const applications = store.applications;
+  if (applications.length === 0) {
+    view.replaceChildren();
+    return;
+  }
 
-  view.append(el('h2', 'section', t('options.history')));
+  const section = el('section');
+  section.id = 'history-section';
+
+  section.append(el('h2', 'section', t('options.history')));
   const guide = el('p', 'hint');
   guide.append(
     link(t('options.whatMeans'), () => {
       openPage('/statuses.html');
     }),
   );
-  view.append(guide);
+  section.append(guide);
 
   for (const application of applications) {
-    const checks = await listChecks(application.id);
+    const checks = store.checks.filter((check) => check.applicationId === application.id);
     const card = el('div', 'card');
     card.append(el('h3', '', application.label));
     if (application.editedAt !== undefined) {
@@ -324,8 +346,10 @@ async function renderHistory(view: HTMLElement): Promise<void> {
       }
       card.append(list);
     }
-    view.append(card);
+    card.append(sharePanel(application, checks));
+    section.append(card);
   }
+  view.replaceChildren(section);
 }
 
 async function redraw(view: HTMLElement): Promise<void> {
