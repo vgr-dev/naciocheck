@@ -317,6 +317,12 @@ ul.history {
   color: var(--gray-600);
 }
 
+/* The English gloss under a Spanish status name: a secondary line, close to its heading. */
+.card p.gloss {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+}
+
 .card .sources {
   margin: 6px 0 0;
   font-size: 0.8125rem;

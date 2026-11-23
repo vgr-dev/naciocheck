@@ -88,7 +88,11 @@ function stepsBlock(locale: 'es' | 'en'): HTMLElement {
 
 function card(entry: StatusEntry, locale: 'es' | 'en'): HTMLElement {
   const node = el('div', 'card');
-  node.append(el('h3', '', entry[locale].title));
+  // The heading is the name the sede shows, in Spanish; English readers get a gloss beneath it.
+  const heading = el('h3', '', entry.es.title);
+  if (locale === 'en') heading.lang = 'es';
+  node.append(heading);
+  if (locale === 'en') node.append(el('p', 'gloss', entry.en.title));
   node.append(el('p', '', entry[locale].explanation));
 
   if (entry.key === 'abierto-en-tramitacion') node.append(stepsBlock(locale));
