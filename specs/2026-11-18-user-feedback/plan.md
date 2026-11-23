@@ -22,13 +22,13 @@ numbers are global across phases. -->
 
 **Phase 2: Report input and panel**
 
-- [x] 5. Carry the report input in the result payload uncommitted
-- [x] 6. Build the report panel uncommitted
+- [x] 5. Carry the report input in the result payload 02efc26
+- [x] 6. Build the report panel c7ff5ac
 
 **Phase 3: Panel on the pages**
 
-- [ ] 7. Offer the panel on the result page
-- [ ] 8. Offer "this explanation looks wrong" in the guide
+- [x] 7. Offer the panel on the result page uncommitted
+- [x] 8. Offer "this explanation looks wrong" in the guide uncommitted
 
 **Phase 4: Worker harness**
 

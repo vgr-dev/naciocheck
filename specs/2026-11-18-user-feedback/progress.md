@@ -151,3 +151,46 @@ feat(ui): add the report panel with copy and continue buttons
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (28 files, 620 tests)
 - **Commit proposal:** one commit per step, one for the plan and progress updates (which also records the Phase 1 hashes)
 - **Open issues:** step 7 adds `report` to the result page's own `ResultPayload` and guard; steps 7 and 8 check `.row` / `.field` styles on their pages
+
+## 2026-11-23 - Step 7: Offer the panel on the result page
+
+- **Status:** done
+- **Changed:** `src/entrypoints/result/main.ts`, `src/entrypoints/result/style.css`
+- **Verified:** `npm run typecheck` -> clean; `npx eslint src/entrypoints/result/main.ts` -> clean
+- **Commit:** uncommitted, proposed "feat(result): offer the report panel on errors and anomalies"
+- **Open issues:**
+  - The page's `ResultPayload` gains `report` (missing read as `null`); the panel is appended after the disclaimer when `report !== null` and the view is an error or has an anomaly (Q1).
+  - Importing `reportPanel` now loads `shared/pages.css` on the result page. Four of its rules clashed with the page's (`body`, `.app`, `.disclaimer`, `button.primary`); the page's rules were made more specific (`html body`, `main.app`, `.app .disclaimer`, `.actions > button.primary`) and `--gray-500` added to `:root`.
+  - Local `browserLabel(userAgent)` (name and major version, no OS); duplicates step 8's `browserName()`, see the phase entry.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(result): offer the report panel on errors and anomalies
+```
+
+## 2026-11-23 - Step 8: Offer "this explanation looks wrong" in the guide
+
+- **Status:** done
+- **Changed:** `src/entrypoints/statuses/main.ts`
+- **Verified:** `npm run typecheck` -> clean; `npx eslint src/entrypoints/statuses/main.ts` -> clean
+- **Commit:** uncommitted, proposed "feat(statuses): offer a report panel on every guide card"
+- **Open issues:**
+  - Every card ends with a closed panel built from `buildGuideReport(entry.key, entry[locale].explanation, context)`.
+  - Local `browserName()`; duplicates step 7's helper and misses Edge on Android (`EdgA/`), see the phase entry.
+  - CSS (read only): `.card p` gives the panel's hints `margin: 0 0 6px`, and the panel is a bordered box inside the bordered card. Harmless; a tweak would go in `report-panel.css`.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(statuses): offer a report panel on every guide card
+```
+
+## 2026-11-23 - Phase 3: Panel on the pages
+
+- **Status:** done
+- **Steps:** 7 done, 8 done
+- **File check:** pass (3 changed files, each in its step's Files; plus the orchestrator's plan.md and progress.md)
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (28 files, 620 tests). Diagnostic, beyond the phase verify: `npm run build:chrome && E2E_SPEC=visual E2E_BROWSER=chrome npx wdio run e2e/wdio.conf.ts` -> 18 passing, 3 failing: the guide and the error-result captures (expected until Phase 7) and the after-all screenshot hook; every other result view matches its baseline, so loading `pages.css` on the result page changed nothing else; network guard 0 outside the fake site
+- **Commit proposal:** one commit per step, one for the plan and progress updates
+- **Open issues:** two browser-name helpers (`browserLabel` in `result/main.ts`, `browserName` in `statuses/main.ts`) that disagree on Edge for Android; proposed follow-up: move one tested helper into `src/core/report.ts` and use it in both pages
