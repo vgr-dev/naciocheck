@@ -321,15 +321,33 @@ Needs G4 (Q6 and Q7).
   UTF-8 body; build the MIME by hand, no new dependency; if the installed workers-types expose a structured
   `send({ from, to, subject, text })`, use it instead and note it in `progress.md`) → `204`. A thrown send is
   `502 upstream`. No `console.*` call receives the body or the token. Nothing is written anywhere.
+  - Local hands-on testing (added 2026-11-23): the expected origin and hostname come from the
+    environment, so `wrangler dev` with Cloudflare's test keys works on localhost.
+    - `worker/checks.ts`: `checkRequest` takes the expected origin as a parameter instead of reading
+      `EXPECTED_ORIGIN`; the constants stay as the production defaults. `tests/feedback-checks.test.ts`
+      covers a non-default origin passing and the production origin failing against it.
+    - `wrangler.jsonc`: `vars.FEEDBACK_ORIGIN = "https://naciocheck.vgr.cat"` beside
+      `TURNSTILE_EXPECTED_HOSTNAME`; `worker/index.ts` types it in `Cloudflare.Env`. The handler passes
+      `env.FEEDBACK_ORIGIN` and `env.TURNSTILE_EXPECTED_HOSTNAME` to the checks.
+    - `.dev.vars.example` (committed): Cloudflare's public always-pass test secret
+      (`1x0000000000000000000000000000000AA`), `TURNSTILE_EXPECTED_HOSTNAME=example.com` (test mode always
+      answers `example.com`) and `FEEDBACK_ORIGIN=http://localhost:8787`, each with a one-line comment that
+      it is for `wrangler dev` only. `.gitignore` gains `.dev.vars`.
+    - `package.json`: `dev:site` runs `wrangler dev` (local; `send_email` is simulated and logs instead of
+      sending). Nothing in `npm test` uses it or reaches Cloudflare.
   - `tests/worker/feedback.test.ts` (Workers runtime, offline): stub `FEEDBACK_MAIL` and `FEEDBACK_LIMIT`,
     intercept siteverify (any other outbound `fetch` fails the test). Cases from the spec: a valid post sends
     exactly one email whose body is the redacted text (a fake NIE in the input appears as `[NIE]`); missing
     token, `success: false`, `timeout-or-duplicate`, wrong hostname, siteverify outage, oversized body,
     `GET`, `text/plain`, cross-origin `Origin`, missing `Origin`, rate-limited client: each gets its code and
     sends nothing; `console` spies record nothing containing the text.
-- **Files:** `worker/index.ts`, `worker/feedback.ts`, `tests/worker/feedback.test.ts`
-- **Verify:** `npx vitest run -c vitest.worker.config.ts`; all pass offline. `npx eslint worker tests/worker`; clean.
-- **Out of scope:** `wrangler.jsonc` (step 9), the pages, deploying, any real Turnstile key.
+- **Files:** `worker/index.ts`, `worker/feedback.ts`, `tests/worker/feedback.test.ts`, `worker/checks.ts`,
+  `tests/feedback-checks.test.ts`, `wrangler.jsonc`, `.dev.vars.example`, `.gitignore`, `package.json`
+- **Verify:** `npx vitest run -c vitest.worker.config.ts`; all pass offline. `npx vitest run tests/feedback-checks.test.ts`;
+  all pass. `npx eslint worker tests/worker tests/feedback-checks.test.ts`; clean. `git check-ignore .dev.vars`;
+  prints `.dev.vars`.
+- **Out of scope:** the pages, deploying, any real Turnstile secret, running `wrangler dev` against
+  Cloudflare (a hands-on check for the user).
 
 ### 11. Add the feedback pages
 
@@ -349,15 +367,27 @@ Needs G4 (Q6 and Q7).
     disables itself, reads the Turnstile token, posts `{ text, token }` to the relative `/api/feedback`
     with `Content-Type: application/json`, and shows a message per response code from the contract (es or en
     from `document.documentElement.lang`); resets the widget after a failure. No other request.
+  - Local test key (added 2026-11-23): the widget is rendered explicitly by `feedback.js` with
+    `turnstile.render`, never implicitly, so the script URL stays exactly as step 3 allows (no `?render=`
+    query): the container has no `cf-turnstile` class and carries the real key in `data-sitekey`.
+    `feedback.js` uses that real key only when `location.hostname === 'naciocheck.vgr.cat'`, and
+    Cloudflare's always-pass test sitekey (`1x00000000000000000000AA`) on any other host. A test key in
+    production would fail closed (a production secret rejects test tokens). Handle `api.js` loading before
+    or after `feedback.js` (both are deferred, `api.js` also async); confirm the API with the
+    `turnstile-spin` skill.
   - `scripts/check-site.mjs`: `REQUIRED_PAGES` gains both pages; the success message stays accurate. Each
     feedback page carries exactly one `data-sitekey`, shaped like a production key (`0x` followed by
     letters, digits, `_` or `-`); Cloudflare's test keys (`1x…`, `2x…`, `3x…`) fail. `tests/site-gate.test.ts`
     covers a real-shaped key passing, each test-key prefix failing, and a missing or doubled key failing.
+    `feedback/feedback.js` may contain exactly one Turnstile test key, the always-pass
+    `1x00000000000000000000AA`; any other test key or a second one fails.
   - `eslint.config.js`: a block giving `site/**/*.js` browser globals (and `turnstile` as a readonly global).
   - `tests/feedback-page.test.ts` (jsdom): load each page's HTML and run `feedback.js` with a fake
     `turnstile` and a stubbed `fetch`; the fragment fills the textarea and is cleared from the address; Send
     posts the edited text and the token to `/api/feedback` once; nothing is posted without a click; each
-    error code shows its message; Copy works without a token.
+    error code shows its message; Copy works without a token; `turnstile.render` gets the real key on
+    `naciocheck.vgr.cat` and the test key on `localhost`; rendering happens once whether `turnstile`
+    exists before or after `feedback.js` runs.
 - **Files:** `site/feedback/index.html`, `site/en/feedback/index.html`, `site/feedback/feedback.js`,
   `scripts/check-site.mjs`, `tests/site-gate.test.ts`, `eslint.config.js`, `tests/feedback-page.test.ts`
 - **Verify:** `npm run check:site`; six pages, passes. `npx vitest run tests/feedback-page.test.ts`; all pass.
@@ -399,6 +429,9 @@ Needs G4 (Q6 and Q7).
   (es + en) link Cloudflare's Turnstile Privacy Addendum
   (`https://www.cloudflare.com/turnstile-privacy-policy/`, allowed there by step 3). The Firefox
   checklist gains a row: open the panel on an error, Copy, Continue opens the feedback page with the text.
+  `README.md` also gains a short "test the feedback page locally" note: copy `.dev.vars.example` to
+  `.dev.vars`, run `npm run dev:site`, open `http://localhost:8787/feedback/`; Turnstile's test keys still
+  contact Cloudflare, so this is a hands-on check, never part of `npm test`.
 - **Files:** `site/privacy/index.html`, `site/en/privacy/index.html`, `README.md`, `store/permissions.md`,
   `store/listing.es.md`, `store/listing.en.md`, `docs/manual-firefox-checklist.md`
 - **Verify:** `npm run check:site`; passes. `npx vitest run tests/licence.test.ts`; passes (licence

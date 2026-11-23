@@ -106,7 +106,9 @@ amendment to ADR 0005.
 - The Worker is tested offline only; no test sends a real email or reaches Cloudflare. Tests replace the
   `send_email` and rate-limit bindings with stubs and intercept the siteverify call, so Turnstile's test
   keys are used only for hands-on checks, never in automated tests.
-- No Turnstile secret or other credential in the repo, a fixture, a log or a test. The only email address
+- No Turnstile secret or other credential in the repo, a fixture, a log or a test. Cloudflare's published
+  Turnstile test keys are not credentials: they may appear in `.dev.vars.example` and, the always-pass
+  sitekey only, in `feedback.js` for hands-on local checks. The only email address
   in the repo is the project's public `naciocheck@vgr.cat` (F1).
 - Deploying the site, configuring Email Routing, creating the Turnstile widget and setting its secret are
   the user's actions.
