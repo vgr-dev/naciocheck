@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import type { ResultView } from '../../core/alerts';
 import { currentLocale, t } from '../../core/i18n';
-import { buildReport, type ReportCheck } from '../../core/report';
+import { browserLabel, buildReport, type ReportCheck } from '../../core/report';
 import { brandHeader } from '../shared/brand';
 import { initPageLocale } from '../shared/locale';
 import { reportPanel } from '../shared/report-panel';
@@ -166,22 +166,6 @@ function buildReportPanel(report: ReportCheck, view: ResultView): HTMLElement {
     anomaly: view.anomaly,
   });
   return reportPanel(text, locale);
-}
-
-/** The browser's name and major version from the user agent, and nothing else: no operating system (Q2). */
-function browserLabel(userAgent: string): string {
-  // Order matters: Edge and Opera also say Chrome, and Chrome also says Safari.
-  const known: ReadonlyArray<readonly [string, RegExp]> = [
-    ['Edge', /\bEdgA?\/(\d+)/],
-    ['Opera', /\bOPR\/(\d+)/],
-    ['Firefox', /\bFirefox\/(\d+)/],
-    ['Chrome', /\bChrome\/(\d+)/],
-  ];
-  for (const [name, pattern] of known) {
-    const match = pattern.exec(userAgent);
-    if (match?.[1] !== undefined) return `${name} ${match[1]}`;
-  }
-  return 'unknown';
 }
 
 function buildBanner(view: ResultView, acknowledged: boolean): HTMLElement {

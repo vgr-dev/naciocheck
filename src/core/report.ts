@@ -186,3 +186,20 @@ export function feedbackUrl(report: string, locale: ReportLocale): string {
   const path = locale === 'en' ? 'en/feedback/' : 'feedback/';
   return `${FEEDBACK_BASE}${path}#${encodeURIComponent(report)}`;
 }
+
+/** Known browsers, checked in order: Edge and Opera also say Chrome, and Chrome also says Safari. */
+const BROWSERS: readonly (readonly [string, RegExp])[] = [
+  ['Edge', /\bEdgA?\/(\d+)/],
+  ['Opera', /\bOPR\/(\d+)/],
+  ['Firefox', /\bFirefox\/(\d+)/],
+  ['Chrome', /\bChrome\/(\d+)/],
+];
+
+/** The browser's name and major version from a user agent, and nothing else: no operating system. */
+export function browserLabel(userAgent: string): string {
+  for (const [name, pattern] of BROWSERS) {
+    const major = pattern.exec(userAgent)?.[1];
+    if (major !== undefined) return `${name} ${major}`;
+  }
+  return 'unknown';
+}

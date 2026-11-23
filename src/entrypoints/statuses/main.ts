@@ -9,7 +9,7 @@ import {
   type StatusKey,
   type SubStatusEntry,
 } from '../../core/statuses';
-import { buildGuideReport, type ReportContext } from '../../core/report';
+import { browserLabel, buildGuideReport, type ReportContext } from '../../core/report';
 import { initPageLocale } from '../shared/locale';
 import { reportPanel } from '../shared/report-panel';
 import { el, root } from '../shared/ui';
@@ -89,23 +89,6 @@ function stepsBlock(locale: 'es' | 'en'): HTMLElement {
   return block;
 }
 
-/** The browser's name and major version, nothing else: no operating system, no full user agent string. */
-function browserName(): string {
-  const agent = navigator.userAgent;
-  // Order matters: Edge and Opera also say Chrome, and Chrome also says Safari.
-  const known: readonly (readonly [string, RegExp])[] = [
-    ['Edge', /Edg\/(\d+)/],
-    ['Opera', /OPR\/(\d+)/],
-    ['Firefox', /Firefox\/(\d+)/],
-    ['Chrome', /Chrome\/(\d+)/],
-  ];
-  for (const [name, pattern] of known) {
-    const major = pattern.exec(agent)?.[1];
-    if (major !== undefined) return `${name} ${major}`;
-  }
-  return 'unknown';
-}
-
 type GuideContext = Omit<ReportContext, 'errorMessages' | 'anomaly'>;
 
 function card(entry: StatusEntry, locale: 'es' | 'en', context: GuideContext): HTMLElement {
@@ -144,7 +127,7 @@ async function main(): Promise<void> {
   const locale = currentLocale().content;
   const context: GuideContext = {
     version: browser.runtime.getManifest().version,
-    browser: browserName(),
+    browser: browserLabel(navigator.userAgent),
     locale,
   };
   view.append(el('h1', 'title', t('statuses.title')));

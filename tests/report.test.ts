@@ -4,6 +4,7 @@ import {
   REPORT_LABELS,
   REPORT_MAX_CHARS,
   TRUNCATED_MARKER,
+  browserLabel,
   buildGuideReport,
   buildReport,
   feedbackUrl,
@@ -290,5 +291,60 @@ describe('feedbackUrl', () => {
     expect(fragment).not.toMatch(/[#&\s]/);
     expect(decodeURIComponent(fragment)).toBe(report);
     expect(new URL(url).host).toBe('naciocheck.vgr.cat');
+  });
+});
+
+describe('browserLabel', () => {
+  // Made-up user agents in the shape each browser sends; only the name and major version may come out.
+  const agents: readonly (readonly [string, string, string])[] = [
+    [
+      'desktop Chrome',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.1234.56 Safari/537.36',
+      'Chrome 158',
+    ],
+    [
+      'Chrome on Android',
+      'Mozilla/5.0 (Linux; Android 15; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.1111.22 Mobile Safari/537.36',
+      'Chrome 157',
+    ],
+    [
+      'desktop Edge',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36 Edg/158.0.3000.1',
+      'Edge 158',
+    ],
+    [
+      'Edge on Android',
+      'Mozilla/5.0 (Linux; Android 15; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36 EdgA/156.0.2000.9',
+      'Edge 156',
+    ],
+    [
+      'Opera',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 OPR/140.0.0.0',
+      'Opera 140',
+    ],
+    [
+      'desktop Firefox',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0',
+      'Firefox 150',
+    ],
+    [
+      'Firefox for Android',
+      'Mozilla/5.0 (Android 15; Mobile; rv:149.0) Gecko/149.0 Firefox/149.0',
+      'Firefox 149',
+    ],
+    ['an unknown agent', 'SomeBrowser/1.0 (Plan 9)', 'unknown'],
+    ['an empty agent', '', 'unknown'],
+  ];
+
+  for (const [name, agent, expected] of agents) {
+    it(`labels ${name} as ${expected}`, () => {
+      expect(browserLabel(agent)).toBe(expected);
+    });
+  }
+
+  it('never includes an operating system or platform token', () => {
+    for (const [, agent] of agents) {
+      expect(browserLabel(agent)).not.toMatch(/windows|linux|android|mac|x11|ios|win64|mobile/i);
+    }
   });
 });
