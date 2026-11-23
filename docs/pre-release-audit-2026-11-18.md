@@ -567,11 +567,9 @@ also exited 0. No local font cache, private plans, existing node_modules or gene
   No Firefox browser was driven in this audit; viewport-width emulation is not an Android device test.
 - **Official-site behavior:** No live-sede check, real applicant-data flow, or human CAPTCHA session was run.
   Current DOM, CSP and official-site behavior must be owner-checked, without automatic real-site traffic.
-- **Site analytics (added 2026-11-23):** For browser requests, Cloudflare Web Analytics injects
-  `static.cloudflareinsights.com/beacon.min.js` into every page of `naciocheck.vgr.cat`. That contradicts the
-  privacy pages ("loads nothing from elsewhere"), and `npm run check:site` cannot see it because it is added at
-  the edge. Turn it off for the hostname. Before release, this must print nothing for each page:
-  `curl -s -H 'Accept: text/html' -A 'Mozilla/5.0 Chrome/158' https://naciocheck.vgr.cat/<page> | grep cloudflareinsights`.
+- **Site analytics (added 2026-11-23, resolved the same day):** Cloudflare Web Analytics is injected at the
+  edge into every page of `naciocheck.vgr.cat`. The owner keeps it on; the privacy pages (es, en) and README
+  now disclose it and state that it applies to the website only, not the extension (ADR 0005).
 - **Visual/legal/publication acceptance:** Logo/toolbar/icon and store-image framing decisions remain the
   owner's; source/license checks are engineering evidence, not legal advice or publication approval.
 - **Detection scope:** Pattern-based scans can miss unlabeled names/identifiers; PNGs were metadata-scanned

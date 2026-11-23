@@ -56,8 +56,8 @@ only opens the website with that text in the address fragment (after the `#`), w
 server. The feedback page loads Cloudflare Turnstile; a report you send there goes through Cloudflare to the
 maintainer by email (`naciocheck@vgr.cat`) and is not stored, and the Worker keeps no logs. Your own result (the
 status text and sub-status the site printed) and your identifiers are never included, and anything shaped like
-an identifier is masked. The home and privacy pages load nothing from elsewhere; only the feedback page loads
-Turnstile.
+an identifier is masked. The website (not the extension) counts visits with Cloudflare Web Analytics, which sets
+no cookies; the feedback page also loads Turnstile.
 
 If you turn encryption on, every identity is stored encrypted, including applications added afterwards. The add and
 edit forms ask for the passphrase each time and do not keep it. To run a check, you unlock the data once; that

@@ -56,7 +56,12 @@ send from a Worker to verified addresses only. See `specs/2026-11-18-user-feedba
   plain link to Cloudflare's Turnstile privacy policy. Every other rule stays.
 - The privacy policy (es + en) and store data-usage answers state that the feedback page loads Cloudflare
   Turnstile and that a report sent from it goes through Cloudflare to the maintainer by email and is not
-  stored. The other pages keep their "loads nothing from elsewhere" statement.
+  stored.
+- Added 2026-11-23: the website (all of `naciocheck.vgr.cat`, not the extension) counts visits with
+  Cloudflare Web Analytics, which Cloudflare injects at the edge. The owner keeps it on: the site is already
+  served and protected by Cloudflare. The privacy pages disclose it and say that it applies to the website
+  only; the extension still sends nothing (ADR 0004). `npm run check:site` checks the source files, so it
+  does not see the injected beacon.
 - Worker tests run offline under `@cloudflare/vitest-plugin`, with the mail and rate-limit bindings stubbed
   and siteverify intercepted (ADR 0007: tests never reach a real host).
 - Enabling Email Routing on `vgr.cat`, verifying the address, creating the Turnstile widget, setting its
