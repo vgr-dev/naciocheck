@@ -1,5 +1,5 @@
 ---
-status: active # draft | active | done | abandoned
+status: done # draft | active | done | abandoned
 created: 2026-11-23
 status-date: 2026-11-23
 ---
@@ -57,20 +57,20 @@ Generado con naciocheck.vgr.cat
 
 ## Acceptance criteria
 
-- [ ] Repeated checks yield one line per continuous run of the same status and sub-status, dated to its first
+- [x] Repeated checks yield one line per continuous run of the same status and sub-status, dated to its first
       observation. A return to an earlier status and sub-status gets a new line. Changes in text unknown to the
       catalogue count.
-- [ ] A sub-status appearing, changing or disappearing under the same main status produces a new line. Apply
+- [x] A sub-status appearing, changing or disappearing under the same main status produces a new line. Apply
       this to `En tramitación`, other known statuses and unknown-to-the-catalogue statuses. Each line includes
       the original sub-status text when present.
-- [ ] A saved filing date changes the first observed registration line without duplicating it, including when the
+- [x] A saved filing date changes the first observed registration line without duplicating it, including when the
       current status is later. When registration was missed, saving a date adds the line even if there are no
       successful checks yet. Leaving the field blank or clearing it yields a summary of observed statuses only.
-- [ ] The filing date accepts real calendar dates up to today and no later than the earliest successful check,
+- [x] The filing date accepts real calendar dates up to today and no later than the earliest successful check,
       when one exists. It survives reopening Options and a backup round trip without changing another expediente.
-- [ ] The preview and pasted text match the requested numbering, date format, raw wording and attribution in both
+- [x] The preview and pasted text match the requested numbering, date format, raw wording and attribution in both
       UI languages. If clipboard access fails, the preview remains selectable for manual copying.
-- [ ] If there are no successful checks and no filing date, there is no summary to copy.
+- [x] If there are no successful checks and no filing date, there is no summary to copy.
 
 ## Open questions
 

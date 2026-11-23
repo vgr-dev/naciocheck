@@ -27,7 +27,7 @@ Never [x] for partial work. Details live in progress.md. -->
 
 **Phase 4: Visual baselines**
 
-- [x] 6. Rewrite the Chrome baselines and review them `uncommitted`
+- [x] 6. Rewrite the Chrome baselines and review them `43a3c42`
 
 ## Phase 1: Summary builder and stored filing date
 
