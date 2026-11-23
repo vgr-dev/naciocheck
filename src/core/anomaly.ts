@@ -1,10 +1,4 @@
-import {
-  classifyTransition,
-  resolvePathState,
-  type ResolvedPathState,
-  type ResolvedPathStateId,
-} from './paths';
-import { STATUS_CATALOG, type StatusKey } from './statuses';
+import { classifyTransition, resolvePathState, type ResolvedPathStateId } from './paths';
 import type { Check } from './storage';
 
 /**
@@ -33,18 +27,9 @@ const PARAINMIGRANTES_RETROCESO = {
 /** The states of *En tramitación*: the move that source documents is K to one of them. */
 const PROCESSING_STATES = new Set<ResolvedPathStateId>(['T1', 'T2', 'T3', 'T4', 'TE']);
 
-function statusTitle(status: StatusKey, locale: 'es' | 'en'): string {
-  return STATUS_CATALOG.find((entry) => entry.key === status)?.[locale].title ?? status;
-}
-
-/** How the page names a state: the status, plus the site's own second line when it printed one. */
-function describe(
-  state: ResolvedPathState,
-  rawSubStatus: string | null,
-  locale: 'es' | 'en',
-): string {
-  const title = statusTitle(state.status, locale);
-  return rawSubStatus === null ? title : `${title}, ${rawSubStatus}`;
+/** How the note names a state: the text the site printed, plus its own second line when it printed one. */
+function describe(check: Check): string {
+  return check.subStatus === null ? check.raw : `${check.raw} ${check.subStatus}`;
 }
 
 export function detectAnomaly(previous: Check | null, current: Check): AnomalyNote | null {
@@ -62,8 +47,8 @@ export function detectAnomaly(previous: Check | null, current: Check): AnomalyNo
 
   return {
     kind: 'unusual',
-    es: `El expediente pasa de «${describe(before, previous.subStatus, 'es')}» a «${describe(after, current.subStatus, 'es')}», un cambio que no se había observado hasta ahora. La página no explica el motivo y no significa por sí mismo que algo vaya mal.`,
-    en: `The file moves from "${describe(before, previous.subStatus, 'en')}" to "${describe(after, current.subStatus, 'en')}", a change not observed so far. The page does not explain why, and it does not by itself mean something is wrong.`,
+    es: `El expediente pasa de «${describe(previous)}» a «${describe(current)}», un cambio que no se había observado hasta ahora. La página no explica el motivo y no significa por sí mismo que algo vaya mal.`,
+    en: `The file moves from "${describe(previous)}" to "${describe(current)}", a change not observed so far. The page does not explain why, and it does not by itself mean something is wrong.`,
     source,
   };
 }

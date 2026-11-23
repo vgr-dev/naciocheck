@@ -65,8 +65,12 @@ describe('detectAnomaly', () => {
     const note = detectAnomaly(CALIFICACION, T1);
 
     expect(note?.kind).toBe('unusual');
-    expect(note?.es).toContain('Abierto - En calificación');
-    expect(note?.es).toContain('Abierto - En tramitación');
+    expect(note?.es).toContain(
+      '«Abierto - En calificación. Su expediente se encuentra en calificación.»',
+    );
+    expect(note?.es).toContain(
+      '«Abierto - En tramitación. Su expediente se encuentra en tramitación.»',
+    );
     expect(note?.source?.url).toContain('parainmigrantes.info');
   });
 
@@ -74,8 +78,12 @@ describe('detectAnomaly', () => {
     const note = detectAnomaly(T3, T1);
 
     expect(note?.kind).toBe('unusual');
-    expect(note?.es).toContain('Pendiente recepción de informes preceptivos oficiales');
-    expect(note?.es).toContain('Su expediente se encuentra en tramitación.');
+    expect(note?.es).toContain(
+      '«Abierto - En tramitación. Pendiente recepción de informes preceptivos oficiales»',
+    );
+    expect(note?.es).toContain(
+      '«Abierto - En tramitación. Su expediente se encuentra en tramitación.»',
+    );
   });
 
   it('does not cite that source for any other unusual move', () => {
@@ -89,8 +97,14 @@ describe('detectAnomaly', () => {
     const note = detectAnomaly(CALIFICACION, T4);
 
     expect(note?.en).toContain('The file moves from');
-    expect(note?.en).toContain('Open - Under assessment');
-    expect(note?.en).toContain('Open - In progress');
+    expect(note?.en).toContain(
+      '"Abierto - En calificación. Su expediente se encuentra en calificación."',
+    );
+    expect(note?.en).toContain(
+      '"Abierto - En tramitación. Su expediente se encuentra en calificación."',
+    );
+    expect(note?.en).not.toContain('Open - In progress');
+    expect(note?.en).not.toContain('Open - Under assessment');
   });
 
   it('says nothing for errors or unrecognised statuses', () => {

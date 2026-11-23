@@ -108,14 +108,14 @@ describe('notifications and the path notes', () => {
 });
 
 describe('buildResultView — status', () => {
-  it('uses the catalogue title and says it is the first check', () => {
+  it('names the status by its raw text and says it is the first check', () => {
     const view = buildResultView({
       label: 'Primera',
       change: changeOf('first', { current: PREVIOUS }),
     });
 
     expect(view.view).toBe('status');
-    expect(view.status?.title).toBe('Abierto - Registrado');
+    expect(view.status?.title).toBe('Abierto - Registrado.');
     expect(view.versionLine).toBe('Primera comprobación.');
     expect(view.previous).toBeNull();
     expect(view.explanation).toEqual(expect.any(String));
@@ -173,14 +173,14 @@ describe('buildResultView — status', () => {
     expect(view.observedMeaning).toContain('first step of the observed sequence');
   });
 
-  it('names the previous status in the language of the view', () => {
+  it('names both statuses by the site text in every language of the view', () => {
     const spanish = buildResultView({ label: 'Primera', change: changeOf('changed') });
     const english = buildResultView({ label: 'First', change: changeOf('changed'), locale: 'en' });
 
-    // Spanish keeps the text the site printed; English reads it through the catalogue, like the current status.
+    // The site's text is the status name in both languages; only the "Before:" label follows the locale.
     expect(spanish.previous?.text).toBe('Antes: Abierto - Registrado.');
-    expect(english.previous?.text).toBe('Before: Open - Registered');
-    expect(english.status?.title).toBe('Open - In progress');
+    expect(english.previous?.text).toBe('Before: Abierto - Registrado.');
+    expect(english.status?.title).toBe('Abierto - En tramitación.');
   });
 
   it('keeps the previous status as the site printed it when the catalogue does not know it', () => {

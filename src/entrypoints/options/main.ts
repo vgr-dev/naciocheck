@@ -2,7 +2,6 @@ import {
   type LanguageSetting,
   LOCALES,
   SELECTABLE_LOCALES,
-  currentLocale,
   isLanguageSetting,
   resolveLocaleCode,
   t,
@@ -10,7 +9,6 @@ import {
   weekdayNarrow,
 } from '../../core/i18n';
 import { REMINDER_PRESETS, type ReminderConfig } from '../../core/schedule';
-import { displayStatus } from '../../core/statuses';
 import {
   type Application,
   deleteApplication,
@@ -319,9 +317,7 @@ async function renderHistory(view: HTMLElement): Promise<void> {
             'li',
             '',
             `${formatDate(check.at)} · ${
-              check.outcome === 'status'
-                ? displayStatus(check.raw, currentLocale().content)
-                : t('common.errorPrefix', { text: check.raw })
+              check.outcome === 'status' ? check.raw : t('common.errorPrefix', { text: check.raw })
             }`,
           ),
         );

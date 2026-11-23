@@ -2,13 +2,7 @@ import type { AnomalyNote } from './anomaly';
 import type { Change } from './changes';
 import { translate } from './i18n';
 import { classifyTransition, resolvePathState, type ResolvedPathState } from './paths';
-import {
-  type StatusEntry,
-  type StatusSource,
-  displayStatus,
-  findStatus,
-  findSubStatus,
-} from './statuses';
+import { type StatusEntry, type StatusSource, findStatus, findSubStatus } from './statuses';
 import type { Check } from './storage';
 
 /**
@@ -56,7 +50,7 @@ export function decideAlert(change: Change, label: string, locale: Locale = 'es'
 export interface ResultView {
   view: 'status' | 'changed' | 'error';
   label: string;
-  /** The status as the page printed it, plus what the catalogue knows about it. */
+  /** The status as the page printed it (`title` and `text` are both the site's text as read), plus its tone. */
   status: {
     title: string;
     text: string;
@@ -132,7 +126,6 @@ export function buildResultView(input: {
   }
 
   const entry = findStatus(current.raw);
-  const statusTitle = entry === null ? current.raw : entry[locale].title;
   const explanation = entry === null ? null : entry[locale].explanation;
   const whatYouCanDo = entry === null ? null : entry[locale].whatYouCanDo;
 
@@ -152,7 +145,7 @@ export function buildResultView(input: {
     view: change.kind === 'changed' ? 'changed' : 'status',
     label,
     status: {
-      title: statusTitle,
+      title: current.raw,
       text: current.raw,
       subStatus: current.subStatus,
       at: current.at,
@@ -172,8 +165,7 @@ export function buildResultView(input: {
 function previousSummary(change: Change, locale: Locale): { text: string; at: string } | null {
   const previous = change.kind === 'changed' ? change.previous : null;
   if (previous === null) return null;
-  const status = displayStatus(previous.raw, locale);
-  return { text: translate(locale, 'alert.before', { status }), at: previous.at };
+  return { text: translate(locale, 'alert.before', { status: previous.raw }), at: previous.at };
 }
 
 function versionLine(change: Change, locale: Locale): string {
