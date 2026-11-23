@@ -717,6 +717,65 @@ describe('extension pages', () => {
       expect(parent).toBe('hint');
     });
 
+    it('shares the check timeline and keeps an optional filing date', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      await seedPreviousCheck(FIRST_APPLICATION.label, 'Abierto - Registrado.', null);
+      await seedPreviousCheck(
+        FIRST_APPLICATION.label,
+        'Abierto - En tramitación.',
+        'Su expediente se encuentra en tramitación.',
+      );
+
+      let page = await openExtensionContext('options.html');
+      let panel = page.$('details.share-panel');
+      await expect(panel).toBeExisting();
+      await panel.$('summary').click();
+      let preview = panel.$('textarea');
+      await expect(preview).toHaveValue(
+        /^(1\. \d{2}\/\d{2}\/\d{4} - Abierto - Registrado\.)\n(2\. \d{2}\/\d{2}\/\d{4} - Abierto - En tramitación\. Su expediente se encuentra en tramitación\.)\nGenerado con naciocheck\.vgr\.cat$/,
+      );
+      const observedSummary = await preview.getValue();
+
+      // Set the real date input in the page context. WebDriver's text typing is unreliable for native date fields.
+      await page.execute(() => {
+        const input = document.querySelector<HTMLInputElement>(
+          'details.share-panel input[type="date"]',
+        );
+        if (input === null) throw new Error('No share filing-date input');
+        input.value = '2026-01-15';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await panel.$('button=Guardar la fecha').click();
+      await expect(panel.$('p.saved')).toHaveText('Fecha de presentación guardada.');
+      await expect(preview).toHaveValue(/^1\. 15\/01\/2026 - Abierto - Registrado\./);
+
+      page = await openExtensionContext('options.html');
+      panel = page.$('details.share-panel');
+      await expect(panel).toBeExisting();
+      await panel.$('summary').click();
+      await expect(panel.$('input[type="date"]')).toHaveValue('2026-01-15');
+      preview = panel.$('textarea');
+      await expect(preview).toHaveValue(/^1\. 15\/01\/2026 - Abierto - Registrado\./);
+
+      await panel.$('button=Quitar la fecha').click();
+      await browser.waitUntil(
+        async () => {
+          const value = await panel.$('input[type="date"]').getValue();
+          const text = await panel.$('textarea').getValue();
+          return value === '' && text === observedSummary;
+        },
+        { timeoutMsg: 'Clearing the filing date did not restore the observed date' },
+      );
+
+      await setStoredLanguage('en');
+      page = await openExtensionContext('options.html');
+      panel = page.$('details.share-panel');
+      await expect(panel).toBeExisting();
+      await panel.$('summary').click();
+      await expect(panel.$('textarea')).toHaveValue(observedSummary);
+    });
+
     /** A submit button in a form stretched to the form's width while the section buttons did not: one rule, natural width. */
     it('keeps every button at its natural width, in forms too', async () => {
       const page = await openExtensionContext('options.html');
