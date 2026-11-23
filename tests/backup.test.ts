@@ -77,6 +77,27 @@ describe('export / import', () => {
     expect(imported.applications[0]?.identity.kind).toBe('encrypted');
   });
 
+  it('round-trips an optional filing date', () => {
+    const withFilingDate: Store = {
+      ...PLAIN_STORE,
+      applications: [{ ...PLAIN_STORE.applications[0]!, filingDate: '2024-02-29' }],
+    };
+
+    expect(parseBackup(exportStore(withFilingDate))).toEqual(withFilingDate);
+  });
+
+  it('keeps the current filing date when imported applications collide by id', () => {
+    const current: Store = {
+      ...PLAIN_STORE,
+      applications: [{ ...PLAIN_STORE.applications[0]!, filingDate: '2024-02-29' }],
+    };
+    const incoming: Store = {
+      ...PLAIN_STORE,
+      applications: [{ ...PLAIN_STORE.applications[0]!, filingDate: '2025-03-01' }],
+    };
+    expect(mergeStores(current, incoming).applications[0]?.filingDate).toBe('2024-02-29');
+  });
+
   it('wraps the store with a format marker and a date', () => {
     const parsed = JSON.parse(exportStore(PLAIN_STORE)) as { format: string; exportedAt: string };
 

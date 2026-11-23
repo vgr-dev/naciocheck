@@ -49,6 +49,10 @@ export const es = {
   'validation.year': 'El año son cuatro dígitos, por ejemplo 2015.',
   'validation.birthDate': 'La fecha de nacimiento va como AAAA-MM-DD.',
   'validation.birthDateFuture': 'La fecha de nacimiento no puede ser futura.',
+  'validation.filingDate': 'La fecha de presentación va como AAAA-MM-DD.',
+  'validation.filingDateFuture': 'La fecha de presentación no puede ser futura.',
+  'validation.filingDateAfterCheck':
+    'La fecha de presentación no puede ser posterior a la primera comprobación.',
 
   // Onboarding -------------------------------------------------------------------------------------------------
   'onboarding.subtitle':

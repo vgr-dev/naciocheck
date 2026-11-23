@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { t } from '../src/core/i18n';
-import { isValidIdentity, validateIdentity } from '../src/core/validation';
+import { filingDateError, isValidIdentity, validateIdentity } from '../src/core/validation';
 
 const VALID = {
   nie: 'X0000000X',
@@ -83,5 +83,25 @@ describe('validateIdentity', () => {
     expect(
       Object.keys(validateIdentity({ nie: '', numero: '', year: '', birthDate: '' })),
     ).toHaveLength(4);
+  });
+});
+
+describe('filingDateError', () => {
+  const now = new Date(2026, 5, 10, 12);
+  it('requires a real calendar date and accepts today', () => {
+    expect(filingDateError('2026-02-30', null, now)).toBe(t('validation.filingDate'));
+    expect(filingDateError('10/06/2026', null, now)).toBe(t('validation.filingDate'));
+    expect(filingDateError('2026-06-10', null, now)).toBeNull();
+    expect(filingDateError('2026-06-11', null, now)).toBe(t('validation.filingDateFuture'));
+  });
+
+  it('allows the earliest check day and rejects a later day in local time', () => {
+    const checkAt = new Date(2026, 5, 10, 1).toISOString();
+    const afterBothDates = new Date(2026, 5, 12, 12);
+    expect(filingDateError('2026-06-10', checkAt, afterBothDates)).toBeNull();
+    expect(filingDateError('2026-06-11', checkAt, afterBothDates)).toBe(
+      t('validation.filingDateAfterCheck'),
+    );
+    expect(filingDateError('2026-06-09', checkAt, afterBothDates)).toBeNull();
   });
 });

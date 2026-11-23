@@ -45,6 +45,9 @@ export const en: Record<MessageKey, string> = {
   'validation.year': 'The year is four digits, for example 2015.',
   'validation.birthDate': 'The date of birth goes as YYYY-MM-DD.',
   'validation.birthDateFuture': 'The date of birth cannot be in the future.',
+  'validation.filingDate': 'The filing date goes as YYYY-MM-DD.',
+  'validation.filingDateFuture': 'The filing date cannot be in the future.',
+  'validation.filingDateAfterCheck': 'The filing date cannot be later than the first check.',
 
   // Onboarding -------------------------------------------------------------------------------------------------
   'onboarding.subtitle':

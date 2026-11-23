@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
-import { DEFAULT_LANGUAGE, type LanguageSetting } from '../src/core/i18n';
+import { DEFAULT_LANGUAGE, t, type LanguageSetting } from '../src/core/i18n';
 import { parseCheckPage } from '../src/core/parser';
 import {
   acknowledgeCheck,
@@ -23,6 +23,8 @@ import {
   replaceStore,
   SCHEMA_VERSION,
   setLanguage,
+  setFilingDate,
+  firstStatusCheckAt,
   setReminder,
   type PlainIdentity,
   updateApplication,
@@ -93,6 +95,105 @@ describe('applications', () => {
     await deleteApplication(first);
 
     await expect(listApplications()).resolves.toMatchObject([{ id: second }]);
+  });
+});
+
+describe('filing dates', () => {
+  it('finds the earliest successful status check, ignoring other outcomes', () => {
+    const check = (outcome: 'status' | 'error', at: string) => ({ outcome, at }) as never;
+    expect(
+      firstStatusCheckAt([
+        check('error', '2020-01-01'),
+        check('status', '2021-02-03'),
+        check('status', '2021-01-02'),
+      ]),
+    ).toBe('2021-01-02');
+    expect(firstStatusCheckAt([check('error', '2020-01-01')])).toBeNull();
+  });
+  it('saves and clears an optional date without changing checks or another application', async () => {
+    const first = await addApplication({ label: 'Primera', identity: IDENTITY });
+    const second = await addApplication({ label: 'Segunda', identity: IDENTITY });
+    const check = await appendCheck({
+      applicationId: first.id,
+      outcome: 'status',
+      statusKey: 'abierto-registrado',
+      raw: 'Abierto - Registrado.',
+      subStatus: null,
+    });
+
+    await setFilingDate(first.id, '2024-02-29');
+    expect(await getApplication(first.id)).toMatchObject({ filingDate: '2024-02-29' });
+    expect(await getApplication(second.id)).toEqual(second);
+    await expect(listChecks(first.id)).resolves.toEqual([check]);
+
+    await setFilingDate(first.id, null);
+    expect(await getApplication(first.id)).toEqual(first);
+    await setFilingDate(first.id, '   ');
+    expect(await getApplication(first.id)).toEqual(first);
+  });
+
+  it('rejects invalid, future, and post-check dates while unknown applications are a no-op', async () => {
+    const application = await addApplication({ label: 'Primera', identity: IDENTITY });
+    const other = await addApplication({ label: 'Segunda', identity: IDENTITY });
+    const recordedCheck = (
+      id: string,
+      applicationId: string,
+      outcome: 'status' | 'error',
+      at: string,
+    ) => ({
+      id,
+      applicationId,
+      outcome,
+      at,
+      statusKey: 'abierto-registrado' as const,
+      raw: 'Abierto - Registrado.',
+      subStatus: null,
+      acknowledged: false,
+    });
+    await mutateStore((store) => ({
+      ...store,
+      checks: [
+        recordedCheck('error-old', application.id, 'error', '2020-01-01T10:00:00.000Z'),
+        recordedCheck('other-old', other.id, 'status', '2020-01-02T10:00:00.000Z'),
+        recordedCheck(
+          'first-success',
+          application.id,
+          'status',
+          new Date(2026, 5, 10, 12).toISOString(),
+        ),
+      ],
+    }));
+    await expect(setFilingDate(application.id, '2023-02-29')).rejects.toThrow(
+      t('validation.filingDate'),
+    );
+    await expect(setFilingDate(application.id, '2999-01-01')).rejects.toThrow(
+      t('validation.filingDateFuture'),
+    );
+    await setFilingDate(application.id, '2026-06-10');
+    await expect(setFilingDate(application.id, '2026-06-11')).rejects.toThrow(
+      t('validation.filingDateAfterCheck'),
+    );
+    await deleteApplication(application.id);
+    await expect(setFilingDate(application.id, '2024-01-01')).resolves.toBeUndefined();
+  });
+
+  it('rejects an impossible stored filing date but accepts older snapshots without one', () => {
+    const base = {
+      id: 'app-1',
+      label: 'Primera',
+      identity: IDENTITY,
+      createdAt: '2026-11-06T10:00:00.000Z',
+    };
+    expect(() =>
+      migrateStore({
+        version: 1,
+        applications: [{ ...base, filingDate: '2023-02-30' }],
+        checks: [],
+      }),
+    ).toThrow(/filingDate/i);
+    expect(migrateStore({ version: 1, applications: [base], checks: [] }).applications[0]).toEqual(
+      base,
+    );
   });
 });
 

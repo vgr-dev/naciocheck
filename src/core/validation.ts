@@ -16,12 +16,40 @@ const NUMERO = /^[A-Z]\d{1,9}$/;
 const YEAR = /^\d{4}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Today as `AAAA-MM-DD` in the reader's own time zone: the day the person filling the form is on. */
-function today(now: Date = new Date()): string {
-  const year = String(now.getFullYear()).padStart(4, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+/** Formats today or a supplied timestamp as `AAAA-MM-DD` in the reader's own time zone. */
+export function localCalendarDate(now: Date | string = new Date()): string {
+  const date = typeof now === 'string' ? new Date(now) : now;
+  const year = String(date.getFullYear()).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/** Validates a filing date against today and the first successful check's local calendar day. */
+export function filingDateError(
+  value: string,
+  earliestCheckAt: string | null,
+  now: Date = new Date(),
+): string | null {
+  const date = value.trim();
+  if (!isCalendarDate(date)) return t('validation.filingDate');
+  if (date > localCalendarDate(now)) return t('validation.filingDateFuture');
+  if (earliestCheckAt !== null && date > localCalendarDate(earliestCheckAt)) {
+    return t('validation.filingDateAfterCheck');
+  }
+  return null;
+}
+
+/** True only for a real date in the `YYYY-MM-DD` calendar-date form. */
+export function isCalendarDate(value: string): boolean {
+  if (!DATE.test(value)) return false;
+  const [year = NaN, month = NaN, day = NaN] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
 }
 
 /**
@@ -32,18 +60,10 @@ function today(now: Date = new Date()): string {
  */
 function birthDateError(value: string): string | null {
   const trimmed = value.trim();
-  if (!DATE.test(trimmed)) return t('validation.birthDate');
-
-  const [year = NaN, month = NaN, day = NaN] = trimmed.split('-').map(Number);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  const exists =
-    parsed.getUTCFullYear() === year &&
-    parsed.getUTCMonth() === month - 1 &&
-    parsed.getUTCDate() === day;
-  if (!exists) return t('validation.birthDate');
+  if (!isCalendarDate(trimmed)) return t('validation.birthDate');
 
   // `AAAA-MM-DD` sorts as text, so a plain comparison is enough.
-  return trimmed > today() ? t('validation.birthDateFuture') : null;
+  return trimmed > localCalendarDate() ? t('validation.birthDateFuture') : null;
 }
 
 export function validateIdentity(identity: Omit<PlainIdentity, 'kind'>): IdentityErrors {

@@ -3,7 +3,7 @@ import { DEFAULT_LANGUAGE, isLanguageSetting, type LanguageSetting } from './i18
 import { DEFAULT_REMINDER, isValidReminder, type ReminderConfig } from './schedule';
 import type { ResolvedStatusKey } from './statuses';
 import { isValidEncryptedPayload } from './crypto';
-import { isValidIdentity } from './validation';
+import { filingDateError, isCalendarDate, isValidIdentity } from './validation';
 
 /**
  * The local store: everything the extension knows lives in `storage.local` under a single key.
@@ -47,6 +47,8 @@ export interface Application {
    * the schema stays version 1 and an older snapshot simply has no marker (D6).
    */
   editedAt?: string;
+  /** Optional calendar date when the application was filed. */
+  filingDate?: string;
 }
 
 /** `unknown` means the page was not recognised: not a status, but not a captcha or data error either. */
@@ -173,6 +175,12 @@ function validateApplication(value: unknown, index: number): asserts value is Ap
   if (!isTimestamp(value.createdAt)) throw new Error(`${where}: createdAt is not a timestamp`);
   if (value.editedAt !== undefined && !isTimestamp(value.editedAt)) {
     throw new Error(`${where}: editedAt is not a timestamp`);
+  }
+  if (
+    value.filingDate !== undefined &&
+    (typeof value.filingDate !== 'string' || !isCalendarDate(value.filingDate))
+  ) {
+    throw new Error(`${where}: filingDate is not a real calendar date`);
   }
   validateIdentity(value.identity, where);
 }
@@ -416,6 +424,44 @@ export async function updateApplication(
     );
     return { ...store, applications };
   });
+}
+
+/** Saves or clears the filing calendar date for one application. */
+export async function setFilingDate(
+  applicationId: string,
+  filingDate: string | null,
+): Promise<void> {
+  await mutateStore((store) => {
+    const application = store.applications.find((candidate) => candidate.id === applicationId);
+    if (application === undefined) return store;
+    const date = filingDate?.trim() ?? '';
+    if (date !== '') {
+      const earliestCheckAt = firstStatusCheckAt(
+        store.checks.filter((check) => check.applicationId === applicationId),
+      );
+      const error = filingDateError(date, earliestCheckAt);
+      if (error !== null) throw new Error(error);
+    }
+    const updated = { ...application };
+    if (date === '') delete updated.filingDate;
+    else updated.filingDate = date;
+    return {
+      ...store,
+      applications: store.applications.map((candidate) =>
+        candidate.id === applicationId ? updated : candidate,
+      ),
+    };
+  });
+}
+
+/** Earliest successful status check timestamp, or null when none exists. */
+export function firstStatusCheckAt(checks: readonly Check[]): string | null {
+  return (
+    checks
+      .filter((check) => check.outcome === 'status')
+      .map((check) => check.at)
+      .sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null
+  );
 }
 
 /** Deletes the application and every check that belongs to it — no orphan history is left behind. */
