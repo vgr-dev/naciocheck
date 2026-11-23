@@ -213,6 +213,18 @@ export const en: Record<MessageKey, string> = {
   'result.disclaimer':
     'Informational only, not legal advice. The official decision arrives through DEHú. NacioCheck is not an official Ministry of Justice tool.',
 
+  // Report a problem (result page) ----------------------------------------------------------------------------
+  'report.summary': 'Report a problem',
+  'report.intro':
+    'This is the text that would be shared: the version, the browser, the language and what the page showed. Your own result, your details and your identifiers are never included. Nothing leaves your browser until you send it yourself from the website. You can review the text and add what you saw in your own words, in Catalan, Spanish or English.',
+  'report.textLabel': 'Report text (you can edit it)',
+  'report.copy': 'Copy the text',
+  'report.copied': 'Text copied.',
+  'report.copyFailed': 'Could not copy: select the text and copy it by hand.',
+  'report.continue': 'Continue on the website',
+  'report.continueHint':
+    'Opens naciocheck.vgr.cat in a new tab. The text travels in the address and is not sent until you press Send there.',
+
   // Status guide -----------------------------------------------------------------------------------------------
   'statuses.title': 'NacioCheck · What each status means',
   'statuses.whatYouCanDo': 'What you can do: {text}',
@@ -223,6 +235,7 @@ export const en: Record<MessageKey, string> = {
   'statuses.observedSteps': 'Steps observed on real files, not official:',
   'statuses.observedSource': 'Observed on real files, not official',
   'statuses.branchHint': 'A branch off the usual path: not a required step.',
+  'statuses.explanationWrong': 'Does this explanation look wrong?',
 
   // Alerts and the result model (core) -------------------------------------------------------------------------
   'alert.firstCheck': 'First check.',

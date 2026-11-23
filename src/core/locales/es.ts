@@ -222,6 +222,18 @@ export const es = {
   'result.disclaimer':
     'Información orientativa, no es asesoramiento jurídico. La resolución oficial llega por DEHú. NacioCheck no es una herramienta oficial del Ministerio de Justicia.',
 
+  // Report a problem (result page) ----------------------------------------------------------------------------
+  'report.summary': 'Informar de un problema',
+  'report.intro':
+    'Este es el texto que se compartiría: la versión, el navegador, el idioma y lo que ha mostrado la página. Tu resultado, tus datos y tus identificadores nunca se incluyen. No sale nada de tu navegador hasta que lo envíes tú desde la web. Puedes revisar el texto y añadir con tus palabras lo que viste, en catalán, español o inglés.',
+  'report.textLabel': 'Texto del informe (puedes editarlo)',
+  'report.copy': 'Copiar el texto',
+  'report.copied': 'Texto copiado.',
+  'report.copyFailed': 'No se ha podido copiar: selecciona el texto y cópialo a mano.',
+  'report.continue': 'Continuar en la web',
+  'report.continueHint':
+    'Abre naciocheck.vgr.cat en una pestaña nueva. El texto viaja en la dirección y no se envía hasta que pulses Enviar allí.',
+
   // Status guide -----------------------------------------------------------------------------------------------
   'statuses.title': 'NacioCheck · Qué significa cada estado',
   'statuses.whatYouCanDo': 'Qué puedes hacer: {text}',
@@ -232,6 +244,7 @@ export const es = {
   'statuses.observedSteps': 'Pasos observados en expedientes reales, no oficiales:',
   'statuses.observedSource': 'Observado en expedientes reales, no oficial',
   'statuses.branchHint': 'Rama del camino habitual: no es un paso obligatorio.',
+  'statuses.explanationWrong': '¿Esta explicación parece incorrecta?',
 
   // Alerts and the result model (core) -------------------------------------------------------------------------
   'alert.firstCheck': 'Primera comprobación.',
