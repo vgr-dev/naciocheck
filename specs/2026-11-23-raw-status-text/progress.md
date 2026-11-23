@@ -155,3 +155,29 @@ docs: rewrite Firefox checklist row 12 for raw status text
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (458 tests); `E2E_SPEC=check-flow npm run test:e2e` -> pass (13); `E2E_SPEC=pages npm run test:e2e` -> pass (35); network guard 0 outside the fake site in both
 - **Commit proposal:** one commit per step, one for the plan and progress updates
 - **Open issues:** the visual spec still fails on baselines until phase 4 (expected)
+
+## 2026-11-23 - Step 8: Rewrite the Chrome baselines and review them
+
+- **Status:** done
+- **Changed:** 25 files in `e2e/baselines/chrome/`: `result-changed-{en,es}-{1280x800,412x915,full1280,full412}`, `result-status-{en,es}-{1280x800,412x915}`, `popup-{one,several,changed}-en-{1280x800,380x600,412x915}`, `options-several-en-{full1280,full412}`, `statuses-guide-en-{1280x800,412x915}`; none outside the expected families
+- **Verified:** `npm run test:e2e:update-baselines` -> pass (visual 20, 0 outside the fake site); `npm run test:e2e` -> pass (13 + 35 + 2 + 20, 0 outside)
+- **Commit:** uncommitted, proposed "test(e2e): rewrite Chrome baselines for raw status names"
+- **Open issues:** /review-ui findings (nothing fixed, follow-up only):
+  - Low: wrapping of long raw names (e.g. "Abierto - En tramitación: Requerido.") is not exercised; the fixtures only use short names, which fit on one line at 380 px and 412 px. A long-name visual fixture would need a follow-up spec.
+  - Low: the English result page mixes the Spanish site name with English explanations by design; readable, no overflow.
+  - Limits: about 22 of 100 images opened (all changed families plus samples); no hover, focus, dark theme or RTL states in the matrix.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+test(e2e): rewrite Chrome baselines for raw status names
+```
+
+## 2026-11-23 - Phase 4: Visual baselines
+
+- **Status:** done
+- **Steps:** 8 done
+- **File check:** pass (25 baseline PNGs, all in step 8's Files; plus the orchestrator's plan.md)
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (458 tests); `npm run test:e2e` -> pass (4 spec files: 13, 35, 2, 20; network guard 0 outside the fake site in each); `npm run build:chrome && npm run build:firefox && npm run check:privacy` -> pass (one content-script host, canonical notices, no forbidden APIs, URLs allowed)
+- **Commit proposal:** one commit for the baselines, one for the plan and progress updates
+- **Open issues:** the two Low review findings above; Firefox checklist row 12 is Not run until the manual Firefox pass

@@ -24,12 +24,12 @@ Never [x] for partial work. Details live in progress.md. -->
 
 **Phase 3: End-to-end assertions and the manual checklist**
 
-- [x] 6. Update the E2E assertions to the raw names uncommitted
-- [x] 7. Rewrite Firefox checklist row 12 uncommitted
+- [x] 6. Update the E2E assertions to the raw names cbe42fd
+- [x] 7. Rewrite Firefox checklist row 12 889cc7b
 
 **Phase 4: Visual baselines**
 
-- [ ] 8. Rewrite the Chrome baselines and review them
+- [x] 8. Rewrite the Chrome baselines and review them uncommitted
 
 ## Phase 1: Switch every status name to the raw text
 
