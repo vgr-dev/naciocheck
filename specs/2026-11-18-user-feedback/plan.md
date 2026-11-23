@@ -29,11 +29,11 @@ numbers are global across phases. -->
 
 - [x] 7. Offer the panel on the result page d6a24bf
 - [x] 8. Offer "this explanation looks wrong" in the guide 2b1a9b1
-- [x] 8a. Share one tested browser label helper uncommitted
+- [x] 8a. Share one tested browser label helper d947750
 
 **Phase 4: Worker harness**
 
-- [ ] 9. Add the Worker, its bindings and its test harness
+- [x] 9. Add the Worker, its bindings and its test harness uncommitted
 
 **Phase 5: Endpoint and feedback pages**
 

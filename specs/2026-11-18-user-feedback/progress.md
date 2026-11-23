@@ -202,3 +202,30 @@ feat(statuses): offer a report panel on every guide card
 - **Verified:** `npx vitest run tests/report.test.ts` -> pass (53); `npm run typecheck` -> clean; `npx eslint` on the four files -> clean; `grep -rn "function browser" src/entrypoints` -> no match; `npm test` -> pass (28 files, 630 tests); `npm run lint` -> clean; `npm run format:check` -> clean
 - **Commit:** uncommitted, proposed "refactor(core): share one browser label helper across report pages"
 - **Open issues:** none. `browserLabel(userAgent)` keeps the result page's patterns (word-bounded, `EdgA/` for Edge on Android); the guide now gets Edge on Android right. Tests cover nine made-up agents (desktop and Android Chrome, Edge, Firefox, plus Opera, an unknown and an empty agent) and assert no OS or platform token in any label.
+
+## 2026-11-23 - Step 9: Add the Worker, its bindings and its test harness
+
+- **Status:** done
+- **Changed:** `package.json`, `package-lock.json`, `wrangler.jsonc`, `worker/index.ts` (new), `worker/tsconfig.json` (new), `tests/worker/tsconfig.json` (new), `tests/worker/smoke.test.ts` (new), `tsconfig.json`, `vitest.config.ts`, `vitest.worker.config.ts` (new); `eslint.config.js` not needed
+- **Verified:** `npx vitest run -c vitest.worker.config.ts` -> pass (1), also inside `unshare -rn` with loopback only, so the `send_email` and `ratelimits` bindings load offline; `npm run typecheck` -> clean (root, e2e, worker; `worker/checks.ts` included); `npx eslint worker tests/worker vitest.worker.config.ts` -> clean; `npm test`, `npm run lint`, `npm run format:check`, `npm run check:site` -> pass
+- **Commit:** uncommitted, proposed "feat(worker): add the Worker skeleton, bindings and test harness"
+- **Open issues:**
+  - Installed: `@cloudflare/vitest-plugin` 1.9.0 (`^1.9.0`), `@cloudflare/workers-types` 5.20261123.1 (`^5.20261123.1`). The plugin brings `miniflare@5.20261119.0-beta` and `workerd@1.20261119.1` beside wrangler's own copies; `npm audit` 0 vulnerabilities; npm warns that 5 packages (edgedriver, esbuild, geckodriver, workerd twice) have install scripts outside `allowScripts`.
+  - `wrangler.jsonc`: `main`, `run_worker_first: ["/api/*"]`, `observability.enabled: false`, `FEEDBACK_LIMIT` (namespace `1001`, 2 per 60 s), `FEEDBACK_MAIL` (`destination_address` naciocheck@vgr.cat), `vars.TURNSTILE_EXPECTED_HOSTNAME`; no secret, no other address, no `remote: true`.
+  - `worker/index.ts` augments `Cloudflare.Env` and `GlobalProps.mainModule` (one `eslint-disable-next-line @typescript-eslint/no-namespace` with its reason); the test config passes a dummy `TURNSTILE_SECRET` (`test-only-not-a-real-secret`).
+  - For step 10: the plugin has no outbound fetch mock in this version, so siteverify is stubbed with `vi.spyOn(globalThis, 'fetch')`; workers-types exposes a structured `send(EmailMessageBuilder)` overload besides `send(EmailMessage)`, shape not yet checked.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(worker): add the Worker skeleton, bindings and test harness
+```
+
+## 2026-11-23 - Phase 4: Worker harness
+
+- **Status:** done
+- **Steps:** 9 done
+- **File check:** pass (10 changed or new files, each in step 9's Files; plus the orchestrator's plan.md and progress.md)
+- **Phase verify:** `npm ci && npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site` -> pass (extension 28 files, 630 tests; worker 1 file, 1 test; check:site 4 pages)
+- **Commit proposal:** one commit for step 9, one for the plan and progress updates
+- **Open issues:** before Phase 5, the Turnstile sitekey (Q7) is still needed for step 11; step 10 stubs siteverify through `globalThis.fetch` and checks the structured `send` overload
