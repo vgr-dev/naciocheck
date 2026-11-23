@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NacioCheck: el teu expedient de nacionalitat, al dia</title>
+    <meta
+      name="description"
+      content="Extensió per a Chrome i Firefox que comprova l'estat de la teva sol·licitud de nacionalitat espanyola per residència: omple el formulari, tu resols el captcha i t'avisa si l'estat canvia. Gratuïta i sense comptes."
+    />
+    <!-- @head -->
+    <!-- @style landing -->
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Salta al contingut</a>
+    <!-- @header -->
+    <main id="main" class="landing">
+      <section id="hero" class="hero" aria-labelledby="hero-title">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <h1 id="hero-title" class="hero-title">
+              <picture>
+                <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
+                <img src="/img/logo-light.svg" alt="NacioCheck" width="520" height="128" />
+              </picture>
+            </h1>
+            <p class="hero-tagline">El teu expedient de nacionalitat, al dia.</p>
+            <p class="hero-value">
+              Una extensió per a Chrome i Firefox que consulta l'estat de la teva sol·licitud de
+              nacionalitat espanyola per residència: omple el formulari oficial per tu, et deixa
+              només el captcha i t'avisa tan bon punt l'estat canvia.
+            </p>
+            <!-- @install -->
+            <ul class="hero-facts">
+              <li>Gratuïta</li>
+              <li>Sense comptes</li>
+              <li>Les teves dades es queden al navegador</li>
+              <li>Projecte independent, no oficial</li>
+            </ul>
+          </div>
+          <div class="hero-art">
+            <div class="hero-badge">
+              <img src="/img/icon-animated.svg" alt="" width="128" height="128" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="section" aria-labelledby="how-title">
+        <div class="wrap">
+          <p class="eyebrow">Com funciona</p>
+          <h2 id="how-title">Avís, captcha i resultat</h2>
+          <p class="section-intro">
+            Consultar l'estat deixa de ser un tràmit: deses les teves dades una vegada i cada
+            comprovació es redueix a tres passos.
+          </p>
+          <ol class="steps">
+            <li class="step">
+              <div class="step-text">
+                <h3>T'ho recorda</h3>
+                <p>
+                  Desa una sol·licitud o més i tria un recordatori: els dies i l'hora en què vols
+                  comprovar-ho. Quan arriba, un avís del navegador t'ho diu.
+                </p>
+              </div>
+              <figure class="shot">
+                <img
+                  src="/img/screens/es/options-several-1280.webp"
+                  srcset="
+                    /img/screens/es/options-several-640.webp   640w,
+                    /img/screens/es/options-several-1280.webp 1280w
+                  "
+                  sizes="(min-width: 52rem) 40rem, 100vw"
+                  width="1280"
+                  height="800"
+                  decoding="async"
+                  alt="Les opcions de NacioCheck, en castellà, amb dues sol·licituds desades, «Solicitud uno» i «Solicitud dos», i el formulari per afegir-ne una altra."
+                />
+                <figcaption>
+                  L'extensió encara no està en català: les captures són en castellà.
+                </figcaption>
+              </figure>
+            </li>
+            <li class="step">
+              <div class="step-text">
+                <h3>Tu resols el captcha</h3>
+                <p>
+                  NacioCheck obre la consulta oficial i omple el formulari amb les teves dades. A la
+                  pantalla només queda el captcha: el resols tu, com demana el web, i la consulta
+                  s'envia en aquell moment.
+                </p>
+              </div>
+              <div class="callout">
+                <p>
+                  NacioCheck mai no resol, salta ni envia el captcha enlloc. Sempre el resol una
+                  persona: tu.
+                </p>
+              </div>
+            </li>
+            <li class="step">
+              <div class="step-text">
+                <h3>Veus el resultat</h3>
+                <p>
+                  L'estat que mostra la seu es desa al teu historial. Si ha canviat des de l'última
+                  vegada, NacioCheck t'ho diu ben clar i t'explica què sol voler dir.
+                </p>
+              </div>
+              <figure class="shot">
+                <img
+                  src="/img/screens/es/result-changed-1280.webp"
+                  srcset="
+                    /img/screens/es/result-changed-640.webp   640w,
+                    /img/screens/es/result-changed-1280.webp 1280w
+                  "
+                  sizes="(min-width: 52rem) 40rem, 100vw"
+                  width="1280"
+                  height="800"
+                  decoding="async"
+                  alt="L'avís «El estado ha cambiado» de NacioCheck, en castellà: la sol·licitud passa d'«Abierto - Registrado» a «Abierto - En tramitación», amb una explicació de l'estat."
+                />
+              </figure>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="statuses" class="section section-band" aria-labelledby="statuses-title">
+        <div class="wrap">
+          <p class="eyebrow">Què vol dir cada estat</p>
+          <h2 id="statuses-title">El camí habitual d'un expedient</h2>
+          <p class="status-note">
+            <strong>Orientatiu, no oficial.</strong> Aquestes explicacions resumeixen el que s'ha
+            vist en expedients reals i en fonts públiques. No són assessorament jurídic ni
+            substitueixen la notificació oficial, que arriba per DEHú.
+          </p>
+          <div class="status-grid">
+            <ol class="timeline">
+              <li data-state="R">
+                <span class="state-name" lang="es">Abierto - Registrado</span>
+                <span class="state-text">
+                  La sol·licitud ha entrat i està registrada: aquí comença la tramitació.
+                </span>
+              </li>
+              <li data-state="T1">
+                <span class="state-name" lang="es">Abierto - En tramitación</span>
+                <span class="state-sub" lang="es">Su expediente se encuentra en tramitación</span>
+                <span class="state-text">
+                  Tramitació en curs, abans que es demanin els informes preceptius.
+                </span>
+              </li>
+              <li data-state="T2">
+                <span class="state-name" lang="es">Abierto - En tramitación</span>
+                <span class="state-sub" lang="es"
+                  >Pendiente solicitud informes preceptivos oficiales</span
+                >
+                <span class="state-text">
+                  Els informes preceptius s'han demanat i l'expedient espera que arribin.
+                </span>
+              </li>
+              <li data-state="T3">
+                <span class="state-name" lang="es">Abierto - En tramitación</span>
+                <span class="state-sub" lang="es"
+                  >Pendiente recepción de informes preceptivos oficiales</span
+                >
+                <span class="state-text">
+                  Els informes estan pendents de rebre's: el pas següent a demanar-los.
+                </span>
+              </li>
+              <li data-state="T4">
+                <span class="state-name" lang="es">Abierto - En tramitación</span>
+                <span class="state-sub" lang="es">Su expediente se encuentra en calificación</span>
+                <span class="state-text">
+                  En els expedients observats, la resolució sol arribar en dies o setmanes des
+                  d'aquí.
+                </span>
+              </li>
+              <li data-state="C">
+                <span class="state-name" lang="es">Concedido - Enviada notificación</span>
+                <span class="state-text">
+                  Concedida: la resolució és favorable i la notificació s'ha enviat per DEHú.
+                </span>
+              </li>
+              <li data-state="F">
+                <span class="state-name" lang="es">Finalizado - Concedido, notificado</span>
+                <span class="state-text">
+                  Concessió notificada. El que queda (inscripció, jurament o promesa) es fa al
+                  Registre Civil.
+                </span>
+              </li>
+            </ol>
+            <figure class="shot">
+              <img
+                src="/img/screens/es/statuses-guide-1280.webp"
+                srcset="
+                  /img/screens/es/statuses-guide-640.webp   640w,
+                  /img/screens/es/statuses-guide-1280.webp 1280w
+                "
+                sizes="(min-width: 60rem) 34rem, 100vw"
+                width="1280"
+                height="800"
+                decoding="async"
+                alt="La guia d'estats de NacioCheck, en castellà: cada estat del camí habitual amb la seva explicació i les seves fonts."
+              />
+              <figcaption>
+                L'extensió inclou la guia completa: també els requeriments, la qualificació i les
+                altres desviacions, cadascuna amb les seves fonts.
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy" class="section" aria-labelledby="privacy-title">
+        <div class="wrap">
+          <p class="eyebrow">Privadesa</p>
+          <h2 id="privacy-title">Les teves dades són teves</h2>
+          <p class="section-intro">
+            El teu NIE, el teu número d'expedient i la teva data de naixement no han de sortir del
+            teu ordinador o del teu mòbil. NacioCheck està fet perquè no en surtin.
+          </p>
+          <ul class="promises">
+            <li class="promise">
+              <h3>Res no surt del navegador</h3>
+              <p>
+                Les teves dades i el teu historial només es desen a l'extensió. No hi ha comptes ni
+                servidors propis: l'única petició és la consulta que tu envies a la seu oficial.
+              </p>
+            </li>
+            <li class="promise">
+              <h3>Xifratge, si el vols</h3>
+              <p>
+                Pots xifrar les teves dades amb una contrasenya que només coneixes tu. També les
+                pots exportar a un fitxer o esborrar-ho tot quan vulguis.
+              </p>
+            </li>
+            <li class="promise">
+              <h3>Sense rastreig</h3>
+              <p>
+                L'extensió no té analítica, ni publicitat, ni telemetria. No sabem qui la fa servir
+                ni què consulta.
+              </p>
+            </li>
+            <li class="promise">
+              <h3>Codi obert</h3>
+              <p>
+                NacioCheck és programari lliure amb llicència GPL-3.0: tothom pot llegir què fa i
+                com ho fa.
+              </p>
+              <!-- @if repository -->
+              <p><a href="https://github.com/vgr-dev/naciocheck">Veure el codi a GitHub</a></p>
+              <!-- @endif -->
+            </li>
+          </ul>
+          <p class="section-more">
+            <a href="/ca/privacy/">Llegeix la política de privadesa completa</a>
+          </p>
+        </div>
+      </section>
+
+      <section id="faq" class="section section-band" aria-labelledby="faq-title">
+        <div class="wrap">
+          <p class="eyebrow">Preguntes freqüents</p>
+          <h2 id="faq-title">El que més es pregunta</h2>
+          <div class="faq">
+            <details>
+              <summary>És una eina oficial?</summary>
+              <p>
+                No. NacioCheck és un projecte personal i independent, sense cap vincle amb el
+                Ministerio de Justicia ni amb cap organisme públic. Fa servir la consulta oficial de
+                la seu electrònica tal com és, i les explicacions dels estats són orientatives.
+              </p>
+            </details>
+            <details>
+              <summary>Resol el captcha per mi?</summary>
+              <p>
+                No. El captcha el resols tu, sempre. NacioCheck omple el formulari i espera; no el
+                salta, no el resol i no l'envia a cap servei.
+              </p>
+            </details>
+            <details>
+              <summary>On es desen les meves dades?</summary>
+              <p>
+                Només al teu navegador, a l'emmagatzematge local de l'extensió. Les pots xifrar amb
+                una contrasenya, exportar a un fitxer o esborrar des de les Opcions. No se'ns envia
+                res.
+              </p>
+            </details>
+            <details>
+              <summary>És gratuïta?</summary>
+              <p>
+                Sí. Totes les funcions actuals són gratuïtes i ho continuaran sent. Sense anuncis i
+                sense comptes.
+              </p>
+            </details>
+            <details>
+              <summary>En quins navegadors funciona?</summary>
+              <p>
+                A Chrome i a Firefox, a l'ordinador. Firefox per a Android és un objectiu que encara
+                no s'ha provat en cap dispositiu. Els enllaços per instal·lar-la apareixeran a dalt
+                tan bon punt les botigues la publiquin.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section id="agencies" class="agency" aria-labelledby="agencies-title">
+        <div class="agency-art" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="wrap">
+          <div class="agency-copy">
+            <h2 id="agencies-title">Sou una gestoria o un despatx?</h2>
+            <p>
+              NacioCheck és gratuït per a tothom. Si necessiteu més, com ara el seguiment de molts
+              expedients o eines pròpies per al vostre equip, parlem-ne.
+            </p>
+            <p>Sempre amb la mateixa regla: el captcha el resol una persona.</p>
+            <a class="button" href="https://vgr.cat/ca/">Parlem-ne a vgr.cat</a>
+          </div>
+        </div>
+      </section>
+    </main>
+    <!-- @footer -->
+  </body>
+</html>

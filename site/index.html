@@ -3,88 +3,319 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>NacioCheck</title>
+    <title>NacioCheck: tu expediente de nacionalidad, al día</title>
     <meta
       name="description"
-      content="NacioCheck: el estado de tu solicitud de nacionalidad, en tu navegador."
+      content="Extensión para Chrome y Firefox que comprueba el estado de tu solicitud de nacionalidad española por residencia: rellena el formulario, tú resuelves el captcha y te avisa si el estado cambia. Gratis y sin cuentas."
     />
-    <style>
-      :root {
-        color-scheme: light;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        display: flex;
-        min-height: 100vh;
-        margin: 0;
-        padding: 2.5rem 1.25rem;
-        align-items: center;
-        justify-content: center;
-        font:
-          400 17px/1.6 system-ui,
-          -apple-system,
-          'Segoe UI',
-          sans-serif;
-        color: #0f172a;
-        background: #f8fafc;
-      }
-      main {
-        max-width: 38rem;
-      }
-      h1 {
-        margin: 0 0 0.25rem;
-        font-size: 2.2rem;
-        color: #0f766e;
-      }
-      .tagline {
-        margin: 0 0 1.5rem;
-        font-size: 1.1rem;
-        color: #4b5563;
-      }
-      p {
-        margin: 0.75rem 0;
-      }
-      nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-        margin: 1.5rem 0;
-      }
-      a {
-        color: #0d9488;
-        font-weight: 500;
-      }
-      footer {
-        margin-top: 2.5rem;
-        padding-top: 1rem;
-        font-size: 0.9rem;
-        color: #4b5563;
-        border-top: 1px solid #e2e8f0;
-      }
-    </style>
+    <!-- @head -->
+    <!-- @style landing -->
   </head>
   <body>
-    <main>
-      <h1>NacioCheck</h1>
-      <p class="tagline">Tu expediente de nacionalidad, al día.</p>
-      <p>
-        NacioCheck es una extensión para Chrome y Firefox que comprueba el estado de tu solicitud de
-        nacionalidad española por residencia: rellena el formulario oficial por ti, te deja solo el
-        captcha y guarda cada comprobación en tu navegador.
-      </p>
-      <nav>
-        <a href="/privacy/">Política de privacidad</a>
-        <a href="/en/">English</a>
-        <a href="/en/privacy/">Privacy policy</a>
-      </nav>
-      <footer>
-        <p>
-          NacioCheck es un proyecto personal e independiente. No está afiliada al Ministerio de
-          Justicia ni a ningún organismo público.
-        </p>
-      </footer>
+    <a class="skip-link" href="#main">Saltar al contenido</a>
+    <!-- @header -->
+    <main id="main" class="landing">
+      <section id="hero" class="hero" aria-labelledby="hero-title">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <h1 id="hero-title" class="hero-title">
+              <picture>
+                <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
+                <img src="/img/logo-light.svg" alt="NacioCheck" width="520" height="128" />
+              </picture>
+            </h1>
+            <p class="hero-tagline">Tu expediente de nacionalidad, al día.</p>
+            <p class="hero-value">
+              Una extensión para Chrome y Firefox que consulta el estado de tu solicitud de
+              nacionalidad española por residencia: rellena el formulario oficial por ti, te deja
+              solo el captcha y te avisa en cuanto el estado cambia.
+            </p>
+            <!-- @install -->
+            <ul class="hero-facts">
+              <li>Gratis</li>
+              <li>Sin cuentas</li>
+              <li>Tus datos se quedan en tu navegador</li>
+              <li>Proyecto independiente, no oficial</li>
+            </ul>
+          </div>
+          <div class="hero-art">
+            <div class="hero-badge">
+              <img src="/img/icon-animated.svg" alt="" width="128" height="128" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="section" aria-labelledby="how-title">
+        <div class="wrap">
+          <p class="eyebrow">Cómo funciona</p>
+          <h2 id="how-title">Aviso, captcha y resultado</h2>
+          <p class="section-intro">
+            Consultar el estado deja de ser un trámite: guardas tus datos una vez y cada
+            comprobación se reduce a tres pasos.
+          </p>
+          <ol class="steps">
+            <li class="step">
+              <div class="step-text">
+                <h3>Te lo recuerda</h3>
+                <p>
+                  Guarda una o varias solicitudes y elige un recordatorio: el día y la hora en que
+                  quieres comprobar. Cuando llega, un aviso del navegador te lo dice.
+                </p>
+              </div>
+              <figure class="shot">
+                <img
+                  src="/img/screens/es/options-several-1280.webp"
+                  srcset="
+                    /img/screens/es/options-several-640.webp   640w,
+                    /img/screens/es/options-several-1280.webp 1280w
+                  "
+                  sizes="(min-width: 52rem) 40rem, 100vw"
+                  width="1280"
+                  height="800"
+                  decoding="async"
+                  alt="Las opciones de NacioCheck con dos solicitudes guardadas, «Solicitud uno» y «Solicitud dos», y el formulario para añadir otra."
+                />
+              </figure>
+            </li>
+            <li class="step">
+              <div class="step-text">
+                <h3>Tú resuelves el captcha</h3>
+                <p>
+                  NacioCheck abre la consulta oficial y rellena el formulario con tus datos. En la
+                  pantalla queda solo el captcha: lo resuelves tú, como pide la web, y la consulta
+                  se envía en ese momento.
+                </p>
+              </div>
+              <div class="callout">
+                <p>
+                  NacioCheck nunca resuelve, salta ni envía el captcha a nadie. Siempre lo resuelve
+                  una persona: tú.
+                </p>
+              </div>
+            </li>
+            <li class="step">
+              <div class="step-text">
+                <h3>Ves el resultado</h3>
+                <p>
+                  El estado que muestra la sede se guarda en tu historial. Si ha cambiado desde la
+                  última vez, NacioCheck te lo dice bien claro y te explica qué suele significar.
+                </p>
+              </div>
+              <figure class="shot">
+                <img
+                  src="/img/screens/es/result-changed-1280.webp"
+                  srcset="
+                    /img/screens/es/result-changed-640.webp   640w,
+                    /img/screens/es/result-changed-1280.webp 1280w
+                  "
+                  sizes="(min-width: 52rem) 40rem, 100vw"
+                  width="1280"
+                  height="800"
+                  decoding="async"
+                  alt="El aviso «El estado ha cambiado» de NacioCheck: la solicitud pasa de «Abierto - Registrado» a «Abierto - En tramitación», con una explicación del estado."
+                />
+              </figure>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="statuses" class="section section-band" aria-labelledby="statuses-title">
+        <div class="wrap">
+          <p class="eyebrow">Qué significa cada estado</p>
+          <h2 id="statuses-title">El camino habitual de un expediente</h2>
+          <p class="status-note">
+            <strong>Orientativo, no oficial.</strong> Estas explicaciones resumen lo observado en
+            expedientes reales y en fuentes públicas. No son asesoramiento jurídico ni sustituyen a
+            la notificación oficial, que llega por DEHú.
+          </p>
+          <div class="status-grid">
+            <ol class="timeline">
+              <li data-state="R">
+                <span class="state-name">Abierto - Registrado</span>
+                <span class="state-text">
+                  La solicitud ha entrado y está registrada: aquí empieza la tramitación.
+                </span>
+              </li>
+              <li data-state="T1">
+                <span class="state-name">Abierto - En tramitación</span>
+                <span class="state-sub">Su expediente se encuentra en tramitación</span>
+                <span class="state-text">
+                  Tramitación en curso, antes de que se pidan los informes preceptivos.
+                </span>
+              </li>
+              <li data-state="T2">
+                <span class="state-name">Abierto - En tramitación</span>
+                <span class="state-sub">Pendiente solicitud informes preceptivos oficiales</span>
+                <span class="state-text">
+                  Los informes preceptivos están pedidos y el expediente espera que lleguen.
+                </span>
+              </li>
+              <li data-state="T3">
+                <span class="state-name">Abierto - En tramitación</span>
+                <span class="state-sub">Pendiente recepción de informes preceptivos oficiales</span>
+                <span class="state-text">
+                  Los informes están pendientes de recibirse: el paso siguiente a pedirlos.
+                </span>
+              </li>
+              <li data-state="T4">
+                <span class="state-name">Abierto - En tramitación</span>
+                <span class="state-sub">Su expediente se encuentra en calificación</span>
+                <span class="state-text">
+                  En los expedientes observados, la resolución suele llegar en días o semanas desde
+                  aquí.
+                </span>
+              </li>
+              <li data-state="C">
+                <span class="state-name">Concedido - Enviada notificación</span>
+                <span class="state-text">
+                  La resolución es favorable y la notificación se ha enviado; llega por DEHú.
+                </span>
+              </li>
+              <li data-state="F">
+                <span class="state-name">Finalizado - Concedido, notificado</span>
+                <span class="state-text">
+                  Concesión notificada. Lo que queda (inscripción, jura o promesa) se hace en el
+                  Registro Civil.
+                </span>
+              </li>
+            </ol>
+            <figure class="shot">
+              <img
+                src="/img/screens/es/statuses-guide-1280.webp"
+                srcset="
+                  /img/screens/es/statuses-guide-640.webp   640w,
+                  /img/screens/es/statuses-guide-1280.webp 1280w
+                "
+                sizes="(min-width: 60rem) 34rem, 100vw"
+                width="1280"
+                height="800"
+                decoding="async"
+                alt="La guía de estados de NacioCheck: cada estado del camino habitual con su explicación y sus fuentes."
+              />
+              <figcaption>
+                La extensión incluye la guía completa: también los requerimientos, la calificación y
+                los demás desvíos, cada uno con sus fuentes.
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy" class="section" aria-labelledby="privacy-title">
+        <div class="wrap">
+          <p class="eyebrow">Privacidad</p>
+          <h2 id="privacy-title">Tus datos son tuyos</h2>
+          <p class="section-intro">
+            Tu NIE, tu número de expediente y tu fecha de nacimiento no tienen por qué salir de tu
+            ordenador o tu móvil. NacioCheck está hecho para que no lo hagan.
+          </p>
+          <ul class="promises">
+            <li class="promise">
+              <h3>Nada sale de tu navegador</h3>
+              <p>
+                Tus datos y tu historial se guardan solo en la extensión. No hay cuentas ni
+                servidores propios: la única petición es la consulta que tú envías a la sede
+                oficial.
+              </p>
+            </li>
+            <li class="promise">
+              <h3>Cifrado, si lo quieres</h3>
+              <p>
+                Puedes cifrar tus datos con una contraseña que solo tú conoces. También puedes
+                exportarlos a un archivo o borrarlo todo cuando quieras.
+              </p>
+            </li>
+            <li class="promise">
+              <h3>Sin rastreo</h3>
+              <p>
+                La extensión no tiene analítica, ni publicidad, ni telemetría. No sabemos quién la
+                usa ni qué consulta.
+              </p>
+            </li>
+            <li class="promise">
+              <h3>Código abierto</h3>
+              <p>
+                NacioCheck es software libre con licencia GPL-3.0: cualquiera puede leer qué hace y
+                cómo lo hace.
+              </p>
+              <!-- @if repository -->
+              <p><a href="https://github.com/vgr-dev/naciocheck">Ver el código en GitHub</a></p>
+              <!-- @endif -->
+            </li>
+          </ul>
+          <p class="section-more">
+            <a href="/privacy/">Lee la política de privacidad completa</a>
+          </p>
+        </div>
+      </section>
+
+      <section id="faq" class="section section-band" aria-labelledby="faq-title">
+        <div class="wrap">
+          <p class="eyebrow">Preguntas frecuentes</p>
+          <h2 id="faq-title">Lo que más se pregunta</h2>
+          <div class="faq">
+            <details>
+              <summary>¿Es una herramienta oficial?</summary>
+              <p>
+                No. NacioCheck es un proyecto personal e independiente, sin ninguna relación con el
+                Ministerio de Justicia ni con ningún organismo público. Usa la consulta oficial de
+                la sede electrónica tal como es, y las explicaciones de los estados son
+                orientativas.
+              </p>
+            </details>
+            <details>
+              <summary>¿Resuelve el captcha por mí?</summary>
+              <p>
+                No. El captcha lo resuelves tú, siempre. NacioCheck rellena el formulario y espera;
+                no lo salta, no lo resuelve y no lo envía a ningún servicio.
+              </p>
+            </details>
+            <details>
+              <summary>¿Dónde se guardan mis datos?</summary>
+              <p>
+                Solo en tu navegador, en el almacenamiento local de la extensión. Puedes cifrarlos
+                con una contraseña, exportarlos a un archivo o borrarlos desde Opciones. Nada se
+                envía a nosotros.
+              </p>
+            </details>
+            <details>
+              <summary>¿Es gratis?</summary>
+              <p>
+                Sí. Todas las funciones actuales son gratuitas y lo seguirán siendo. Sin anuncios y
+                sin cuentas.
+              </p>
+            </details>
+            <details>
+              <summary>¿En qué navegadores funciona?</summary>
+              <p>
+                En Chrome y en Firefox, en el ordenador. Firefox para Android es un objetivo que aún
+                no se ha probado en un dispositivo. Los enlaces para instalarla aparecerán arriba en
+                cuanto las tiendas la publiquen.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section id="agencies" class="agency" aria-labelledby="agencies-title">
+        <div class="agency-art" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="wrap">
+          <div class="agency-copy">
+            <h2 id="agencies-title">¿Sois una gestoría o un despacho?</h2>
+            <p>
+              NacioCheck es gratis para todos. Si necesitáis más, como el seguimiento de muchos
+              expedientes o herramientas propias para vuestro equipo, hablemos.
+            </p>
+            <p>Siempre con la misma regla: el captcha lo resuelve una persona.</p>
+            <a class="button" href="https://vgr.cat/es/">Hablemos en vgr.cat</a>
+          </div>
+        </div>
+      </section>
     </main>
+    <!-- @footer -->
   </body>
 </html>

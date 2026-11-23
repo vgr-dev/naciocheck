@@ -1,0 +1,619 @@
+/*
+ * NacioCheck site: the landing page only (the `@style landing` marker inlines it after base.css).
+ *
+ * Colours come only from the base.css tokens, so both themes and their contrast checks carry over. The pairs
+ * this file adds (text on `--accent-soft`, a button on `--accent-soft`) are checked in
+ * `tests/site-landing.test.ts`. Motion runs only under `prefers-reduced-motion: no-preference`.
+ */
+
+.landing {
+  display: block;
+}
+
+.wrap {
+  inline-size: 100%;
+  max-inline-size: calc(var(--page-max) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.section {
+  padding-block: clamp(3rem, 7vw, 5.5rem);
+}
+
+.section + .section {
+  border-block-start: 1px solid var(--border);
+}
+
+.section-band {
+  background: var(--band);
+}
+
+.section h2 {
+  margin-block: 0 0.75rem;
+  font-size: clamp(1.5rem, 1.2rem + 1.1vw, 2rem);
+}
+
+.section-intro {
+  max-inline-size: var(--measure);
+  margin-block: 0 2.25rem;
+  font-size: 1.0625rem;
+  color: var(--muted);
+}
+
+.eyebrow {
+  margin-block: 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* 1. Hero: the copy beside the animated icon, the icon above the copy on a phone. */
+
+.hero {
+  padding-block: clamp(2.5rem, 6vw, 5rem) clamp(3rem, 7vw, 5.5rem);
+  background: linear-gradient(180deg, var(--band), var(--bg));
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 2rem;
+}
+
+.hero-copy {
+  max-inline-size: 38rem;
+}
+
+.hero-title {
+  margin: 0 0 1rem;
+  line-height: 0;
+}
+
+.hero-title img {
+  display: block;
+  inline-size: min(100%, 22rem);
+  block-size: auto;
+}
+
+.hero-tagline {
+  margin-block: 0 1rem;
+  font-size: clamp(1.4rem, 1.1rem + 1.2vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--heading);
+  text-wrap: balance;
+}
+
+.hero-value {
+  margin-block: 0;
+  font-size: 1.125rem;
+  color: var(--fg);
+}
+
+.hero .install-buttons {
+  margin-block: 1.75rem 1rem;
+}
+
+.hero-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9375rem;
+  color: var(--muted);
+  list-style: none;
+}
+
+.hero-facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+/* A small check before each fact, drawn with two borders: decoration only. */
+.hero-facts li::before {
+  inline-size: 0.4rem;
+  block-size: 0.75rem;
+  margin-block-start: -0.2rem;
+  margin-inline-start: 0.2rem;
+  border-block-end: 2px solid var(--accent);
+  border-inline-end: 2px solid var(--accent);
+  transform: rotate(45deg);
+  content: '';
+}
+
+.hero-art {
+  display: grid;
+  place-items: center;
+  order: -1;
+}
+
+.hero-badge {
+  display: grid;
+  place-items: center;
+  inline-size: clamp(7rem, 30vw, 18rem);
+  aspect-ratio: 1;
+  background: var(--accent-soft);
+  border-radius: 50%;
+  box-shadow: 0 0 0 clamp(0.6rem, 2vw, 1.25rem) var(--band);
+}
+
+.hero-badge img {
+  display: block;
+  inline-size: 68%;
+  block-size: auto;
+}
+
+/* On a phone the header logo and the hero logo already show the badge: a third one would only push the copy
+   down, so the animated icon is a wide-screen moment. */
+@media (max-width: 51.99rem) {
+  .hero-art {
+    display: none;
+  }
+}
+
+@media (min-width: 52rem) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 3rem;
+  }
+
+  .hero-art {
+    order: 0;
+  }
+}
+
+/* 2. How it works: three numbered steps, each with its screenshot or, for the captcha, a short callout. */
+
+.steps {
+  display: grid;
+  gap: clamp(2.5rem, 6vw, 4rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 1.25rem 3rem;
+  margin: 0;
+  counter-increment: step;
+}
+
+.step-text h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-block: 0 0.5rem;
+  font-size: 1.3rem;
+}
+
+.step-text h3::before {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  font-size: 1rem;
+  font-weight: 750;
+  color: var(--button-fg);
+  background: var(--button-bg);
+  border-radius: 50%;
+  content: counter(step);
+}
+
+.step-text p {
+  margin-block: 0.5rem 0;
+  max-inline-size: 34rem;
+}
+
+.shot {
+  margin: 0;
+}
+
+.shot img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 2px var(--border),
+    0 16px 36px -22px var(--control-border);
+}
+
+.shot figcaption {
+  margin-block-start: 0.6rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.callout {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  font-size: clamp(1.1rem, 1rem + 0.5vw, 1.35rem);
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--accent-soft-fg);
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+}
+
+.callout p {
+  margin: 0;
+}
+
+@media (min-width: 52rem) {
+  .step {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  }
+
+  .step:nth-child(even) .step-text {
+    order: 2;
+  }
+}
+
+/* 3. Status teaser: a short timeline of the usual path beside the guide's screenshot. */
+
+.status-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 2.5rem 3rem;
+}
+
+.status-note {
+  max-inline-size: var(--measure);
+  margin-block: 0 2rem;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.9375rem;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-inline-start: 4px solid var(--accent);
+  border-radius: var(--radius-small);
+}
+
+.timeline {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline li {
+  position: relative;
+  margin: 0;
+  padding-block: 0 1.25rem;
+  padding-inline-start: 2rem;
+}
+
+/* The line between the dots. */
+.timeline li::before {
+  position: absolute;
+  inset-block: 0.5rem 0;
+  inset-inline-start: calc(0.4375rem - 1px);
+  inline-size: 2px;
+  background: var(--card-border);
+  content: '';
+}
+
+.timeline li:last-child::before {
+  display: none;
+}
+
+/* The dot. */
+.timeline li::after {
+  position: absolute;
+  inset-block-start: 0.35rem;
+  inset-inline-start: 0;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  background: var(--bg);
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  content: '';
+}
+
+.section-band .timeline li::after {
+  background: var(--band);
+}
+
+.timeline li:last-child::after {
+  background: var(--accent);
+}
+
+.state-name {
+  display: block;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+.state-sub {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  color: var(--heading);
+}
+
+.state-text {
+  display: block;
+  margin-block-start: 0.2rem;
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+@media (min-width: 60rem) {
+  .status-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .status-grid .shot {
+    position: sticky;
+    inset-block-start: 1.5rem;
+  }
+}
+
+/* 4. Privacy promises: four cards. */
+
+.promises {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.promise {
+  margin: 0;
+  padding: 1.25rem 1.35rem;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+}
+
+.promise h3 {
+  margin-block: 0 0.4rem;
+  font-size: 1.0625rem;
+  color: var(--heading);
+}
+
+.promise p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--fg);
+}
+
+.section-more {
+  margin-block: 1.75rem 0;
+}
+
+/* 5. FAQ: native disclosure widgets, no script. */
+
+.faq {
+  max-inline-size: var(--measure);
+}
+
+.faq details {
+  border-block-end: 1px solid var(--border);
+}
+
+.faq details:first-of-type {
+  border-block-start: 1px solid var(--border);
+}
+
+.faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 1rem;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  color: var(--fg);
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A plus that turns into a minus when the answer is open. */
+.faq summary::after {
+  flex: none;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.6rem;
+  text-align: center;
+  color: var(--accent);
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  content: '+';
+}
+
+.faq details[open] summary::after {
+  content: '\2212';
+}
+
+.faq summary:hover {
+  color: var(--accent-hover);
+}
+
+.faq details > p {
+  margin-block: 0 1.1rem;
+  color: var(--fg);
+}
+
+/* 6. Agency band: full width, a slow decorative drift of rings that echo the badge. */
+
+.agency {
+  position: relative;
+  overflow: hidden;
+  padding-block: clamp(3.5rem, 8vw, 6rem);
+  color: var(--accent-soft-fg);
+  background: var(--accent-soft);
+  isolation: isolate;
+}
+
+.agency .wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.agency-copy {
+  max-inline-size: 40rem;
+}
+
+.agency h2 {
+  margin-block: 0 1rem;
+  font-size: clamp(1.6rem, 1.25rem + 1.4vw, 2.25rem);
+  color: var(--accent-soft-fg);
+}
+
+.agency p {
+  margin-block: 0 1rem;
+  font-size: 1.0625rem;
+}
+
+.agency .button {
+  margin-block-start: 0.75rem;
+}
+
+.agency-art {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: -6rem;
+  z-index: 0;
+  inline-size: 30rem;
+  aspect-ratio: 1;
+  pointer-events: none;
+  translate: 0 -50%;
+}
+
+.agency-art span {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0.22;
+}
+
+.agency-art span:nth-child(1) {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.agency-art span:nth-child(2) {
+  inline-size: 72%;
+  block-size: 72%;
+  opacity: 0.3;
+}
+
+.agency-art span:nth-child(3) {
+  inline-size: 44%;
+  block-size: 44%;
+  opacity: 0.4;
+}
+
+/* The check in the middle: two borders, like the hero facts. */
+.agency-art span:nth-child(4) {
+  inline-size: 9%;
+  block-size: 16%;
+  border: 0;
+  border-block-end: 6px solid var(--accent);
+  border-inline-end: 6px solid var(--accent);
+  border-radius: 2px;
+  opacity: 0.55;
+  transform: translateY(-12%) rotate(45deg);
+}
+
+@media (max-width: 52rem) {
+  .agency-art {
+    inset-block-start: auto;
+    inset-block-end: -10rem;
+    inset-inline-end: -8rem;
+    inline-size: 20rem;
+    translate: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .agency-art span:nth-child(-n + 3) {
+    animation: agency-breathe 9s ease-in-out infinite;
+  }
+
+  .agency-art span:nth-child(2) {
+    animation-delay: -3s;
+  }
+
+  .agency-art span:nth-child(3) {
+    animation-delay: -6s;
+  }
+
+  .agency-art span:nth-child(4) {
+    animation: agency-tick 9s ease-in-out infinite;
+  }
+}
+
+@keyframes agency-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes agency-tick {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agency-art span {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .agency-art {
+    display: none;
+  }
+
+  .promise,
+  .status-note,
+  .callout {
+    border: 1px solid CanvasText;
+  }
+}
+
+@media print {
+  .agency-art,
+  .hero-art {
+    display: none;
+  }
+}
