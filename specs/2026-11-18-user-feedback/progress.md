@@ -422,3 +422,17 @@ test(e2e): capture the report panel and rewrite the Chrome baselines
 - **Found:** for browser requests Cloudflare injects `static.cloudflareinsights.com/beacon.min.js` (Web Analytics) into `/`, `/privacy/`, `/en/privacy/` and `/feedback/`, which contradicts the privacy pages ("loads nothing from elsewhere"). It is added at the edge, so `check:site` cannot see it; the user turns it off in the dashboard. Check after a deploy: `curl -s -H 'Accept: text/html' -A 'Mozilla/5.0 Chrome/158' https://naciocheck.vgr.cat/<page>` must not contain `cloudflareinsights`.
 - **Open:** Web Analytics off for `naciocheck.vgr.cat`; redeploy; live send; Firefox checklist row 15.
 - **Commit:** uncommitted
+
+## 2026-11-23 - Live send verified
+
+- **Status:** done for the website; Firefox checklist row 15 and the analytics beacon remain
+- **Verified:** Chrome on `https://naciocheck.vgr.cat/en/feedback/#Production%20test%20from%20Chrome.`: the box held the fragment text, the widget (sitekey `0x4AAAAAAGPHi96wZq5N-xcv`, Managed) issued a real token without a visible challenge, Send posted `POST /api/feedback` -> 204 and the page said "Sent. Thank you: your feedback has reached the person who maintains the project." The page runs in standards mode; the console messages come from the Turnstile frame. Inbox delivery to `naciocheck@vgr.cat` to be confirmed by the user.
+- **Still open:** every live page still carries the Cloudflare Web Analytics beacon (`curl` with browser headers finds `cloudflareinsights` on `/`, `/privacy/`, `/en/privacy/`, `/feedback/`, `/en/feedback/`); Firefox checklist row 15 with the real extension.
+- **Commit:** uncommitted
+
+## 2026-11-23 - Live delivery confirmed
+
+- **Status:** done
+- **Verified:** the user received the "Production test from Chrome." report at `naciocheck@vgr.cat`.
+- **Still open:** the Web Analytics beacon on the live pages; Firefox checklist row 15.
+- **Commit:** uncommitted
