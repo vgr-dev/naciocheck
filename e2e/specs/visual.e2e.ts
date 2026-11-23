@@ -230,6 +230,37 @@ async function captureResult(
   }
 }
 
+/**
+ * Shows the result page of the last run with its "Report a problem" panel open, at each viewport.
+ *
+ * The panel is closed on every load, so it is opened by a click on its summary after the viewport is set; the
+ * page keeps its scroll, which is what a person who opens it sees.
+ */
+async function captureResultWithPanelOpen(
+  state: string,
+  locale: Locale,
+  viewports: readonly Viewport[],
+): Promise<void> {
+  await browser.url(fresh(extensionPage('result')));
+  await adoptLastRunResult();
+  for (const viewport of viewports) {
+    await browser.url(fresh(extensionPage('result')));
+    await expect($('#app')).toBeExisting();
+    await browser.setViewport(VIEWPORTS[viewport]);
+    const panel = $('details.report-panel');
+    await expect(panel).toBeExisting();
+    await panel.$('summary').click();
+    await browser.waitUntil(async () => (await panel.getProperty('open')) === true, {
+      timeoutMsg: 'The report panel did not open',
+    });
+    // Drop the focus ring a click leaves on the summary, so the baseline does not depend on it.
+    await browser.execute(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    await compareCurrent('result', state, locale, viewport);
+  }
+}
+
 describe('screenshots', () => {
   it('onboarding: nothing saved yet', async () => {
     await resetExtensionStorage();
@@ -430,6 +461,7 @@ describe('screenshots', () => {
       const checkWindow = await startCheckFromPopup();
       await finishCheck(checkWindow);
       await captureResult('error', locale, EVERYWHERE);
+      await captureResultWithPanelOpen('error-report', locale, EVERYWHERE);
     }
   });
 
@@ -501,8 +533,8 @@ describe('screenshots', () => {
       'Written by `e2e/specs/visual.e2e.ts` after every run. Baselines are tracked by git (D3): an image that',
       'changes is a change to review, so its new version belongs in the history next to the code that made it.',
       '',
-      `- **Images**: ${comparisons.length} — 2 locales × 50: onboarding 3 states × 2 viewports (6), popup 4 × 3 (12),`,
-      '  options 5 × 2 (10), statuses 1 × 2 (2), result 3 × 2 (6), unlock 1 × 2 (2), the fake form 3 overlays × 2 (6),',
+      `- **Images**: ${comparisons.length} — 2 locales × 52: onboarding 3 states × 2 viewports (6), popup 4 × 3 (12),`,
+      '  options 5 × 2 (10), statuses 1 × 2 (2), result 4 × 2 (8), unlock 1 × 2 (2), the fake form 3 overlays × 2 (6),',
       '  and the long pages whole: onboarding (empty), options (two applications) and the changed-status alert,',
       '  × 2 widths (6).',
       '- **Viewports**: desktop 1280×800, phone 412×915, popup 380×600 (popup only); `full1280` and `full412` are the',
