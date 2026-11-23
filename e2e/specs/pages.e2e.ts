@@ -169,6 +169,60 @@ async function runOneCheck(sede: FakeSede): Promise<WebdriverIO.BrowsingContext>
   return waitForResult(checkWindow);
 }
 
+/** The feedback page the panel's Continue button opens; the report travels after the `#`. */
+const FEEDBACK_ES = 'https://naciocheck.vgr.cat/feedback/#';
+const FEEDBACK_EN = 'https://naciocheck.vgr.cat/en/feedback/#';
+
+/**
+ * Replaces `chrome.tabs.create` in the page with a recorder, so pressing Continue opens nothing: no tab loads the
+ * feedback page and no request can reach the network guard. Call it before the click; `recordedTabs` reads it.
+ */
+async function recordTabCreation(page: WebdriverIO.BrowsingContext): Promise<void> {
+  await page.execute(() => {
+    const holder = globalThis as unknown as {
+      chrome: { tabs: { create: (properties: { url?: string }) => Promise<unknown> } };
+      recordedTabs?: string[];
+    };
+    const urls: string[] = [];
+    holder.recordedTabs = urls;
+    holder.chrome.tabs.create = (properties) => {
+      urls.push(properties.url ?? '');
+      return Promise.resolve({});
+    };
+  });
+}
+
+async function recordedTabs(page: WebdriverIO.BrowsingContext): Promise<string[]> {
+  return page.execute(
+    () => (globalThis as unknown as { recordedTabs?: string[] }).recordedTabs ?? [],
+  );
+}
+
+/** Opens a closed report panel the way a keyboard user does: focus its summary and press Enter. */
+async function openPanelWithKeyboard(panel: WebdriverIO.Element): Promise<void> {
+  expect(await panel.getProperty('open')).toBe(false);
+  const summary = await panel.$('summary');
+  await browser.execute((node) => {
+    node.focus();
+  }, summary);
+  await summary.addValue('');
+  await browser.waitUntil(async () => (await panel.getProperty('open')) === true, {
+    timeoutMsg: 'The panel did not open from the keyboard',
+  });
+}
+
+/** Values the seeded fake application holds: none of them may ever appear in a report. */
+function identityValues(identity: FakeIdentity): string[] {
+  return [
+    identity.label,
+    identity.nie,
+    identity.numero,
+    identity.year,
+    identity.birthDate,
+    identity.birthDate.split('-').reverse().join('/'),
+  ];
+}
+
 describe('extension pages', () => {
   /**
    * First of all, and before anything writes to storage: an install opens the first run page by itself
@@ -1012,6 +1066,50 @@ describe('extension pages', () => {
       expect(await page.$$('#app p.gloss')).toHaveLength(0);
       expect(await headings[0]?.getAttribute('lang')).toBeNull();
     });
+
+    it('offers a closed "explanation looks wrong" panel on every card', async () => {
+      const page = await openExtensionContext('statuses.html');
+
+      const cards = await page.$$('#app div.card');
+      expect(cards.length).toBeGreaterThan(5);
+      for (const card of cards) {
+        const panel = await card.$('details.report-panel');
+        await expect(panel).toBeExisting();
+        expect(await panel.getProperty('open')).toBe(false);
+        await expect(panel.$('summary')).toHaveText('¿Esta explicación parece incorrecta?');
+      }
+      // One panel per card and none elsewhere: the guide reads as before until a panel is opened.
+      expect(await page.$$('#app details.report-panel')).toHaveLength(cards.length);
+    });
+
+    it('fills a card panel with its key and explanation, and continues in the language of the page', async () => {
+      await setStoredLanguage('en');
+      const page = await openExtensionContext('statuses.html');
+      await recordTabCreation(page);
+
+      const first = (await page.$$('#app div.card'))[0];
+      if (first === undefined) throw new Error('No status card');
+      const panel = await first.$('details.report-panel');
+      await openPanelWithKeyboard(panel);
+
+      const text = panel.$('textarea');
+      const report = await text.getValue();
+      expect(report).toContain('NacioCheck report');
+      expect(report).toContain('status key: ');
+      expect(report).toMatch(/explanation: \S/);
+
+      // One line: a typed newline is not kept by every driver, and the point is that the edited text travels.
+      const edited = 'Edited report: the explanation reads wrong & unclear';
+      await text.setValue(edited);
+      await panel.$('button=Continue on the website').click();
+      const urls = await recordedTabs(page);
+      expect(urls).toHaveLength(1);
+      expect(urls[0]?.startsWith(FEEDBACK_EN)).toBe(true);
+      expect(decodeURIComponent((urls[0] ?? '').slice(FEEDBACK_EN.length))).toBe(edited);
+
+      // Back to Spanish: what the next test in this session finds is what this one leaves.
+      await setStoredLanguage('es');
+    });
   });
 
   describe('result page', () => {
@@ -1125,6 +1223,112 @@ describe('extension pages', () => {
       await expect(result.$('p.sub-status')).toHaveText(
         /Su expediente ha sido registrado correctamente/,
       );
+    });
+
+    /**
+     * The report holds the outcome and the status key, never what the site printed for the person (Q2) and never
+     * the application's own values. Continue is exercised against a recorder: no feedback page is ever loaded.
+     */
+    it('offers a closed report panel on an error and continues with the edited text', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const sede = serveFakeSede({ results: [capturedPage('result-error-captcha.htm')] });
+
+      const result = await runOneCheck(sede);
+      await expect(result.$('.banner.error')).toBeExisting();
+
+      const panel = await result.$('details.report-panel');
+      await expect(panel).toBeExisting();
+      await expect(panel.$('summary')).toHaveText('Informar de un problema');
+      // After the disclaimer and before the buttons: the page keeps its reading order.
+      const order = await result.execute(() => {
+        const disclaimer = document.querySelector('p.disclaimer');
+        const found = document.querySelector('details.report-panel');
+        const retry = [...document.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === 'Volver a intentarlo',
+        );
+        if (disclaimer === null || found === null || retry === undefined) {
+          throw new Error('Missing disclaimer, panel or retry button');
+        }
+        return {
+          afterDisclaimer: Boolean(
+            disclaimer.compareDocumentPosition(found) & Node.DOCUMENT_POSITION_FOLLOWING,
+          ),
+          beforeRetry: Boolean(
+            found.compareDocumentPosition(retry) & Node.DOCUMENT_POSITION_FOLLOWING,
+          ),
+        };
+      });
+      expect(order).toEqual({ afterDisclaimer: true, beforeRetry: true });
+
+      await openPanelWithKeyboard(panel);
+      const text = panel.$('textarea');
+      const report = await text.getValue();
+      expect(report).toContain('Informe de NacioCheck');
+      expect(report).toContain('resultado: error');
+      expect(report).toContain('clave de estado: unknown');
+      expect(await text.getAttribute('spellcheck')).toBe('false');
+
+      // Only the outcome and the key: not what the site printed, not one value of the saved application.
+      const { checks } = await readStoredStore();
+      const printed = [checks[0]?.raw, checks[0]?.subStatus, 'Abierto - Registrado.'].filter(
+        (value): value is string => value !== undefined && value !== null && value !== '',
+      );
+      for (const value of [...printed, ...identityValues(FIRST_APPLICATION)]) {
+        expect(report).not.toContain(value);
+      }
+
+      await recordTabCreation(result);
+      // One line: a typed newline is not kept by every driver, and the point is that the edited text travels.
+      const edited = 'Informe editado: lo vi después de pulsar enviar & más';
+      await text.setValue(edited);
+      await panel.$('button=Continuar en la web').click();
+
+      const urls = await recordedTabs(result);
+      expect(urls).toHaveLength(1);
+      expect(urls[0]?.startsWith(FEEDBACK_ES)).toBe(true);
+      expect(decodeURIComponent((urls[0] ?? '').slice(FEEDBACK_ES.length))).toBe(edited);
+      // The panel never left the page: the result is still showing and nothing was sent.
+      await expect(result.$('.banner.error')).toBeExisting();
+      expect(sede.posts).toHaveLength(1);
+    });
+
+    it("offers the panel on a status with an anomaly note, without the site's own sentence", async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      await seedPreviousCheck(
+        FIRST_APPLICATION.label,
+        'Abierto - Concedido. Enviada notificación.',
+        null,
+      );
+      const sede = serveFakeSede({ results: [resultPage()] });
+
+      const result = await runOneCheck(sede);
+      await expect(result.$('p.anomaly')).toHaveText(/no se había observado hasta ahora/);
+
+      const panel = await result.$('details.report-panel');
+      await expect(panel).toBeExisting();
+      expect(await panel.getProperty('open')).toBe(false);
+      await openPanelWithKeyboard(panel);
+      const report = await panel.$('textarea').getValue();
+      expect(report).toContain('resultado: status');
+      expect(report).toContain('nota: ');
+      for (const value of [
+        RESULT_VALUES.status,
+        RESULT_VALUES.subStatus,
+        'Abierto - Concedido',
+        ...identityValues(FIRST_APPLICATION),
+      ]) {
+        expect(report).not.toContain(value);
+      }
+    });
+
+    it('offers no panel on a normal status', async () => {
+      await addApplicationThroughUi(FIRST_APPLICATION);
+      const sede = serveFakeSede({ results: [resultPage()] });
+
+      const result = await runOneCheck(sede);
+      await expect(result.$('h1.status')).toHaveText('Abierto - Registrado.');
+      await expect(result.$('p.anomaly')).not.toBeExisting();
+      await expect(result.$('details.report-panel')).not.toBeExisting();
     });
 
     it('retries a failed check and finishes the run', async () => {
