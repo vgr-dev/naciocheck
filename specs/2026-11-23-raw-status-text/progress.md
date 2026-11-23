@@ -118,3 +118,40 @@ refactor(statuses): remove the unused displayStatus helper
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (25 files, 458 tests)
 - **Commit proposal:** one commit for step 5, one for the plan and progress updates
 - **Open issues:** E2E still expected red until phases 3 and 4 (accepted)
+
+## 2026-11-23 - Step 6: Update the E2E assertions to the raw names
+
+- **Status:** done
+- **Changed:** `e2e/specs/check-flow.e2e.ts`, `e2e/specs/pages.e2e.ts`
+- **Verified:** `npm run typecheck` -> pass; `E2E_SPEC=check-flow npm run test:e2e` -> pass (13, 0 outside the fake site); `E2E_SPEC=pages npm run test:e2e` -> pass (35, 0 outside the fake site)
+- **Commit:** uncommitted, proposed "test(e2e): assert the status exactly as the site printed it"
+- **Open issues:** the guide has 17 cards, so the new cases take the first (`$$(...)[0]`, "Abierto - Registrado"); the plan's "first .card h3" wording was loose, no behaviour impact
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+test(e2e): assert the status exactly as the site printed it
+```
+
+## 2026-11-23 - Step 7: Rewrite Firefox checklist row 12
+
+- **Status:** done
+- **Changed:** `docs/manual-firefox-checklist.md` (row 12 only)
+- **Verified:** `npx prettier --check docs/manual-firefox-checklist.md` -> pass
+- **Commit:** uncommitted, proposed "docs(firefox): expect the site's status text in checklist row 12"
+- **Open issues:** row 12 is Not run until the manual Firefox pass; "the alert" dropped from the row as it is the result page's changed view, covered by "the result heading"
+- **Run by:** implement-phase (builder subagent, model haiku)
+- **Proposed commit (builder):**
+
+```
+docs: rewrite Firefox checklist row 12 for raw status text
+```
+
+## 2026-11-23 - Phase 3: End-to-end assertions and the manual checklist
+
+- **Status:** done
+- **Steps:** 6 done; 7 done
+- **File check:** pass (3 changed files, each in its step's Files; plus the orchestrator's plan.md)
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (458 tests); `E2E_SPEC=check-flow npm run test:e2e` -> pass (13); `E2E_SPEC=pages npm run test:e2e` -> pass (35); network guard 0 outside the fake site in both
+- **Commit proposal:** one commit per step, one for the plan and progress updates
+- **Open issues:** the visual spec still fails on baselines until phase 4 (expected)

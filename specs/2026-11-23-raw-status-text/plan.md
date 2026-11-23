@@ -20,12 +20,12 @@ Never [x] for partial work. Details live in progress.md. -->
 
 **Phase 2: Remove displayStatus**
 
-- [x] 5. Delete displayStatus and its unit tests uncommitted
+- [x] 5. Delete displayStatus and its unit tests a83adc6
 
 **Phase 3: End-to-end assertions and the manual checklist**
 
-- [ ] 6. Update the E2E assertions to the raw names
-- [ ] 7. Rewrite Firefox checklist row 12
+- [x] 6. Update the E2E assertions to the raw names uncommitted
+- [x] 7. Rewrite Firefox checklist row 12 uncommitted
 
 **Phase 4: Visual baselines**
 
