@@ -31,18 +31,21 @@ amendment to ADR 0005.
 - Extension: a "Report a problem" panel on the result page for an error, an unknown page or an anomaly note,
   and a "this explanation looks wrong" entry in the status guide.
 - The report is an editable text built from non-identifying fields only (extension version, browser name
-  and major version, locale, outcome, `statusKey`, the page's error messages, the anomaly note), passed
-  through a redaction pass that masks anything shaped like a NIE, an application number, a date or a long
-  number, with the masks visible. The person's own result (the status text and sub-status sentence the site
-  printed for them) is never included (F3). Labels and the body are in the person's language: Catalan,
-  Spanish or English only (F4).
+  and major version, locale, outcome, `statusKey`, fixed error categories, and anomaly state IDs). Error
+  categories use fixed labels so arbitrary text from the sede stays out of the prefilled report. The Worker
+  masks text shaped like a NIE, an application number, a date or a long number, with visible masks. The
+  person's own result (the status text and sub-status sentence the site printed for them) stays out of
+  the prefilled report (F3). Labels and the body are in the person's language: Catalan, Spanish or English
+  only (F4).
 - Two buttons in the panel: Copy (works offline) and Continue on the website (a new tab on the feedback page
   with the report in the fragment).
 - A pure report builder and redactor in `src/core/` whose signature takes a check, never an application or
   identity, so "no identifier" is a property of the types. The Worker reuses the same `redact`.
 - Site: `/feedback/` and `/en/feedback/` pages that read the fragment into a textarea, show what will be sent,
-  render a Turnstile widget (Invisible as the target, Managed accepted; the mode is set in the dashboard), and post the text with the token on an explicit Send click. Copy stays available
-  on the page and works without Turnstile. The pages carry one same-origin script and Turnstile's
+  render a Turnstile widget (Invisible as the target, Managed accepted; the mode is set in the dashboard),
+  and post the text with the token on an explicit Send click. The page checks the encoded JSON request
+  against the Worker's byte limit before posting. Copy stays available on the page and works without
+  Turnstile. The pages carry one same-origin script and Turnstile's
   `https://challenges.cloudflare.com/turnstile/v0/api.js`, loaded from that exact URL (Cloudflare forbids
   proxying it); no other page gains a script. The feedback and privacy pages link to Cloudflare's Turnstile
   privacy policy.
@@ -120,9 +123,12 @@ amendment to ADR 0005.
       the report.
 - [ ] The panel is absent on a normal status and present on an error and an unknown page; the text contains
       the outcome and status key, and neither the status text nor the sub-status sentence the site printed,
-      nor any of the fake identity's values; editing it changes what Copy would hold; the
-      Continue click calls `tabs.create` with `https://naciocheck.vgr.cat/` plus `feedback/#` and no other
-      host.
+      nor any of the fake identity's values, even when they appear inside a sede error message. Editing it
+      changes what Copy would hold. The Continue click calls `tabs.create` with `https://naciocheck.vgr.cat/`
+      plus `feedback/#` and no other host.
+- [ ] The prefilled report fits the Worker request limit with a 2,048-character ASCII Turnstile token that
+      needs no JSON escaping. The feedback page measures the actual encoded JSON and keeps an oversized
+      draft editable without posting it.
 - [ ] Worker tests: a valid post with a passing token sends one email whose body is the redacted text; a
       missing token, a failed or spent token (`timeout-or-duplicate`), a wrong hostname, a siteverify
       outage, an oversized body, a wrong method or content type, a cross-origin post and a rate-limited
@@ -148,10 +154,10 @@ amendment to ADR 0005.
   unless Email Routing rejects sending to itself; then the builder stops and asks.
 - **F2. Which states offer the panel.** Decided 2026-11-23: error, unknown page, anomaly note, and the guide.
 - **F3. What the report may contain.** Decided 2026-11-23: extension version, browser name and major
-  version, locale, outcome, `statusKey`, the page's error messages and the anomaly note. Not the person's
-  own result: the status text and sub-status sentence the site printed are left out. Consequence: for an
-  unrecognised status the report says only `unknown`; the panel's intro invites the person to describe
-  what they saw in their own words if they wish.
+  version, locale, outcome and `statusKey`. The implementation uses anomaly state IDs and, following the
+  review, fixed error categories in place of arbitrary sede text. The person's own status text and
+  sub-status sentence stay out of the prefilled report. The panel invites the person to describe what they
+  saw in their own words if they wish.
 - **F4. Report format.** Decided 2026-11-23: labels and body in the person's language, limited to Catalan,
   Spanish or English. The extension has `es` and `en` today, so reports are `es` or `en` (`qps` maps to
   `es`); a `ca` report comes with a `ca` locale, never by itself. The feedback pages say comments are

@@ -49,7 +49,7 @@ numbers are global across phases. -->
 
 **Phase 7: Visual baselines**
 
-- [x] 14. Capture the panel and rewrite the Chrome baselines uncommitted
+- [x] 14. Capture the panel and rewrite the Chrome baselines 900f720
 
 ## Before building (gates)
 

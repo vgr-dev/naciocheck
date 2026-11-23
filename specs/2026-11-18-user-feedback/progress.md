@@ -385,3 +385,12 @@ test(e2e): capture the report panel and rewrite the Chrome baselines
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && npm run test:e2e` -> pass (extension 30 files, 701 tests; worker 2 files, 31 tests; 6 pages; E2E 13 + 40 + 2 + 20, network guard 0 outside the fake site in every worker)
 - **Commit proposal:** one commit for step 14, one for the plan and progress updates
 - **Open issues:** three Low UI findings above; the options-editing flake; then the spec's remaining acceptance work: `/spec-review`, the user's deploy and hands-on checks (Email Routing, widget hostname, `TURNSTILE_SECRET`, local `dev:site`, Firefox checklist row 15 and its wording), and the final real report
+
+## 2026-11-23 - Review follow-up
+
+- **Changed:** Prefilled reports use fixed error categories in place of sede text. The generated report fits the byte budget, and the feedback page checks the serialized request before sending. Firefox checklist row 15 uses a failed check and covers Turnstile, email delivery and retention.
+- **Visual baseline:** Updated only `e2e/baselines/chrome/result-error-report-en-412x915.png`. The shorter draft removed the textarea scrollbar, the only pixel change above tolerance in the first run.
+- **Verified:** `npm test` passed 707 extension tests and 31 Worker tests. The new cases cover synthetic private text, the generated report's byte limits and an oversized website draft that can be shortened and sent with the same token.
+- **Chrome E2E:** `npm run test:e2e` passed all 75 tests on the final changes. All 104 screenshots were within tolerance, and every spec recorded zero unexpected requests.
+- **Static checks:** Typecheck, format, site and extension privacy checks passed. ESLint passed with the generated `.wrangler/` development artifacts excluded.
+- **Open issues:** The manual Firefox check, deployment and a real report reaching the project inbox are pending.
