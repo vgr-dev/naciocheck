@@ -37,14 +37,15 @@ numbers are global across phases. -->
 
 **Phase 5: Endpoint and feedback pages**
 
-- [x] 10. Handle POST /api/feedback uncommitted
-- [x] 10a. Give redact a module of its own uncommitted
-- [x] 11. Add the feedback pages uncommitted
+- [x] 10. Handle POST /api/feedback 8f021ba
+- [x] 10a. Give redact a module of its own 9dc6eb8
+- [x] 11. Add the feedback pages cd2ef77
 
 **Phase 6: End-to-end checks and wording**
 
-- [ ] 12. Cover the panel in the Chrome E2E suite
-- [ ] 13. State the feedback channel in the policy and docs
+- [x] 12. Cover the panel in the Chrome E2E suite uncommitted
+- [x] 12a. Report an anomaly by its state ids, never its note text uncommitted
+- [x] 13. State the feedback channel in the policy and docs uncommitted
 
 **Phase 7: Visual baselines**
 
@@ -437,6 +438,36 @@ has no DOM lib (`crypto`, `navigator`, `LockManager` errors). The user chose to 
 - **Verify:** `npm run typecheck`; clean. `npm run test:e2e`; the new cases pass and the guard reports 0
   unexpected requests (visual mismatches in `visual.e2e.ts` are expected until step 14).
 - **Out of scope:** `visual.e2e.ts`, baselines, the website pages (no E2E loads them).
+
+### 12a. Report an anomaly by its state ids, never its note text
+
+Added 2026-11-23 during Phase 6: step 12's E2E case found that a report from a result with an anomaly
+note copies the note, and `detectAnomaly` quotes the site's status and sub-status sentences of both checks
+in it (`describe()` in `src/core/anomaly.ts`), which Q2 rules out. The user chose state ids only.
+
+- **Goal:** the report carries an anomaly as its kind and the catalogue's path-state ids, under the
+  existing labels: `nota: unusual, K → T2` (es) / `anomaly note: unusual, K → T2` (en), and never the
+  note text.
+  - `src/core/anomaly.ts`: `AnomalyNote` gains `from` and `to` (the `ResolvedPathStateId`s that
+    `detectAnomaly` already resolves). The note texts shown on the result page are unchanged.
+  - `src/core/alerts.ts`: the view gains `anomalyMove: { kind: AnomalyKind; from: string; to: string } | null`
+    beside the existing `anomaly` text, filled from the note.
+  - `src/core/report.ts`: `ReportContext.anomaly` becomes `{ kind: string; from: string; to: string } | null`,
+    formatted as `<kind>, <from> → <to>`; no free text from the site reaches the report.
+  - `src/entrypoints/result/main.ts`: passes `view.anomalyMove` to `buildReport`; the panel still shows
+    when the view has an anomaly. A result cached before this change (no `anomalyMove`) builds a report
+    without the anomaly line rather than with the note text.
+  - `src/entrypoints/background.ts`: only if its payload guard or cache needs the new view field.
+  - Tests: `tests/anomaly.test.ts` asserts `from`/`to` for the documented moves; `tests/alerts.test.ts`
+    asserts `anomalyMove`; `tests/report.test.ts` builds a report from a real `detectAnomaly` note between
+    two fake checks and asserts it holds the ids and none of either check's `raw` or `subStatus`.
+- **Files:** `src/core/anomaly.ts`, `src/core/alerts.ts`, `src/core/report.ts`,
+  `src/entrypoints/result/main.ts`, `src/entrypoints/background.ts`, `tests/anomaly.test.ts`,
+  `tests/alerts.test.ts`, `tests/report.test.ts`, `tests/background.test.ts`
+- **Verify:** `npx vitest run tests/anomaly.test.ts tests/alerts.test.ts tests/report.test.ts tests/background.test.ts`;
+  all pass. `npm run typecheck`; clean. `npx eslint` on the changed files; clean. Then
+  `E2E_SPEC=pages npm run test:e2e`; step 12's anomaly case passes unchanged, guard at 0.
+- **Out of scope:** the anomaly note's wording on the result page, `e2e/specs/pages.e2e.ts`, baselines.
 
 ### 13. State the feedback channel in the policy and docs
 

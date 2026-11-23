@@ -289,3 +289,68 @@ feat(site): add the es and en feedback pages
 - **Phase verify:** first run `npm run typecheck` -> fail (worker project, 5 errors); after step 10a: `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site` -> pass (extension 30 files, 696 tests; worker 2 files, 31 tests; check:site 6 pages)
 - **Commit proposal:** 10a first (so every commit typechecks), then 10, then 11, then the plan and progress updates
 - **Open issues:** hands-on, the user's: `wrangler dev` with `.dev.vars`, enabling Email Routing and verifying that `naciocheck@vgr.cat` can send to itself, restricting the widget hostname, `wrangler secret put TURNSTILE_SECRET`
+
+## 2026-11-23 - Step 12: Cover the panel in the Chrome E2E suite
+
+- **Status:** done (reported partial: the anomaly case failed on a real defect, fixed by step 12a without editing the test)
+- **Changed:** `e2e/specs/pages.e2e.ts`
+- **Verified:** `npm run typecheck` -> clean; `npx eslint e2e/specs/pages.e2e.ts` -> clean; `E2E_SPEC=pages npm run test:e2e` -> 39 passing, 1 failing (anomaly case) before 12a, 40 passing after; full `npm run test:e2e` -> guard 0 outside the fake site
+- **Commit:** uncommitted, proposed "test(e2e): cover the report panel on the result page and guide"
+- **Open issues:**
+  - Helpers: `recordTabCreation` / `recordedTabs` (replace `chrome.tabs.create` before the click, so no feedback page loads), `openPanelWithKeyboard`, `identityValues`.
+  - Guide: one closed panel per card; en keyboard open, edit, Continue records one `tabs.create` to `https://naciocheck.vgr.cat/en/feedback/#` with the edited text.
+  - Result: error result (`result-error-captcha.htm`) panel closed, after the disclaimer, keyboard-openable, no `raw`/`subStatus`, no identity values; Continue records `https://naciocheck.vgr.cat/feedback/#…`, `sede.posts` stays 1. Normal status: no panel. Anomaly: closed panel, report free of either check's site text.
+  - Not covered: an unknown-page result (no fixture ends on one; `synthetic-unknown-form.html` exercises the content-script fallback only).
+  - Headless Chrome's agent says `HeadlessChrome/158`, which `browserLabel` reads as `unknown`; the browser line is not asserted. Cosmetic, headless only.
+  - WebdriverIO `setValue` drops newlines in a textarea, so edited text in the tests is one line.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+test(e2e): cover the report panel on the result page and guide
+```
+
+## 2026-11-23 - Step 12a: Report an anomaly by its state ids, never its note text
+
+- **Status:** done
+- **Changed:** `src/core/anomaly.ts`, `src/core/alerts.ts`, `src/core/report.ts`, `src/entrypoints/result/main.ts`, `tests/anomaly.test.ts`, `tests/alerts.test.ts`, `tests/report.test.ts`; `background.ts` and its test not needed (the guard only checks `view` exists and the view is cached whole)
+- **Verified:** `npx vitest run tests/anomaly.test.ts tests/alerts.test.ts tests/report.test.ts tests/background.test.ts` -> pass (136); `npm run typecheck` -> clean; `npx eslint` on the 7 files -> clean; `E2E_SPEC=pages npm run test:e2e` -> 40 passing, guard 0
+- **Commit:** uncommitted, proposed "fix(report): name an anomaly by its state ids, not the note text"
+- **Open issues:**
+  - Added to the plan during Phase 6 after step 12 found that `detectAnomaly`'s note quotes both checks' `raw` and `subStatus`, which reached the report (breaks Q2). The user chose state ids only.
+  - `AnomalyNote` gains `from`/`to`; `ResultView.anomalyMove` carries kind and ids; `ReportContext.anomaly` is `{ kind, from, to } | null`. The visible note on the result page is unchanged. A view cached before this change builds a report with no anomaly line.
+  - Labels kept as `nota` / `anomaly note` (step 12's E2E asserts `nota: `); the plan's example was corrected to match.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+fix(report): name an anomaly by its state ids, not the note text
+```
+
+## 2026-11-23 - Step 13: State the feedback channel in the policy and docs
+
+- **Status:** done
+- **Changed:** `site/privacy/index.html`, `site/en/privacy/index.html`, `README.md`, `store/permissions.md`, `store/listing.es.md`, `store/listing.en.md`, `docs/manual-firefox-checklist.md`
+- **Verified:** `npm run check:site` -> pass (6 pages); `npx vitest run tests/licence.test.ts` -> pass (13); `npx prettier --check README.md store docs/manual-firefox-checklist.md site` -> clean
+- **Commit:** uncommitted, proposed "docs: state the feedback channel in the policy and docs"
+- **Open issues:**
+  - Privacy pages gain an "Informar de un problema" / "Reporting a problem" section with a nav link and the plain Turnstile Privacy Addendum link; the summary card points to it; "last reviewed" moved to 23 November 2026.
+  - README: a "Reporting a problem" paragraph and a "Test the feedback page locally" subsection; the stale `check:site` "no scripts" comment corrected.
+  - Store: a "Feedback channel" bullet in Chrome data usage and a clause in the AMO answer (data collected stays "none"); both listings gain a "Your data" bullet and a privacy-summary sentence; short descriptions untouched.
+  - Firefox checklist row 15 "Report a problem" (Not run). Its wording says to seed an error "with the dev helper below, or a real failed check", but the dev helper seeds a status check: the user may want to reword it.
+  - The home pages have no explicit "loads nothing from elsewhere" sentence and were outside this step's Files.
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+docs: state the feedback channel in the policy and docs
+```
+
+## 2026-11-23 - Phase 6: End-to-end checks and wording
+
+- **Status:** done
+- **Steps:** 12 done (anomaly case fixed by 12a), 12a done (added during the phase), 13 done
+- **File check:** pass (15 changed files, each in its step's Files; plus the orchestrator's plan.md and progress.md)
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site` -> pass (extension 30 files, 701 tests; worker 2 files, 31 tests; 6 pages); `npm run test:e2e` -> check-flow 13, pages 40, 2, visual 18 passing; visual 3 failing as expected until Phase 7 (status guide, error result, after-all screenshot hook); network guard 0 outside the fake site in all four workers
+- **Commit proposal:** 12a first (the fix), then 12, then 13, then the plan and progress updates
+- **Open issues:** Firefox checklist row 15 wording (dev helper seeds a status, not an error); headless Chrome reports `navegador: unknown`; no unknown-page result fixture
