@@ -409,3 +409,9 @@ test(e2e): capture the report panel and rewrite the Chrome baselines
 - **Verified:** Chrome on `http://localhost:8787/en/feedback/#hello%20from%20Chrome`: the box holds the fragment text, the address loses the fragment, the widget renders and issues `XXXX.DUMMY.TOKEN.XXXX`, no console messages; Send posted `{"text":"hello from Chrome","token":"XXXX.DUMMY.TOKEN.XXXX"}` with `Origin: http://localhost:8787` and got `403 origin` (old `.dev.vars`). `npm test` -> pass (711 + 31, with a `.dev.vars` present); lint, format, typecheck, check:site -> pass.
 - **Not verified:** a successful local Send (needs the new origin in `.dev.vars` and a restart); the Firefox `file:///` security message, which comes from no URL in the site; the deployed page.
 - **Commit:** uncommitted
+
+## 2026-11-23 - Local Send verified
+
+- **Status:** done (local); the deployed checks remain
+- **Verified:** after the user set `FEEDBACK_ORIGIN=http://naciocheck.vgr.cat` in `.dev.vars` and restarted `npm run dev:site`, Chrome on `http://localhost:8787/feedback/#prueba%20desde%20Chrome`: the box held `prueba desde Chrome`, Turnstile issued `XXXX.DUMMY.TOKEN.XXXX`, Send posted `POST /api/feedback` -> 204, the page said "Enviado. Gracias: el comentario ha llegado a quien mantiene el proyecto.", Send stayed disabled, no console messages. The local `send_email` simulation wrote the body `prueba desde Chrome` to `.wrangler/tmp/email/.../email-text/`.
+- **Open:** Email Routing and sending setup, widget hostname, `TURNSTILE_SECRET`, deploy, live smoke test, Firefox checklist row 15.
