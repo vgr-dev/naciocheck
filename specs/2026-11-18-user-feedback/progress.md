@@ -436,3 +436,10 @@ test(e2e): capture the report panel and rewrite the Chrome baselines
 - **Verified:** the user received the "Production test from Chrome." report at `naciocheck@vgr.cat`.
 - **Still open:** the Web Analytics beacon on the live pages; Firefox checklist row 15.
 - **Commit:** uncommitted
+
+## 2026-11-23 - Firefox checklist row 15
+
+- **Status:** done
+- **Verified:** the user ran row 15 in Firefox: it behaves exactly as in Chrome, nothing to note. Recorded as PASS in `docs/manual-firefox-checklist.md`.
+- **Still open:** the Web Analytics beacon on the live pages.
+- **Commit:** uncommitted
