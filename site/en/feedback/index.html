@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NacioCheck — send feedback</title>
+    <meta
+      name="description"
+      content="Review the text of your NacioCheck feedback and send it, or copy it, if you want."
+    />
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 2.5rem 1.25rem 4rem;
+        font:
+          400 17px/1.6 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.9rem;
+        line-height: 1.2;
+        color: #0f766e;
+      }
+      p {
+        margin: 0.5rem 0;
+      }
+      .lead,
+      .hint,
+      footer {
+        color: #4b5563;
+      }
+      .lead {
+        font-size: 1.05rem;
+      }
+      .hint {
+        font-size: 0.95rem;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+      }
+      a {
+        color: #0d9488;
+      }
+      label {
+        display: block;
+        margin: 1.5rem 0 0.35rem;
+        font-weight: 600;
+      }
+      textarea {
+        display: block;
+        width: 100%;
+        min-height: 16rem;
+        padding: 0.75rem 1rem;
+        font:
+          400 0.95rem/1.5 ui-monospace,
+          monospace;
+        color: #0f172a;
+        background: #ffffff;
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+        resize: vertical;
+      }
+      textarea:focus-visible,
+      button:focus-visible,
+      a:focus-visible {
+        outline: 3px solid #0f766e;
+        outline-offset: 2px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin: 1rem 0;
+      }
+      button {
+        padding: 0.6rem 1.25rem;
+        font: inherit;
+        font-weight: 600;
+        color: #ffffff;
+        background: #0f766e;
+        border: 1px solid #0f766e;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      button.secondary {
+        color: #0f766e;
+        background: #ffffff;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      #status {
+        min-height: 1.6rem;
+        font-weight: 500;
+      }
+      footer {
+        margin-top: 3rem;
+        padding-top: 1rem;
+        font-size: 0.9rem;
+        border-top: 1px solid #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Send feedback about NacioCheck</h1>
+      <p class="lead">
+        This is exactly what will be sent. Read it, and remove anything you do not want to share.
+      </p>
+
+      <nav>
+        <a href="/en/">Home</a>
+        <a href="/en/privacy/">Privacy policy</a>
+      </nav>
+
+      <label for="report">Feedback text</label>
+      <textarea
+        id="report"
+        name="report"
+        rows="12"
+        placeholder="Write anything you want to tell us here."
+        aria-describedby="note"
+      ></textarea>
+      <p id="note" class="hint">
+        Only this text, with your edits, is sent, and only when you press “Send”. It carries no
+        name, no email and no details of your application. If anything you see there is personal,
+        delete it before sending. You can write in Catalan, Spanish or English.
+      </p>
+      <noscript
+        ><p>
+          This page needs JavaScript to send the feedback. Without it, you can copy the text and
+          send it another way.
+        </p></noscript
+      >
+
+      <div id="turnstile" data-sitekey="0x4AAAAAAGPHi96wZq5N-xcv"></div>
+
+      <div class="actions">
+        <button type="button" id="copy" class="secondary">Copy</button>
+        <button type="button" id="send">Send</button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+
+      <p class="hint">
+        To keep out spam, this page uses Cloudflare Turnstile. When you send, the text and that
+        check go through Cloudflare to the person who maintains the project, by email; it is not
+        stored anywhere else. More in
+        <a href="https://www.cloudflare.com/turnstile-privacy-policy/">Turnstile's privacy policy</a
+        >.
+      </p>
+
+      <footer>
+        <p>
+          NacioCheck is a personal, independent project. It is not affiliated with the Ministerio de
+          Justicia or any public body, and this page is not an official channel.
+        </p>
+      </footer>
+    </main>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="/feedback/feedback.js" defer></script>
+  </body>
+</html>

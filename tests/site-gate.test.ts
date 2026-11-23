@@ -83,7 +83,10 @@ function withBody(extra: string): string {
   return VALID.replace('</body>', `${extra}</body>`);
 }
 
-const FEEDBACK = withBody(`${TURNSTILE_SCRIPT}${OWN_SCRIPT}`);
+const SITEKEY = '0x4AAAAAAGPHi96wZq5N-xcv';
+const WIDGET = `<div id="turnstile" data-sitekey="${SITEKEY}"></div>`;
+
+const FEEDBACK = withBody(`${WIDGET}${TURNSTILE_SCRIPT}${OWN_SCRIPT}`);
 
 describe('site gate: feedback pages', () => {
   it.each(FEEDBACK_PAGES)('accepts both scripts on %s', (name) => {
@@ -133,6 +136,48 @@ describe('site gate: feedback pages', () => {
   it.each(FEEDBACK_PAGES)('still rejects other remote references on %s', (name) => {
     expect(pageProblems(name, `${FEEDBACK}<a href="https://evil.example/">x</a>`)).not.toEqual([]);
     expect(pageProblems(name, `${FEEDBACK}<iframe src="/x"></iframe>`)).not.toEqual([]);
+  });
+});
+
+describe('site gate: sitekey on the feedback pages', () => {
+  const withKey = (key: string) => FEEDBACK.replace(SITEKEY, key);
+
+  it.each(FEEDBACK_PAGES)('accepts a production-shaped key on %s', (name) => {
+    expect(pageProblems(name, withKey('0xAbC_123-xyz'))).toEqual([]);
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects each Cloudflare test-key prefix on %s', (name) => {
+    for (const key of [
+      '1x00000000000000000000AA',
+      '2x00000000000000000000AB',
+      '3x00000000000000000000FF',
+    ]) {
+      expect(pageProblems(name, withKey(key))).not.toEqual([]);
+    }
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects an empty or odd key on %s', (name) => {
+    expect(pageProblems(name, withKey(''))).not.toEqual([]);
+    expect(pageProblems(name, withKey('0x'))).not.toEqual([]);
+    expect(pageProblems(name, withKey('0x bad'))).not.toEqual([]);
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects a missing key on %s', (name) => {
+    expect(pageProblems(name, FEEDBACK.replace(WIDGET, '<div id="turnstile"></div>'))).not.toEqual(
+      [],
+    );
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects a doubled key on %s', (name) => {
+    expect(
+      pageProblems(name, withBody(`${WIDGET}${WIDGET}${TURNSTILE_SCRIPT}${OWN_SCRIPT}`)),
+    ).not.toEqual([]);
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects an unquoted key attribute on %s', (name) => {
+    expect(
+      pageProblems(name, FEEDBACK.replace(`data-sitekey="${SITEKEY}"`, `data-sitekey=${SITEKEY}`)),
+    ).not.toEqual([]);
   });
 });
 
@@ -196,6 +241,27 @@ describe('site gate: non-HTML files', () => {
     ["await import('/x.js')", 'dynamic import'],
   ])('rejects feedback.js with %s (%s)', (code) => {
     expect(assetProblems('feedback/feedback.js', `${GOOD_JS}${code};\n`)).not.toEqual([]);
+  });
+
+  it('accepts exactly one always-pass test sitekey in feedback.js', () => {
+    const one = `${GOOD_JS}const key = '1x00000000000000000000AA';\n`;
+    expect(assetProblems('feedback/feedback.js', one)).toEqual([]);
+  });
+
+  it.each([
+    [
+      'a second always-pass key',
+      `const a = '1x00000000000000000000AA'; const b = '1x00000000000000000000AA';`,
+    ],
+    ['the always-fail sitekey', `const a = '2x00000000000000000000AB';`],
+    ['the forced-challenge sitekey', `const a = '3x00000000000000000000FF';`],
+    ['a test secret', `const a = '1x0000000000000000000000000000000AA';`],
+    [
+      'the always-pass key plus another',
+      `const a = '1x00000000000000000000AA'; const b = '2x00000000000000000000AB';`,
+    ],
+  ])('rejects feedback.js with %s', (_label, code) => {
+    expect(assetProblems('feedback/feedback.js', `${GOOD_JS}${code}\n`)).not.toEqual([]);
   });
 
   it('walks the directory: only feedback/feedback.js passes among files', () => {

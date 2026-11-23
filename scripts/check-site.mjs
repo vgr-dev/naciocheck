@@ -19,22 +19,35 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SITE_DIR = resolve(import.meta.dirname, '../site');
 
-/** The pages the Worker has to serve: `/`, `/privacy/`, `/en/` and `/en/privacy/`. */
+/** The pages that post a report: the only ones that may carry scripts. */
+const FEEDBACK_PAGES = ['feedback/index.html', 'en/feedback/index.html'];
+
+/**
+ * The pages the Worker has to serve: `/`, `/privacy/`, `/feedback/` and their `/en/` twins.
+ */
 export const REQUIRED_PAGES = [
   'index.html',
   'privacy/index.html',
+  'feedback/index.html',
   'en/index.html',
   'en/privacy/index.html',
+  'en/feedback/index.html',
 ];
-
-/** The pages that post a report: the only ones that may carry scripts. */
-const FEEDBACK_PAGES = ['feedback/index.html', 'en/feedback/index.html'];
 
 /** The pages that may link Cloudflare's Turnstile Privacy Addendum (checked 2026-11-23). */
 const TURNSTILE_LINK_PAGES = [...FEEDBACK_PAGES, 'privacy/index.html', 'en/privacy/index.html'];
 
 /** The only file under `site/` that is not HTML. */
 const FEEDBACK_SCRIPT = 'feedback/feedback.js';
+
+/** A production sitekey: `0x` and then letters, digits, `_` or `-`. Cloudflare's test keys start `1x`, `2x`, `3x`. */
+const PRODUCTION_SITEKEY = /^0x[A-Za-z0-9_-]+$/;
+
+/** Anything shaped like a Turnstile test sitekey or test secret (`1x…`, `2x…`, `3x…`). */
+const TEST_KEY_SHAPE = /\b[123]x[0-9A-Za-z_-]{10,}/g;
+
+/** The one test key `feedback.js` may carry: the always-pass sitekey, for hands-on checks on localhost. */
+const ALLOWED_TEST_KEY = '1x00000000000000000000AA';
 
 const OWN_SCRIPT_TAG = /<script\s+src="\/feedback\/feedback\.js"\s+defer\s*><\/script>/gi;
 const TURNSTILE_SCRIPT_TAG =
@@ -95,6 +108,18 @@ export function pageProblems(name, text) {
       problems.push(`site/${name}: has ${String(tags)} <script> elements, exactly 2 are allowed`);
     }
     checked = checked.replace(OWN_SCRIPT_TAG, '').replace(TURNSTILE_SCRIPT_TAG, '');
+
+    // Exactly one sitekey, shaped like a production key: a test key in production fails closed (a
+    // production secret rejects its tokens) and would silently break the page.
+    const attributes = text.match(/data-sitekey/gi)?.length ?? 0;
+    const keys = [...text.matchAll(/\bdata-sitekey\s*=\s*"([^"]*)"/gi)].map((match) => match[1]);
+    if (attributes !== 1 || keys.length !== 1) {
+      problems.push(
+        `site/${name}: needs exactly one data-sitekey="..." (found ${String(attributes)})`,
+      );
+    } else if (!PRODUCTION_SITEKEY.test(keys[0] ?? '')) {
+      problems.push(`site/${name}: data-sitekey is not shaped like a production key (0x...)`);
+    }
   }
 
   if (TURNSTILE_LINK_PAGES.includes(name)) {
@@ -120,7 +145,7 @@ export function pageProblems(name, text) {
 
 /**
  * Checks a file that is not a page. Only `feedback/feedback.js` is allowed, and it may reach nothing but
- * the relative `/api/feedback`: no address, no dynamic code.
+ * the relative `/api/feedback`: no address, no dynamic code, no test key but the always-pass sitekey.
  * @param {string} name
  * @param {string} text
  * @returns {string[]}
@@ -139,6 +164,14 @@ export function assetProblems(name, text) {
   ];
   for (const [pattern, why] of rules) {
     if (pattern.test(text)) problems.push(`site/${name}: ${why}`);
+  }
+  // Cloudflare's published test keys are not credentials, but only the always-pass sitekey belongs here,
+  // once. Any other key-shaped string (a secret, a second key) fails.
+  const keys = text.match(TEST_KEY_SHAPE) ?? [];
+  if (keys.length > 1 || keys.some((key) => key !== ALLOWED_TEST_KEY)) {
+    problems.push(
+      `site/${name}: may carry only the always-pass test sitekey ${ALLOWED_TEST_KEY}, once`,
+    );
   }
   return problems;
 }
@@ -175,6 +208,6 @@ if (resolve(process.argv[1] ?? '') === SCRIPT_PATH) {
     process.exit(1);
   }
   console.log(
-    `Privacy site check passed: ${String(REQUIRED_PAGES.length)} pages (${REQUIRED_PAGES.join(', ')}), no scripts, no external references.`,
+    `Privacy site check passed: ${String(REQUIRED_PAGES.length)} pages (${REQUIRED_PAGES.join(', ')}), scripts only on the feedback pages, no other external references.`,
   );
 }

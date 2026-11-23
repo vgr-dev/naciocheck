@@ -39,6 +39,18 @@ export default tseslint.config(
     },
   },
   {
+    // The site's script is served to a page and runs in it, not in Node; `turnstile` comes from
+    // Cloudflare's api.js, loaded by the page.
+    files: ['site/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        ...globals.browser,
+        turnstile: 'readonly',
+      },
+    },
+  },
+  {
     // The E2E suite runs in Node and drives the browsers through Mocha.
     files: ['e2e/**/*.ts', 'wdio.conf.ts'],
     languageOptions: {
