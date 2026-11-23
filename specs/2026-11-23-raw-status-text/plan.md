@@ -29,7 +29,7 @@ Never [x] for partial work. Details live in progress.md. -->
 
 **Phase 4: Visual baselines**
 
-- [x] 8. Rewrite the Chrome baselines and review them uncommitted
+- [x] 8. Rewrite the Chrome baselines and review them f9ccd2a
 
 ## Phase 1: Switch every status name to the raw text
 
