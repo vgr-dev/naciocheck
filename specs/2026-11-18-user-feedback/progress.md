@@ -415,3 +415,10 @@ test(e2e): capture the report panel and rewrite the Chrome baselines
 - **Status:** done (local); the deployed checks remain
 - **Verified:** after the user set `FEEDBACK_ORIGIN=http://naciocheck.vgr.cat` in `.dev.vars` and restarted `npm run dev:site`, Chrome on `http://localhost:8787/feedback/#prueba%20desde%20Chrome`: the box held `prueba desde Chrome`, Turnstile issued `XXXX.DUMMY.TOKEN.XXXX`, Send posted `POST /api/feedback` -> 204, the page said "Enviado. Gracias: el comentario ha llegado a quien mantiene el proyecto.", Send stayed disabled, no console messages. The local `send_email` simulation wrote the body `prueba desde Chrome` to `.wrangler/tmp/email/.../email-text/`.
 - **Open:** Email Routing and sending setup, widget hostname, `TURNSTILE_SECRET`, deploy, live smoke test, Firefox checklist row 15.
+
+## 2026-11-23 - Live check: analytics beacon
+
+- **Status:** partial: the live send remains
+- **Found:** for browser requests Cloudflare injects `static.cloudflareinsights.com/beacon.min.js` (Web Analytics) into `/`, `/privacy/`, `/en/privacy/` and `/feedback/`, which contradicts the privacy pages ("loads nothing from elsewhere"). It is added at the edge, so `check:site` cannot see it; the user turns it off in the dashboard. Check after a deploy: `curl -s -H 'Accept: text/html' -A 'Mozilla/5.0 Chrome/158' https://naciocheck.vgr.cat/<page>` must not contain `cloudflareinsights`.
+- **Open:** Web Analytics off for `naciocheck.vgr.cat`; redeploy; live send; Firefox checklist row 15.
+- **Commit:** uncommitted

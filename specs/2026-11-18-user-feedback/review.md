@@ -30,8 +30,8 @@ report and inbox check also remains open. The spec stays active.
 
 ## Scope and acceptance
 
-- Reviewed the feedback commits from `c47059e` through `a14a948`, excluding the unrelated raw-status
-  closeout in `bb06ee0`. The manifest configuration, fixtures, URL allowlist and store screenshots
+- Reviewed the feedback commits from `c47059e` through `4b44c1f`, excluding the unrelated raw-status
+  closeout in `f6acb61`. The manifest configuration, fixtures, URL allowlist and store screenshots
   are outside the diff. The extension opens a tab with a fragment and the site posts only on Send.
 - Worker tests cover valid mail, rejection paths and zero unstubbed requests. The binding restricts the
   recipient, and Worker observability is disabled as agreed. The runtime tests stub mail. Cloudflare
@@ -50,7 +50,7 @@ report and inbox check also remains open. The spec stays active.
   guide across Spanish, English, desktop and phone. The phone error capture ends before the textarea
   and actions. The CSS search found no physical direction properties in the reviewed styles. Focus,
   RTL rendering and the feedback website were outside this spot check.
-- Corrected the stale step 14 status to reference `900f720`. Product code and tests were left for
+- Corrected the stale step 14 status to reference `748e648`. Product code and tests were left for
   the builder.
 
 ## Verification
@@ -96,7 +96,7 @@ the inbox are done.
   `too-large` and keeps the draft editable.
 - **Low (Firefox row 15):** the row now starts from a real failed check, goes through Turnstile and
   Send, and asks for the email to be confirmed; a note covers delivery and retention.
-- `plan.md` Status matches `git log` (every hash exists; step 14 is `900f720`). `progress.md` records
+- `plan.md` Status matches `git log` (every hash exists; step 14 is `748e648`). `progress.md` records
   the follow-up.
 
 ### Findings

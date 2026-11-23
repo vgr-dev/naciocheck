@@ -37,19 +37,19 @@ numbers are global across phases. -->
 
 **Phase 5: Endpoint and feedback pages**
 
-- [x] 10. Handle POST /api/feedback 8f021ba
-- [x] 10a. Give redact a module of its own 9dc6eb8
-- [x] 11. Add the feedback pages cd2ef77
+- [x] 10. Handle POST /api/feedback 9ab2f69
+- [x] 10a. Give redact a module of its own 1ad2aef
+- [x] 11. Add the feedback pages 876eac7
 
 **Phase 6: End-to-end checks and wording**
 
-- [x] 12. Cover the panel in the Chrome E2E suite ffdbc5f
-- [x] 12a. Report an anomaly by its state ids, never its note text 2f498d2
-- [x] 13. State the feedback channel in the policy and docs e820cca
+- [x] 12. Cover the panel in the Chrome E2E suite ee3c1e0
+- [x] 12a. Report an anomaly by its state ids, never its note text 9aa48b1
+- [x] 13. State the feedback channel in the policy and docs 7f79367
 
 **Phase 7: Visual baselines**
 
-- [x] 14. Capture the panel and rewrite the Chrome baselines 900f720
+- [x] 14. Capture the panel and rewrite the Chrome baselines 748e648
 
 ## Before building (gates)
 
@@ -524,7 +524,7 @@ Answers recorded 2026-11-23 (also in `spec.md`):
   as the binding's `destination_address` and used as the sender. If Email Routing rejects sending from and
   to the same address, the builder stops and asks.
 - **Q7 (F6). Answered:** the feedback and privacy pages link Cloudflare's Turnstile Privacy Addendum. The
-  sitekey is `0x4AAAAAAGPHi96wZq5N-xcv` (from the user's 1Password item, 2026-11-23; public by
+  sitekey is `0x4AAAAAAGPHi96wZq5N-xcv` (from the Turnstile dashboard, 2026-11-23; public by
   design). The secret stays in 1Password and reaches the Worker only through the user's
   `wrangler secret put TURNSTILE_SECRET`. The widget was created as Managed; Invisible is still the target,
   a dashboard change with no code change. Before deploying, the user restricts the widget's hostname to
