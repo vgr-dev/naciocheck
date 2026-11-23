@@ -44,6 +44,7 @@ Tus datos
 - Puedes cifrarlos con una contraseña tuya, cuando quieras y desde Opciones. Si la olvidas no se pueden recuperar: el historial se queda, pero tendrás que volver a escribir las solicitudes.
 - Puedes exportar una copia a un archivo, importarla en otro navegador y borrarlo todo desde Opciones.
 - No hay analítica, ni publicidad, ni rastreo, ni telemetría. La extensión solo habla con la sede electrónica, y solo cuando tú lanzas una comprobación.
+- «Informar de un problema» te muestra primero el texto y no envía nada: solo abre nuestra web con ese texto en la dirección, que los navegadores no envían al servidor. Si pulsas Enviar allí, el texto pasa por Cloudflare Turnstile y llega por correo a quien mantiene el proyecto, y no se guarda. Tu propio resultado y tus datos identificativos nunca se incluyen.
 
 Idiomas
 Español e inglés. Firefox para Android es un objetivo y aún no se ha verificado en un dispositivo.
@@ -66,7 +67,10 @@ año y fecha de nacimiento) se guardan solo en el almacenamiento local de la ext
 cifrado, si la usas, solo en el almacenamiento de sesión, que el navegador borra al cerrarse. No hay cuentas, ni
 servidores propios, ni analítica, ni publicidad. La extensión no envía nada a nosotros; la única petición es el
 formulario oficial que tú envías a `https://sede.mjusticia.gob.es/eConsultas/*` al comprobar, y el captcha que
-carga esa página. La copia de seguridad es un archivo que eliges tú donde guardarlo.
+carga esa página. «Informar de un problema» muestra primero el texto y solo abre la web con él en el fragmento
+de la dirección, que no se envía al servidor; un informe que envíes desde la página de comentarios (Cloudflare
+Turnstile) llega por correo a quien mantiene el proyecto, no se guarda y nunca incluye tu propio resultado ni tus
+datos identificativos. La copia de seguridad es un archivo que eliges tú donde guardarlo.
 
 ## Cómo se comprueba
 

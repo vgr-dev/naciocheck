@@ -51,6 +51,14 @@ after both browser builds, and treat it as a release requirement. The reasons fo
 [`store/permissions.md`](store/permissions.md), and the privacy policy is in [`site/`](site/)
 ([English](site/en/privacy/index.html), [Spanish](site/privacy/index.html)).
 
+**Reporting a problem.** The extension sends nothing by itself. "Report a problem" shows you the text first and
+only opens the website with that text in the address fragment (after the `#`), which browsers do not send to the
+server. The feedback page loads Cloudflare Turnstile; a report you send there goes through Cloudflare to the
+maintainer by email (`naciocheck@vgr.cat`) and is not stored, and the Worker keeps no logs. Your own result (the
+status text and sub-status the site printed) and your identifiers are never included, and anything shaped like
+an identifier is masked. The home and privacy pages load nothing from elsewhere; only the feedback page loads
+Turnstile.
+
 If you turn encryption on, every identity is stored encrypted, including applications added afterwards. The add and
 edit forms ask for the passphrase each time and do not keep it. To run a check, you unlock the data once; that
 passphrase stays in `storage.session` only, which the browser clears when it closes. **A forgotten passphrase
@@ -140,8 +148,15 @@ npm run typecheck
 npm test                # unit tests (Vitest)
 npm run format:check    # `npm run format` fixes
 npm run check:privacy   # needs a build first
-npm run check:site      # the privacy site has no scripts and no third-party URLs
+npm run check:site      # the site has scripts only on the feedback pages, and no other third-party URLs
 ```
+
+### Test the feedback page locally
+
+The feedback page posts to the site's Worker. To try it by hand, copy `.dev.vars.example` to `.dev.vars` (it is
+git-ignored and holds only Cloudflare's published Turnstile test values), run `npm run dev:site` and open
+`http://localhost:8787/feedback/`. Turnstile's test keys still contact Cloudflare, so this is a hands-on check
+and never part of `npm test`.
 
 ### End-to-end tests (Chrome)
 

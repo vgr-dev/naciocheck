@@ -45,6 +45,7 @@ Your data
 - You can encrypt them with a passphrase of your own, whenever you want, from Options. If you forget it they cannot be recovered: the history stays, but you will have to type the applications again.
 - You can export a copy to a file, import it in another browser, and delete everything from Options.
 - There is no analytics, no advertising, no tracking and no telemetry. The extension only talks to the official site, and only when you start a check.
+- "Report a problem" shows you the text first and sends nothing: it only opens our website with that text in the address, which browsers do not send to the server. If you press Send there, the text goes through Cloudflare Turnstile to the maintainer by email and is not stored. Your own result and your identifiers are never included.
 
 Languages
 Spanish and English. Firefox for Android is a target and has not been verified on a device yet.
@@ -65,8 +66,11 @@ Your saved data stays on the device. The personal details you type (NIE, applica
 birth) are stored only in the extension's local storage, and the encryption passphrase, if you use one, only in
 session storage, which the browser clears when it closes. There are no accounts, no servers of our own, no
 analytics and no advertising. The extension sends nothing to us; the only request is the official form you submit
-to `https://sede.mjusticia.gob.es/eConsultas/*` when you start a check, plus the captcha that page loads. The
-backup is a file you choose where to keep.
+to `https://sede.mjusticia.gob.es/eConsultas/*` when you start a check, plus the captcha that page loads. "Report
+a problem" shows the text first and only opens the website with it in the address fragment, which is not sent to
+the server; a report you send from the feedback page (Cloudflare Turnstile) reaches the maintainer by email and is
+not stored, and it never includes your own result or your identifiers. The backup is a file you choose where to
+keep.
 
 ## The brand tagline
 

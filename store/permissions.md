@@ -61,6 +61,13 @@ browser builds as a release requirement.
   creditworthiness or for lending purposes.
 - Privacy policy URL: `https://naciocheck.vgr.cat/privacy/` (the policy is in `site/privacy/`; the listing cannot
   be submitted before the owner deploys that site).
+- Feedback channel: the extension sends nothing by itself. "Report a problem" shows the text first and only opens
+  `https://naciocheck.vgr.cat/feedback/` with the text in the address fragment, which browsers do not send to the
+  server; the extension makes no request and needs no extra permission or host. The feedback page loads Cloudflare
+  Turnstile, and a report the person sends there goes through Cloudflare to the maintainer by email
+  (`naciocheck@vgr.cat`); it is not stored and the Worker keeps no logs. The person's own result (status text and
+  sub-status) and identifiers are never included, and anything shaped like an identifier is masked. That is
+  user-initiated and happens on the website, not in the extension, so the data-usage answers stay "none".
 
 ## addons.mozilla.org — submission answers
 
@@ -68,7 +75,9 @@ browser builds as a release requirement.
   (both builds). Nothing is collected, so no optional data types are declared and no consent experience is
   needed.
 - **Privacy policy**: AMO asks for one when data is transmitted. The extension transmits nothing itself; when the
-  user checks, the official form goes to the sede. The field is left empty or pointed at
+  user checks, the official form goes to the sede. "Report a problem" only opens the website with the shown text
+  in the address fragment; a report sent from the feedback page (Cloudflare Turnstile, then email to the
+  maintainer, not stored) is the person's own action on the website. The field is left empty or pointed at
   `https://naciocheck.vgr.cat/privacy/` once it exists, whichever the reviewer prefers.
 - **Source code**: yes. WXT bundles and minifies, so the source package (`npm run zip:sources`, with
   `package-lock.json`) goes with the build.

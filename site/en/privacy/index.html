@@ -87,13 +87,14 @@
     <main>
       <h1>NacioCheck privacy policy</h1>
       <p class="lead">
-        Applies to the NacioCheck extension 0.1.0 and later. Last reviewed: 16 November 2026.
+        Applies to the NacioCheck extension 0.1.0 and later. Last reviewed: 23 November 2026.
       </p>
 
       <nav>
         <a href="#summary">Summary</a>
         <a href="#data">What is stored, and where</a>
         <a href="#not">What it does not do</a>
+        <a href="#report">Reporting a problem</a>
         <a href="#delete">Export and delete</a>
         <a href="/privacy/">Español</a>
         <a href="/en/">Home</a>
@@ -106,7 +107,8 @@
           <strong>in your browser only</strong>. There are no accounts, no servers of our own, no
           analytics and no advertising. The extension sends nothing to us or to third parties; the
           only things that leave the browser are the official form you submit to the sede when you
-          run a check and the captcha that page loads.
+          run a check and the captcha that page loads. If you choose to report a problem, what you
+          write leaves only when you send it from the website (see “Reporting a problem”).
         </p>
       </div>
 
@@ -154,6 +156,33 @@
         </li>
       </ul>
 
+      <h2 id="report">Reporting a problem</h2>
+      <p>
+        The extension sends nothing by itself. “Report a problem” first shows you the text that
+        would be shared and sends it nowhere: it only opens this website with that text in the last
+        part of the address (after the <code>#</code>), which browsers do not send to the server.
+      </p>
+      <ul>
+        <li>
+          The report carries technical details (extension version, browser and its major version,
+          language, kind of result) and whatever you add. It <strong>never</strong> includes your
+          own result (the status text and the sentence the site printed) or your identifying
+          details, and anything shaped like an identifier is masked.
+        </li>
+        <li>
+          The feedback page loads Cloudflare Turnstile to keep out spam. When you press “Send”, the
+          text and that check go through Cloudflare to the person who maintains the project, by
+          email (naciocheck@vgr.cat). It is not stored anywhere else and no logs of the request are
+          kept. More in
+          <a href="https://www.cloudflare.com/turnstile-privacy-policy/"
+            >Turnstile's privacy policy</a
+          >.
+        </li>
+        <li>
+          This privacy page, like the home page, loads nothing from elsewhere. Only the feedback
+          page loads Turnstile.
+        </li>
+      </ul>
       <h2 id="encryption">Optional encryption</h2>
       <p>
         You can protect the NIE, the application number, the year and the date of birth with a
@@ -220,7 +249,7 @@
       <footer>
         <p>
           <a href="/en/">NacioCheck</a> ·
-          <a href="/privacy/">Política de privacidad en español</a> · Last reviewed: 16 November
+          <a href="/privacy/">Política de privacidad en español</a> · Last reviewed: 23 November
           2026
         </p>
       </footer>
