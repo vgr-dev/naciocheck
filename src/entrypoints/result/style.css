@@ -6,6 +6,7 @@
   --red-600: #dc2626;
   --gray-900: #0f172a;
   --gray-600: #4b5563;
+  --gray-500: #6b7280;
   --gray-200: #e2e8f0;
 }
 
@@ -13,7 +14,12 @@
   box-sizing: border-box;
 }
 
-body {
+/*
+ * The report panel brings the shared page stylesheet (`shared/pages.css`) with it, whose `body`, `.app`,
+ * `.disclaimer` and `button.primary` rules would otherwise win or lose by stylesheet order. The rules below are
+ * one step more specific, so this page looks the same in either order.
+ */
+html body {
   margin: 0;
   background: #f8fafc;
   color: var(--gray-900);
@@ -24,7 +30,7 @@ body {
     sans-serif;
 }
 
-.app {
+main.app {
   max-inline-size: 44rem;
   margin-inline: auto;
   padding: 1.5rem 1.25rem 2.5rem;
@@ -61,7 +67,7 @@ body {
 
 .explanation,
 .action,
-.disclaimer {
+.app .disclaimer {
   margin: 1rem 0 0;
 }
 
@@ -69,7 +75,7 @@ body {
   font-weight: 600;
 }
 
-.disclaimer {
+.app .disclaimer {
   padding-block-start: 0.75rem;
   border-block-start: 1px solid var(--gray-200);
   color: var(--gray-600);
@@ -149,7 +155,8 @@ body {
   margin-block: -0.25rem 1.5rem;
 }
 
-button.primary {
+/* Scoped to the page's own actions: the panel's buttons keep the shared look. */
+.actions > button.primary {
   min-block-size: 44px;
   padding: 0.7rem 1.25rem;
   border: 0;
@@ -161,7 +168,7 @@ button.primary {
   cursor: pointer;
 }
 
-button.primary:hover {
+.actions > button.primary:hover {
   background: var(--teal-600);
 }
 

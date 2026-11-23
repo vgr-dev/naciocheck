@@ -1,8 +1,10 @@
 import { browser } from 'wxt/browser';
 import type { ResultView } from '../../core/alerts';
-import { t } from '../../core/i18n';
+import { currentLocale, t } from '../../core/i18n';
+import { buildReport, type ReportCheck } from '../../core/report';
 import { brandHeader } from '../shared/brand';
 import { initPageLocale } from '../shared/locale';
+import { reportPanel } from '../shared/report-panel';
 
 /**
  * The result view: what the last check found, whether it changed, and — when it did — the full-screen alert
@@ -18,6 +20,11 @@ export interface ResultPayload {
   acknowledged: boolean;
   /** True when the run has more applications queued. */
   hasNext: boolean;
+  /**
+   * The only two fields of the check a problem report may carry; `null` when there is nothing to report on.
+   * A payload cached before this field existed has none, and is read as `null`.
+   */
+  report: ReportCheck | null;
 }
 
 const app = document.getElementById('app');
@@ -137,7 +144,44 @@ function render(payload: ResultPayload): void {
   }
 
   app.append(element('p', 'disclaimer', t('result.disclaimer')));
+
+  // Only where something went wrong or the page said something unusual (Q1): a normal status or change has no
+  // panel, so the page reads as before.
+  const report = payload.report ?? null;
+  if (report !== null && (view.view === 'error' || view.anomaly !== null)) {
+    app.append(buildReportPanel(report, view));
+  }
+
   if (view.view !== 'changed') app.append(actions);
+}
+
+/** The panel for this result: the report is editable text, so the person sees exactly what would be shared. */
+function buildReportPanel(report: ReportCheck, view: ResultView): HTMLElement {
+  const locale = currentLocale().content;
+  const text = buildReport(report, {
+    version: browser.runtime.getManifest().version,
+    browser: browserLabel(navigator.userAgent),
+    locale,
+    errorMessages: view.errorMessages,
+    anomaly: view.anomaly,
+  });
+  return reportPanel(text, locale);
+}
+
+/** The browser's name and major version from the user agent, and nothing else: no operating system (Q2). */
+function browserLabel(userAgent: string): string {
+  // Order matters: Edge and Opera also say Chrome, and Chrome also says Safari.
+  const known: ReadonlyArray<readonly [string, RegExp]> = [
+    ['Edge', /\bEdgA?\/(\d+)/],
+    ['Opera', /\bOPR\/(\d+)/],
+    ['Firefox', /\bFirefox\/(\d+)/],
+    ['Chrome', /\bChrome\/(\d+)/],
+  ];
+  for (const [name, pattern] of known) {
+    const match = pattern.exec(userAgent);
+    if (match?.[1] !== undefined) return `${name} ${match[1]}`;
+  }
+  return 'unknown';
 }
 
 function buildBanner(view: ResultView, acknowledged: boolean): HTMLElement {
