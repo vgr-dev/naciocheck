@@ -27,7 +27,7 @@ export interface RequestHeaders {
 
 /**
  * `null` when the request may go on, otherwise the first failing code. `expectedOrigin` comes from the
- * environment (`EXPECTED_ORIGIN` in production, a localhost origin under `wrangler dev`).
+ * environment (`EXPECTED_ORIGIN` in production, the route host over http under `wrangler dev`, whose proxy rewrites Origin).
  */
 export function checkRequest(request: RequestHeaders, expectedOrigin: string): RequestError | null {
   if (request.method !== 'POST') return 'method';

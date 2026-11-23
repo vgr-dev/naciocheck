@@ -12,7 +12,7 @@ declare global {
     interface Env {
       FEEDBACK_LIMIT: RateLimit;
       FEEDBACK_MAIL: SendEmail;
-      /** The one origin allowed to post (`wrangler dev` sets it to localhost through `.dev.vars`). */
+      /** The one origin allowed to post (`.dev.vars` sets the origin `wrangler dev` presents: the route host over http). */
       FEEDBACK_ORIGIN: string;
       TURNSTILE_EXPECTED_HOSTNAME: string;
       /** Set with `wrangler secret put`; never committed. */

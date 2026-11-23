@@ -5,5 +5,7 @@
 TURNSTILE_SECRET=1x0000000000000000000000000000000AA
 # Turnstile's test mode always answers with the hostname example.com; for wrangler dev only.
 TURNSTILE_EXPECTED_HOSTNAME=example.com
-# The origin of the local dev server, so the same-origin check passes on localhost; for wrangler dev only.
-FEEDBACK_ORIGIN=http://localhost:8787
+# The origin the Worker sees under wrangler dev; for wrangler dev only. Wrangler's dev proxy rewrites the
+# browser's Origin (http://localhost:8787) to the route's host over plain http, so it is neither localhost
+# nor the production https origin.
+FEEDBACK_ORIGIN=http://naciocheck.vgr.cat
