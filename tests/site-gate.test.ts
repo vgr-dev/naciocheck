@@ -1,5 +1,8 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { pageProblems } from '../scripts/check-site.mjs';
+import { assetProblems, pageProblems, siteProblems } from '../scripts/check-site.mjs';
 
 /**
  * Negative fixtures for the static-site gate. The real pages are checked by `npm run check:site`; these
@@ -63,5 +66,157 @@ describe('site page gate', () => {
         'site/index.html: no inline <style>',
       ]),
     );
+  });
+});
+
+const OWN_SCRIPT = '<script src="/feedback/feedback.js" defer></script>';
+const TURNSTILE_SCRIPT =
+  '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
+const ADDENDUM_LINK =
+  '<a href="https://www.cloudflare.com/turnstile-privacy-policy/">Cloudflare</a>';
+
+const FEEDBACK_PAGES = ['feedback/index.html', 'en/feedback/index.html'];
+const ADDENDUM_PAGES = [...FEEDBACK_PAGES, 'privacy/index.html', 'en/privacy/index.html'];
+
+/** A valid page with `extra` added before the end of the body. */
+function withBody(extra: string): string {
+  return VALID.replace('</body>', `${extra}</body>`);
+}
+
+const FEEDBACK = withBody(`${TURNSTILE_SCRIPT}${OWN_SCRIPT}`);
+
+describe('site gate: feedback pages', () => {
+  it.each(FEEDBACK_PAGES)('accepts both scripts on %s', (name) => {
+    expect(pageProblems(name, FEEDBACK)).toEqual([]);
+  });
+
+  it.each(['index.html', 'en/index.html', 'privacy/index.html', 'en/privacy/index.html'])(
+    'rejects the Turnstile script and the own script on %s',
+    (name) => {
+      expect(pageProblems(name, withBody(TURNSTILE_SCRIPT))).not.toEqual([]);
+      expect(pageProblems(name, withBody(OWN_SCRIPT))).not.toEqual([]);
+    },
+  );
+
+  it.each(FEEDBACK_PAGES)('rejects a feedback page missing either script on %s', (name) => {
+    expect(pageProblems(name, withBody(OWN_SCRIPT))).not.toEqual([]);
+    expect(pageProblems(name, withBody(TURNSTILE_SCRIPT))).not.toEqual([]);
+    expect(pageProblems(name, VALID)).not.toEqual([]);
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects a second remote script on %s', (name) => {
+    const other = '<script src="https://evil.example/x.js" async defer></script>';
+    expect(pageProblems(name, `${FEEDBACK}${other}`)).not.toEqual([]);
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects a Turnstile URL with another path or a query on %s', (name) => {
+    const otherPath = TURNSTILE_SCRIPT.replace('v0/api.js', 'v1/api.js');
+    const query = TURNSTILE_SCRIPT.replace('api.js"', 'api.js?render=explicit"');
+    const subdomain = TURNSTILE_SCRIPT.replace('challenges.', 'evil.');
+    for (const bad of [otherPath, query, subdomain]) {
+      expect(pageProblems(name, withBody(`${bad}${OWN_SCRIPT}`))).not.toEqual([]);
+    }
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects an inline script or a third script on %s', (name) => {
+    expect(pageProblems(name, `${FEEDBACK}<script>alert(1)</script>`)).not.toEqual([]);
+    expect(pageProblems(name, `${FEEDBACK}<script src="/other.js" defer></script>`)).not.toEqual(
+      [],
+    );
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects a relative own-script look-alike on %s', (name) => {
+    const lookalike = OWN_SCRIPT.replace('/feedback/feedback.js', '//evil.example/feedback.js');
+    expect(pageProblems(name, withBody(`${TURNSTILE_SCRIPT}${lookalike}`))).not.toEqual([]);
+  });
+
+  it.each(FEEDBACK_PAGES)('still rejects other remote references on %s', (name) => {
+    expect(pageProblems(name, `${FEEDBACK}<a href="https://evil.example/">x</a>`)).not.toEqual([]);
+    expect(pageProblems(name, `${FEEDBACK}<iframe src="/x"></iframe>`)).not.toEqual([]);
+  });
+});
+
+describe('site gate: Turnstile privacy addendum link', () => {
+  it.each(ADDENDUM_PAGES)('accepts the plain link on %s', (name) => {
+    const page = FEEDBACK_PAGES.includes(name) ? FEEDBACK : VALID;
+    expect(pageProblems(name, page.replace('</body>', `${ADDENDUM_LINK}</body>`))).toEqual([]);
+  });
+
+  it.each(['index.html', 'en/index.html'])('rejects the link on %s', (name) => {
+    expect(pageProblems(name, withBody(ADDENDUM_LINK))).not.toEqual([]);
+  });
+
+  it.each(['index.html', ...ADDENDUM_PAGES])(
+    'rejects another cloudflare.com address on %s',
+    (name) => {
+      const page = FEEDBACK_PAGES.includes(name) ? FEEDBACK : VALID;
+      const other = [
+        'https://www.cloudflare.com/',
+        'https://www.cloudflare.com/turnstile/',
+        'https://challenges.cloudflare.com/x',
+      ];
+      for (const url of other) {
+        expect(
+          pageProblems(name, page.replace('</body>', `<a href="${url}">x</a></body>`)),
+        ).not.toEqual([]);
+      }
+    },
+  );
+
+  it.each(ADDENDUM_PAGES)('rejects a link with extra attributes or a query on %s', (name) => {
+    const page = FEEDBACK_PAGES.includes(name) ? FEEDBACK : VALID;
+    const withQuery = ADDENDUM_LINK.replace('policy/"', 'policy/?x=1"');
+    const withTarget = ADDENDUM_LINK.replace('policy/"', 'policy/" target="_blank"');
+    for (const link of [withQuery, withTarget]) {
+      expect(pageProblems(name, page.replace('</body>', `${link}</body>`))).not.toEqual([]);
+    }
+  });
+});
+
+describe('site gate: non-HTML files', () => {
+  const GOOD_JS = `const response = await fetch('/api/feedback', { method: 'POST' });\nexport {};\n`;
+
+  it('accepts feedback/feedback.js without any address', () => {
+    expect(assetProblems('feedback/feedback.js', GOOD_JS)).toEqual([]);
+  });
+
+  it('rejects any other file', () => {
+    expect(assetProblems('other.js', GOOD_JS)).not.toEqual([]);
+    expect(assetProblems('feedback/other.js', GOOD_JS)).not.toEqual([]);
+    expect(assetProblems('en/feedback/feedback.js', GOOD_JS)).not.toEqual([]);
+    expect(assetProblems('data.json', '{}')).not.toEqual([]);
+  });
+
+  it.each([
+    ["fetch('https://naciocheck.vgr.cat/api/feedback')", 'absolute https'],
+    ["fetch('http://example.com/')", 'absolute http'],
+    ["fetch('//evil.example/api')", 'protocol-relative'],
+    ['eval("1")', 'eval'],
+    ['new Function("return 1")', 'new Function'],
+    ["await import('/x.js')", 'dynamic import'],
+  ])('rejects feedback.js with %s (%s)', (code) => {
+    expect(assetProblems('feedback/feedback.js', `${GOOD_JS}${code};\n`)).not.toEqual([]);
+  });
+
+  it('walks the directory: only feedback/feedback.js passes among files', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-gate-'));
+    try {
+      const write = (name: string, text: string) => {
+        const path = join(dir, name);
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, text);
+      };
+      write('feedback/feedback.js', GOOD_JS);
+      expect(siteProblems(dir).filter((problem) => problem.includes('feedback.js'))).toEqual([]);
+      write('stray.js', GOOD_JS);
+      write('feedback/feedback.js', "fetch('https://evil.example/')");
+      const problems = siteProblems(dir);
+      expect(problems).toContain('site/stray.js: only HTML is served, this file is not a page');
+      expect(problems.some((problem) => problem.startsWith('site/feedback/feedback.js'))).toBe(
+        true,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

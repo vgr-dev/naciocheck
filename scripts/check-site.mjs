@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
@@ -9,6 +9,11 @@ import { fileURLToPath } from 'node:url';
  * Every rule below is a thing the pages must not contain. The last one is the catch-all: a page may not mention
  * any `http://` or `https://` address at all, not even as a link, because the site links to nothing outside
  * itself — the one host it would ever name is written as plain text (`sede.mjusticia.gob.es`).
+ *
+ * Exceptions, each scoped to named pages and matched exactly (see `FEEDBACK_PAGES` and
+ * `TURNSTILE_LINK_PAGES`): the feedback pages carry two scripts, the site's own `feedback.js` and
+ * Cloudflare's Turnstile; those pages and the privacy pages may link Turnstile's privacy addendum; and
+ * `feedback/feedback.js` is the only file served that is not HTML.
  */
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -21,6 +26,21 @@ export const REQUIRED_PAGES = [
   'en/index.html',
   'en/privacy/index.html',
 ];
+
+/** The pages that post a report: the only ones that may carry scripts. */
+const FEEDBACK_PAGES = ['feedback/index.html', 'en/feedback/index.html'];
+
+/** The pages that may link Cloudflare's Turnstile Privacy Addendum (checked 2026-11-23). */
+const TURNSTILE_LINK_PAGES = [...FEEDBACK_PAGES, 'privacy/index.html', 'en/privacy/index.html'];
+
+/** The only file under `site/` that is not HTML. */
+const FEEDBACK_SCRIPT = 'feedback/feedback.js';
+
+const OWN_SCRIPT_TAG = /<script\s+src="\/feedback\/feedback\.js"\s+defer\s*><\/script>/gi;
+const TURNSTILE_SCRIPT_TAG =
+  /<script\s+src="https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js"\s+async\s+defer\s*><\/script>/gi;
+const TURNSTILE_LINK_TAG =
+  /<a\s+href="https:\/\/www\.cloudflare\.com\/turnstile-privacy-policy\/"\s*>/gi;
 
 const FORBIDDEN = [
   { pattern: /<script\b/i, why: 'has a <script> element: the site carries no JavaScript' },
@@ -58,8 +78,31 @@ function filesIn(directory) {
  */
 export function pageProblems(name, text) {
   const problems = [];
+  let checked = text;
+
+  if (FEEDBACK_PAGES.includes(name)) {
+    // Exactly the two scripts and nothing else with a <script> tag: an inline script, a third script or a
+    // variant of either URL leaves a tag behind and is caught below.
+    const own = text.match(OWN_SCRIPT_TAG)?.length ?? 0;
+    const turnstile = text.match(TURNSTILE_SCRIPT_TAG)?.length ?? 0;
+    const tags = text.match(/<script\b/gi)?.length ?? 0;
+    if (own !== 1)
+      problems.push(`site/${name}: needs exactly one <script src="/feedback/feedback.js" defer>`);
+    if (turnstile !== 1) {
+      problems.push(`site/${name}: needs exactly one Turnstile <script ... async defer>`);
+    }
+    if (tags !== 2) {
+      problems.push(`site/${name}: has ${String(tags)} <script> elements, exactly 2 are allowed`);
+    }
+    checked = checked.replace(OWN_SCRIPT_TAG, '').replace(TURNSTILE_SCRIPT_TAG, '');
+  }
+
+  if (TURNSTILE_LINK_PAGES.includes(name)) {
+    checked = checked.replace(TURNSTILE_LINK_TAG, '<a>');
+  }
+
   for (const { pattern, why } of FORBIDDEN) {
-    if (pattern.test(text)) problems.push(`site/${name}: ${why}`);
+    if (pattern.test(checked)) problems.push(`site/${name}: ${why}`);
   }
 
   // The other half of "plain HTML with inline CSS": a page declares its language, scales on a phone, has a
@@ -72,6 +115,31 @@ export function pageProblems(name, text) {
   }
   if (!/<title>[^<]+<\/title>/i.test(text)) problems.push(`site/${name}: no <title>`);
   if (!/<style>/i.test(text)) problems.push(`site/${name}: no inline <style>`);
+  return problems;
+}
+
+/**
+ * Checks a file that is not a page. Only `feedback/feedback.js` is allowed, and it may reach nothing but
+ * the relative `/api/feedback`: no address, no dynamic code.
+ * @param {string} name
+ * @param {string} text
+ * @returns {string[]}
+ */
+export function assetProblems(name, text) {
+  if (name !== FEEDBACK_SCRIPT) {
+    return [`site/${name}: only HTML is served, this file is not a page`];
+  }
+  const problems = [];
+  const rules = [
+    [/https?:\/\//i, 'names an http(s) address: it posts to the relative /api/feedback only'],
+    [/["'`]\/\/[^\s"'`]/, 'has a protocol-relative address'],
+    [/\beval\b/, 'uses eval'],
+    [/\bnew\s+Function\b/, 'uses new Function'],
+    [/\bimport\s*\(/, 'uses a dynamic import()'],
+  ];
+  for (const [pattern, why] of rules) {
+    if (pattern.test(text)) problems.push(`site/${name}: ${why}`);
+  }
   return problems;
 }
 
@@ -90,13 +158,11 @@ export function siteProblems(siteDir = SITE_DIR) {
   if (files.length === 0) problems.push('site/: no files');
 
   for (const file of files) {
-    const name = relative(siteDir, file);
+    const name = relative(siteDir, file).split(sep).join('/');
     const text = readFileSync(file, 'utf8');
-    if (!name.endsWith('.html')) {
-      problems.push(`site/${name}: only HTML is served, this file is not a page`);
-      continue;
-    }
-    problems.push(...pageProblems(name, text));
+    problems.push(
+      ...(name.endsWith('.html') ? pageProblems(name, text) : assetProblems(name, text)),
+    );
   }
   return problems;
 }
