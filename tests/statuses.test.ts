@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { normaliseText } from '../src/core/normalise';
 import {
-  displayStatus,
   findStatus,
   findSubStatus,
   STATUS_CATALOG,
@@ -249,25 +248,5 @@ describe('final outcomes found by whole-word search', () => {
 
   it('matches whole words only', () => {
     expect(statusKeyOf('Cerrado', 'Su expediente ha sido desarchivado')).toBe(UNKNOWN_STATUS_KEY);
-  });
-});
-
-describe('displayStatus', () => {
-  it('shows the official text as it is in Spanish', () => {
-    expect(displayStatus('Abierto - Registrado.', 'es')).toBe('Abierto - Registrado.');
-  });
-
-  it('shows the catalogue title in English for a text the catalogue knows', () => {
-    expect(displayStatus('Abierto - Registrado.', 'en')).toBe('Open - Registered');
-    expect(displayStatus('Abierto - En tramitación.', 'en')).toBe('Open - In progress');
-  });
-
-  it('falls back to the official text for one it has never seen, in any language', () => {
-    expect(displayStatus('Un estado que nadie ha visto.', 'en')).toBe(
-      'Un estado que nadie ha visto.',
-    );
-    expect(displayStatus('Un estado que nadie ha visto.', 'es')).toBe(
-      'Un estado que nadie ha visto.',
-    );
   });
 });

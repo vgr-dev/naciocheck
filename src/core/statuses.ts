@@ -561,16 +561,6 @@ export function findStatus(raw: string): StatusEntry | null {
 }
 
 /**
- * A status as a person reads it in `content` (the language of the catalogue texts the page uses): the catalogue's
- * title in English when it knows the page's text, and the text as the official site printed it otherwise. Spanish
- * is that text, and a status nobody has seen has no translation to show.
- */
-export function displayStatus(raw: string, content: 'es' | 'en'): string {
-  if (content === 'es') return raw;
-  return findStatus(raw)?.en.title ?? raw;
-}
-
-/**
  * The two final outcomes whose exact page wording has not been captured yet. They are recognised by whole-word
  * search — and only on the two lines the parser already reads, never anywhere else on the page.
  */
