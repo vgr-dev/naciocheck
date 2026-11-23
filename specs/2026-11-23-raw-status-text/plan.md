@@ -13,14 +13,14 @@ Never [x] for partial work. Details live in progress.md. -->
 
 **Phase 1: Switch every status name to the raw text**
 
-- [x] 1. Name the status by its raw text in the result view uncommitted
-- [x] 2. Name the states by their raw texts in the anomaly note uncommitted
-- [x] 3. Show the raw text in the popup and the options history uncommitted
-- [x] 4. Lead each guide entry with the Spanish name and an English gloss uncommitted
+- [x] 1. Name the status by its raw text in the result view f6ad217
+- [x] 2. Name the states by their raw texts in the anomaly note f6ad217
+- [x] 3. Show the raw text in the popup and the options history f6ad217
+- [x] 4. Lead each guide entry with the Spanish name and an English gloss 19cf22b
 
 **Phase 2: Remove displayStatus**
 
-- [ ] 5. Delete displayStatus and its unit tests
+- [x] 5. Delete displayStatus and its unit tests uncommitted
 
 **Phase 3: End-to-end assertions and the manual checklist**
 

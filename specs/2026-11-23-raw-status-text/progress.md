@@ -95,3 +95,26 @@ feat(statuses): lead guide entries with the Spanish name and a gloss
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (25 files, 461 tests)
 - **Commit proposal:** one commit for steps 1-3 (status name from the site's text), one for step 4 (guide), one for the spec folder
 - **Open issues:** E2E not run; expected red on status names and baselines until phases 3 and 4 (accepted)
+
+## 2026-11-23 - Step 5: Delete displayStatus and its unit tests
+
+- **Status:** done
+- **Changed:** `src/core/statuses.ts`, `tests/statuses.test.ts`
+- **Verified:** `npx vitest run tests/statuses.test.ts` -> pass (31); `npm run typecheck` -> pass; `grep -rn displayStatus src tests e2e` -> no output
+- **Commit:** uncommitted, proposed "refactor(statuses): remove the unused displayStatus helper"
+- **Open issues:** none
+- **Run by:** implement-phase (builder subagent, model sonnet)
+- **Proposed commit (builder):**
+
+```
+refactor(statuses): remove the unused displayStatus helper
+```
+
+## 2026-11-23 - Phase 2: Remove displayStatus
+
+- **Status:** done
+- **Steps:** 5 done
+- **File check:** pass (2 changed files, both in step 5's Files; plus the orchestrator's plan.md)
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (25 files, 458 tests)
+- **Commit proposal:** one commit for step 5, one for the plan and progress updates
+- **Open issues:** E2E still expected red until phases 3 and 4 (accepted)
