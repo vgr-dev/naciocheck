@@ -1,6 +1,6 @@
 # Spec review — 2026-11-23
 
-**PASS.** The review found no acceptance blockers. The spec stays active pending confirmation.
+**PASS.** The review found no acceptance blockers. The spec was closed on 2026-11-23 after user confirmation.
 
 Reviewed all eight plan steps against the changes from `f6ad217^` through `15a98c9`, with three parallel
 Luna reviews covering core behavior, UI and localization, and tests and documentation.

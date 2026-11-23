@@ -1,5 +1,5 @@
 ---
-status: active # draft | active | done | abandoned
+status: done # draft | active | done | abandoned
 created: 2026-11-23
 status-date: 2026-11-23
 ---
@@ -69,20 +69,20 @@ NacioCheck shows to the one on the official page. This is a last change before v
 
 ## Acceptance criteria
 
-- [ ] In the English and Spanish UI, the popup card, the options history and the result heading show
+- [x] In the English and Spanish UI, the popup card, the options history and the result heading show
       `check.raw` exactly (for example "Abierto - Registrado."), for both catalogued and unknown statuses.
-- [ ] The result page's "Before:" line shows the previous check's `raw` text in both languages.
-- [ ] The anomaly note names both states by their raw texts (plus the raw sub-status when present) in the
+- [x] The result page's "Before:" line shows the previous check's `raw` text in both languages.
+- [x] The anomaly note names both states by their raw texts (plus the raw sub-status when present) in the
       Spanish and the English note; no catalogue title appears in it.
-- [ ] Explanations, what-you-can-do and observed-meaning texts are unchanged: in the UI language and framed
+- [x] Explanations, what-you-can-do and observed-meaning texts are unchanged: in the UI language and framed
       as non-official.
-- [ ] In the English UI, each guide entry shows the Spanish name with the English title as a gloss; in the
+- [x] In the English UI, each guide entry shows the Spanish name with the English title as a gloss; in the
       Spanish UI it shows the Spanish name only.
-- [ ] `displayStatus` no longer exists and nothing references it.
-- [ ] `npm test`, `npm run lint`, `npm run typecheck`, `npm run test:e2e` pass, with the affected baselines
+- [x] `displayStatus` no longer exists and nothing references it.
+- [x] `npm test`, `npm run lint`, `npm run typecheck`, `npm run test:e2e` pass, with the affected baselines
       rewritten via `npm run test:e2e:update-baselines` and reviewed with `/review-ui`.
-- [ ] `npm run build:chrome`, `npm run build:firefox` and `npm run check:privacy` pass unchanged.
-- [ ] Firefox checklist row 12 describes the new behaviour; its old PASS is not carried over.
+- [x] `npm run build:chrome`, `npm run build:firefox` and `npm run check:privacy` pass unchanged.
+- [x] Firefox checklist row 12 describes the new behaviour; its old PASS is not carried over.
 
 ## Open questions
 
