@@ -18,10 +18,11 @@ explanations from the people using the extension (ADR 0004 forbids telemetry).
 
 The extension never sends anything. Its "Send" action opens `https://naciocheck.vgr.cat/feedback/#<report>`
 (or `/en/feedback/`) in a new tab. The report travels in the URL fragment, which browsers do not send to the
-server. The feedback page shows the text, the person edits it and presses Send, and the page posts it to
-`POST /api/feedback` on the same Worker that serves the site. The Worker checks it and mails it to the
-maintainer through the Cloudflare Email Routing `send_email` binding, which can only deliver to verified
-addresses. Nothing is stored. Because the channel lives on the site, it can change later (GitHub issues once
+server. The feedback page shows the text, the person edits it, passes a Turnstile check and presses Send,
+and the page posts the text and the Turnstile token to `POST /api/feedback` on the same Worker that serves
+the site. The Worker validates the token with Turnstile's siteverify, applies its own checks, and mails the
+text to the maintainer through the Cloudflare `send_email` binding, restricted to one verified destination
+address. Nothing is stored. Because the channel lives on the site, it can change later (GitHub issues once
 the repo is public, another channel) without an extension release. See the proposed amendment to ADR 0005.
 
 ## Scope
@@ -37,11 +38,16 @@ the repo is public, another channel) without an extension release. See the propo
 - A pure report builder and redactor in `src/core/` whose signature takes a check, never an application or
   identity, so "no identifier" is a property of the types. The Worker reuses the same `redact`.
 - Site: `/feedback/` and `/en/feedback/` pages that read the fragment into a textarea, show what will be sent,
-  and post it on an explicit Send click. Copy stays available on the page. The script is same-origin and
-  served only on those pages.
+  render a Turnstile widget, and post the text with the token on an explicit Send click. Copy stays available
+  on the page and works without Turnstile. The pages carry one same-origin script and Turnstile's
+  `https://challenges.cloudflare.com/turnstile/v0/api.js`, loaded from that exact URL (Cloudflare forbids
+  proxying it); no other page gains a script.
 - Worker: `POST /api/feedback` that accepts only a same-origin JSON body under a size cap, rate-limits per
-  client, re-runs `redact`, and sends one plain-text email to the verified maintainer address. No KV, D1, R2
-  or logging of the body; observability does not record request bodies.
+  client, and rejects the request unless siteverify returns `success` for the token with the expected
+  hostname. Only then does it re-run `redact` and send one plain-text email to the verified maintainer
+  address. No KV, D1, R2 or logging of the body; observability does not record request bodies.
+- The Turnstile secret is a Worker secret set by the user (`wrangler secret put`), never in the repo or the
+  Wrangler config; the sitekey is public and lives in the page.
 - es and en texts, keyboard and screen-reader friendly; Chrome E2E and visual baselines for the panel; offline
   tests for the page and the Worker; privacy policy (es + en), README, store texts and the Firefox checklist
   say what the panel and the page do.
@@ -65,10 +71,15 @@ the repo is public, another channel) without an extension release. See the propo
 - `src/core/locales/es.ts`, `en.ts`: the panel's texts (a key-parity test covers `qps`).
 - `site/feedback/index.html`, `site/en/feedback/index.html`, `site/feedback/feedback.js` (new): the page.
 - `worker/index.ts` (new): the `/api/feedback` handler; static assets as before for every other path.
-- `wrangler.jsonc`: `main`, the `send_email` binding to the verified address, the rate-limit binding,
-  `assets.run_worker_first` limited to `/api/*`.
-- `scripts/check-site.mjs` and its test: a scoped exception allowing one same-origin script on the feedback
-  pages only; every other rule unchanged.
+- `wrangler.jsonc`: `main`, the `send_email` binding with `destination_address`, the `ratelimits` binding
+  (`simple`, period 10 or 60), `assets.run_worker_first` limited to `/api/*`.
+- `tests/worker/` (new), `vitest.worker.config.ts` (new): Worker tests under `@cloudflare/vitest-plugin`
+  (`cloudflareTest({ wrangler: { configPath: './wrangler.jsonc' } })`), a separate Vitest project so the
+  extension tests keep their environment; `npm test` runs both.
+- `package.json`: `@cloudflare/vitest-plugin` and `@cloudflare/workers-types` as dev dependencies (needs
+  approval, see F7).
+- `scripts/check-site.mjs` and its test: a scoped exception allowing, on the feedback pages only, one
+  same-origin script and the exact Turnstile script URL; every other rule unchanged.
 - `scripts/allowed-urls.json`: no change (`https://naciocheck.vgr.cat/` is already listed).
 - `site/privacy/index.html`, `site/en/privacy/index.html`, `README.md`, `store/permissions.md`,
   `docs/manual-firefox-checklist.md`: wording.
@@ -86,8 +97,12 @@ the repo is public, another channel) without an extension release. See the propo
   explicit clicks, and the fragment never reaches the server.
 - No new manifest permission and no new host pattern; `npm run check:privacy` passes on the same build.
 - The Continue click is asserted through the call to `tabs.create`, not by loading the page.
-- The Worker is tested offline only; no test sends a real email or reaches Cloudflare.
-- Deploying the site and configuring Email Routing are the user's actions.
+- The Worker is tested offline only; no test sends a real email or reaches Cloudflare. Tests replace the
+  `send_email` and rate-limit bindings with stubs and intercept the siteverify call, so Turnstile's test
+  keys are used only for hands-on checks, never in automated tests.
+- No Turnstile secret, verified address or other credential in the repo, a fixture, a log or a test.
+- Deploying the site, configuring Email Routing, creating the Turnstile widget and setting its secret are
+  the user's actions.
 - Fake identities only in tests and baselines.
 
 ## Acceptance criteria
@@ -98,15 +113,19 @@ the repo is public, another channel) without an extension release. See the propo
       the status and none of the fake identity's values; editing it changes what Copy would hold; the
       Continue click calls `tabs.create` with `https://naciocheck.vgr.cat/` plus `feedback/#` and no other
       host.
-- [ ] Worker tests: a valid post sends one email whose body is the redacted text; an oversized body, a
-      wrong method or content type, a cross-origin post and a rate-limited client are rejected and send
-      nothing; nothing is written to storage or logged.
-- [ ] `npm run check:site` passes and still fails on a script on any other page or on any remote address.
+- [ ] Worker tests: a valid post with a passing token sends one email whose body is the redacted text; a
+      missing token, a failed or spent token (`timeout-or-duplicate`), a wrong hostname, a siteverify
+      outage, an oversized body, a wrong method or content type, a cross-origin post and a rate-limited
+      client are rejected and send nothing; nothing is written to storage or logged; no test reaches a real
+      host.
+- [ ] `npm run check:site` passes and still fails on a script on any other page, on any remote address
+      other than the exact Turnstile script on the feedback pages, and on a Turnstile script elsewhere.
 - [ ] `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run check:site && npm run check:privacy`
       pass, with the E2E guard at 0 unexpected requests.
 - [ ] Privacy policy, README, store data-usage answers and the Firefox checklist state that the extension
-      sends nothing by itself, and that a report the person sends from the website goes through Cloudflare
-      to the maintainer by email and is not stored.
+      sends nothing by itself, that the feedback page loads Cloudflare Turnstile, and that a report the
+      person sends from the website goes through Cloudflare to the maintainer by email and is not stored.
+      Every other page still states that it loads nothing from elsewhere.
 - [ ] After the user deploys: the user sends one report from the real extension with a real error and
       receives it.
 
@@ -123,10 +142,15 @@ the repo is public, another channel) without an extension release. See the propo
   are triaged alike?
 - **F5. Timing.** Resolved by the website channel: it does not depend on the repo being public. Does it
   ship in the first release or the next one?
-- **F6. Spam protection.** The draft uses a size cap, a same-origin check, a hidden honeypot field and
-  per-client rate limiting, so the site still loads nothing from another origin. Turnstile is stronger but
-  loads `challenges.cloudflare.com` on the feedback page and changes the privacy policy's "the site loads
-  nothing from elsewhere" claim. Add it now, or only if spam arrives?
-- **F7. Testing the Worker.** Offline tests may need `@cloudflare/vitest-pool-workers` or Miniflare (a
-  dependency change), or a handler written as a pure function over `Request` with the bindings injected,
-  tested in plain Vitest. The draft prefers the latter.
+- **F6. Spam protection.** Decided 2026-11-23: Turnstile is required, on top of the size cap, the
+  same-origin check and per-client rate limiting. Widget mode (managed, or invisible) and whether the
+  privacy pages link to Cloudflare's Turnstile privacy terms are still open.
+- **F7. Testing the Worker.** Decided 2026-11-23, pending dependency approval: `@cloudflare/vitest-plugin`
+  (1.9.0 supports Vitest `^4.1.0 || ^5.0.0`; the repo is on 5.1.0), which runs the Worker in the Workers
+  runtime locally through Miniflare and replaces the older `@cloudflare/vitest-pool-workers`. Tests call
+  the handler with `exports.default.fetch` from `cloudflare:workers`, with stubbed `send_email` and
+  rate-limit bindings and an intercepted siteverify. The handler keeps its checks in pure functions so they
+  are also covered by plain unit tests.
+- **F8. Cloudflare skills.** The official `cloudflare/skills` plugin (`turnstile-spin`,
+  `cloudflare-email-service`, `workers-best-practices`, `wrangler`) is not installed. It bundles Cloudflare's
+  remote MCP server with account API access. Install it for the build, or work from the docs only?

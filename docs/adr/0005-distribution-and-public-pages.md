@@ -39,17 +39,25 @@ send from a Worker to verified addresses only. See `specs/2026-11-18-user-feedba
   served by the same Worker on the same custom domain. Every other path stays static assets.
 - The extension only opens the feedback page in a new tab, with the report in the URL fragment. The page
   posts it on an explicit Send click after the person has seen and edited it.
-- The Worker mails the report to the maintainer's verified address through the `send_email` binding. It
-  stores nothing, does not log request bodies, caps the size, accepts same-origin posts only, rate-limits
-  per client and redacts anything shaped like an identifier.
-- The feedback pages carry one same-origin script. They load nothing from another origin unless a later
-  decision adds bot protection (spec question F6).
+- Every send passes Cloudflare Turnstile. The Worker validates the token with siteverify (success and the
+  expected hostname) before anything else reaches the mail binding; a request without a valid token sends
+  nothing.
+- The Worker mails the report to the maintainer's verified address through a `send_email` binding fixed to
+  that one `destination_address`. It stores nothing, does not log request bodies, caps the size, accepts
+  same-origin posts only, rate-limits per client and redacts anything shaped like an identifier.
+- The feedback pages carry one same-origin script and Turnstile's script, loaded from
+  `https://challenges.cloudflare.com/turnstile/v0/api.js`. No other page loads anything from another origin.
+- The Turnstile secret is a Worker secret; it never appears in the repo or the Wrangler config.
 
 ### Consequences
 
 - The site is no longer static pages only. `npm run check:site` gets a scoped exception for the feedback
-  pages' script; every other rule stays.
-- The privacy policy (es + en) and store data-usage answers state that a report sent from the website goes
-  through Cloudflare to the maintainer by email and is not stored.
-- Enabling Email Routing on `vgr.cat`, verifying the address and deploying stay the user's actions.
+  pages (the same-origin script and the exact Turnstile URL); every other rule stays.
+- The privacy policy (es + en) and store data-usage answers state that the feedback page loads Cloudflare
+  Turnstile and that a report sent from it goes through Cloudflare to the maintainer by email and is not
+  stored. The other pages keep their "loads nothing from elsewhere" statement.
+- Worker tests run offline under `@cloudflare/vitest-plugin`, with the mail and rate-limit bindings stubbed
+  and siteverify intercepted (ADR 0007: tests never reach a real host).
+- Enabling Email Routing on `vgr.cat`, verifying the address, creating the Turnstile widget, setting its
+  secret and deploying stay the user's actions.
 - The reporting channel can change by redeploying the site, without an extension release.
