@@ -27,8 +27,9 @@ numbers are global across phases. -->
 
 **Phase 3: Panel on the pages**
 
-- [x] 7. Offer the panel on the result page uncommitted
-- [x] 8. Offer "this explanation looks wrong" in the guide uncommitted
+- [x] 7. Offer the panel on the result page d6a24bf
+- [x] 8. Offer "this explanation looks wrong" in the guide 2b1a9b1
+- [x] 8a. Share one tested browser label helper uncommitted
 
 **Phase 4: Worker harness**
 
@@ -244,6 +245,26 @@ Fixed here so that parallel builders agree; change them only by amending this pl
 - **Files:** `src/entrypoints/statuses/main.ts`
 - **Verify:** `npm run typecheck`; clean. `npx eslint src/entrypoints/statuses/main.ts`; clean.
 - **Out of scope:** the catalogue texts, the sub-status steps list, the store screenshot of the guide (Q8).
+
+### 8a. Share one tested browser label helper
+
+Added 2026-11-23 after Phase 3: steps 7 and 8 each wrote a local helper (`browserLabel` in
+`result/main.ts`, `browserName` in `statuses/main.ts`), and they disagree on Edge for Android.
+
+- **Goal:** `src/core/report.ts` exports `browserLabel(userAgent: string): string`, pure (takes the
+  string, never reads `navigator`), returning the browser name and major version only, with no OS (Q2):
+  `Edge` (`Edg/`, `EdgA/`), `Opera` (`OPR/`), `Firefox` (`Firefox/`), `Chrome` (`Chrome/`), checked in
+  that order, else `unknown`. Both pages call it with `navigator.userAgent` and drop their local helper;
+  nothing else in either page changes.
+  - `tests/report.test.ts` adds fixed, made-up user-agent strings for desktop Chrome, Chrome on Android,
+    desktop Edge, Edge on Android, Opera, desktop Firefox, Firefox for Android and an unknown agent, and
+    asserts that no result contains an OS or platform token (`Windows`, `Linux`, `Android`, `Mac`, `X11`).
+- **Files:** `src/core/report.ts`, `tests/report.test.ts`, `src/entrypoints/result/main.ts`,
+  `src/entrypoints/statuses/main.ts`
+- **Verify:** `npx vitest run tests/report.test.ts`; all pass. `npm run typecheck`; clean.
+  `npx eslint src/core/report.ts tests/report.test.ts src/entrypoints/result/main.ts src/entrypoints/statuses/main.ts`;
+  clean. `grep -rn "function browser" src/entrypoints`; no match.
+- **Out of scope:** the report format, the panel, CSS, E2E and baselines.
 
 ## Phase 4: Worker harness
 

@@ -194,3 +194,11 @@ feat(statuses): offer a report panel on every guide card
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck` -> pass (28 files, 620 tests). Diagnostic, beyond the phase verify: `npm run build:chrome && E2E_SPEC=visual E2E_BROWSER=chrome npx wdio run e2e/wdio.conf.ts` -> 18 passing, 3 failing: the guide and the error-result captures (expected until Phase 7) and the after-all screenshot hook; every other result view matches its baseline, so loading `pages.css` on the result page changed nothing else; network guard 0 outside the fake site
 - **Commit proposal:** one commit per step, one for the plan and progress updates
 - **Open issues:** two browser-name helpers (`browserLabel` in `result/main.ts`, `browserName` in `statuses/main.ts`) that disagree on Edge for Android; proposed follow-up: move one tested helper into `src/core/report.ts` and use it in both pages
+
+## 2026-11-23 - Step 8a: Share one tested browser label helper
+
+- **Status:** done
+- **Changed:** `src/core/report.ts`, `tests/report.test.ts`, `src/entrypoints/result/main.ts`, `src/entrypoints/statuses/main.ts`
+- **Verified:** `npx vitest run tests/report.test.ts` -> pass (53); `npm run typecheck` -> clean; `npx eslint` on the four files -> clean; `grep -rn "function browser" src/entrypoints` -> no match; `npm test` -> pass (28 files, 630 tests); `npm run lint` -> clean; `npm run format:check` -> clean
+- **Commit:** uncommitted, proposed "refactor(core): share one browser label helper across report pages"
+- **Open issues:** none. `browserLabel(userAgent)` keeps the result page's patterns (word-bounded, `EdgA/` for Edge on Android); the guide now gets Edge on Android right. Tests cover nine made-up agents (desktop and Android Chrome, Edge, Firefox, plus Opera, an unknown and an empty agent) and assert no OS or platform token in any label.
