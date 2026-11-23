@@ -1,7 +1,7 @@
 # 0005. Store-only distribution, public repo after first release, pages on vgr.cat
 
 - **Status:** accepted
-- **Date:** 2026-11-06 (recorded 2026-11-18), amendment proposed 2026-11-23
+- **Date:** 2026-11-06, amended 2026-11-23 (recorded 2026-11-18)
 
 ## Context
 
@@ -24,7 +24,7 @@ plan cannot serve Pages from a private repository, and the user already runs `vg
 - `npm run deploy:site` is the user's; agents only prepare and verify offline (`npm run check:site`).
 - The history audit result is in `docs/pre-release-audit-2026-11-18.md` (AUD-04, AUD-05).
 
-## Amendment 2026-11-23: a feedback endpoint on the site (proposed)
+## Amendment 2026-11-23: a feedback endpoint on the site
 
 ### Context
 
@@ -42,8 +42,8 @@ send from a Worker to verified addresses only. See `specs/2026-11-18-user-feedba
 - Every send passes Cloudflare Turnstile. The Worker validates the token with siteverify (success and the
   expected hostname) before anything else reaches the mail binding; a request without a valid token sends
   nothing.
-- The Worker mails the report to the maintainer's verified address through a `send_email` binding fixed to
-  that one `destination_address`. It stores nothing, does not log request bodies, caps the size, accepts
+- The Worker mails the report to `naciocheck@vgr.cat`, the project's public contact address, through a
+  `send_email` binding fixed to that one `destination_address`. It stores nothing, does not log request bodies, caps the size, accepts
   same-origin posts only, rate-limits per client and redacts anything shaped like an identifier.
 - The feedback pages carry one same-origin script and Turnstile's script, loaded from
   `https://challenges.cloudflare.com/turnstile/v0/api.js`. No other page loads anything from another origin.
@@ -51,8 +51,9 @@ send from a Worker to verified addresses only. See `specs/2026-11-18-user-feedba
 
 ### Consequences
 
-- The site is no longer static pages only. `npm run check:site` gets a scoped exception for the feedback
-  pages (the same-origin script and the exact Turnstile URL); every other rule stays.
+- The site is no longer static pages only. `npm run check:site` gets scoped exceptions: on the feedback
+  pages, the same-origin script and the exact Turnstile script URL; on the feedback and privacy pages, a
+  plain link to Cloudflare's Turnstile privacy policy. Every other rule stays.
 - The privacy policy (es + en) and store data-usage answers state that the feedback page loads Cloudflare
   Turnstile and that a report sent from it goes through Cloudflare to the maintainer by email and is not
   stored. The other pages keep their "loads nothing from elsewhere" statement.
