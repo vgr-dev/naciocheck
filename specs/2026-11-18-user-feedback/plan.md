@@ -58,8 +58,7 @@ the "Risks / open questions" list at the end of this plan.
 - **G2.** Closed 2026-11-23: Q1–Q5 answered (see the end of this plan).
 - **G3.** Closed 2026-11-23: the dependency change (F7) is approved: `@cloudflare/vitest-plugin` and
   `@cloudflare/workers-types` as dev dependencies, exact versions recorded in `progress.md`.
-- **G4.** Q6 closed 2026-11-23. **Still open: the Turnstile sitekey (Q7).** The user provides it when step
-  11 needs it; the builder of step 11 stops and asks for it rather than committing a test sitekey.
+- **G4.** Closed 2026-11-23: Q6 answered, and the Turnstile sitekey (Q7) is recorded in step 11.
 
 ## Contracts shared by several steps
 
@@ -338,9 +337,11 @@ Needs G4 (Q6 and Q7).
   site pages (inline `<style>`, viewport, title, `lang`), the two scripts allowed by step 3, a labelled
   `<textarea>`, a "this is exactly what will be sent; check it, and remove anything you do not want to share"
   note, a line saying comments are welcome in Catalan, Spanish or English, a Copy button that works without
-  Turnstile, a `<div class="cf-turnstile" data-sitekey="…">` with the sitekey from Q7 (invisible mode is a
-  property of the widget the user creates in the dashboard, not a page attribute; confirm with the
-  `turnstile-spin` skill), a Send button, and an `aria-live` status line. A sentence that the page uses
+  Turnstile, a `<div class="cf-turnstile" data-sitekey="0x4AAAAAAGPHi96wZq5N-xcv">` (Q7; public by
+  design, so it is committed), a Send button, and an `aria-live` status line. The widget mode is a property
+  of the widget in the dashboard, not a page attribute (confirm with the `turnstile-spin` skill): the
+  widget is Managed today and may move to Invisible, so the page must work in both, leaving room for a
+  visible challenge without depending on it. A sentence that the page uses
   Cloudflare Turnstile, with the privacy-addendum link allowed by step 3. Link back to the site home and to
   the privacy page.
   - `site/feedback/feedback.js` (plain ES2022, no build step): on load reads `location.hash`, decodes it
@@ -348,16 +349,20 @@ Needs G4 (Q6 and Q7).
     disables itself, reads the Turnstile token, posts `{ text, token }` to the relative `/api/feedback`
     with `Content-Type: application/json`, and shows a message per response code from the contract (es or en
     from `document.documentElement.lang`); resets the widget after a failure. No other request.
-  - `scripts/check-site.mjs`: `REQUIRED_PAGES` gains both pages; the success message stays accurate.
+  - `scripts/check-site.mjs`: `REQUIRED_PAGES` gains both pages; the success message stays accurate. Each
+    feedback page carries exactly one `data-sitekey`, shaped like a production key (`0x` followed by
+    letters, digits, `_` or `-`); Cloudflare's test keys (`1x…`, `2x…`, `3x…`) fail. `tests/site-gate.test.ts`
+    covers a real-shaped key passing, each test-key prefix failing, and a missing or doubled key failing.
   - `eslint.config.js`: a block giving `site/**/*.js` browser globals (and `turnstile` as a readonly global).
   - `tests/feedback-page.test.ts` (jsdom): load each page's HTML and run `feedback.js` with a fake
     `turnstile` and a stubbed `fetch`; the fragment fills the textarea and is cleared from the address; Send
     posts the edited text and the token to `/api/feedback` once; nothing is posted without a click; each
     error code shows its message; Copy works without a token.
 - **Files:** `site/feedback/index.html`, `site/en/feedback/index.html`, `site/feedback/feedback.js`,
-  `scripts/check-site.mjs`, `eslint.config.js`, `tests/feedback-page.test.ts`
+  `scripts/check-site.mjs`, `tests/site-gate.test.ts`, `eslint.config.js`, `tests/feedback-page.test.ts`
 - **Verify:** `npm run check:site`; six pages, passes. `npx vitest run tests/feedback-page.test.ts`; all pass.
-  `npx eslint site scripts/check-site.mjs tests/feedback-page.test.ts`; clean.
+  `npx vitest run tests/site-gate.test.ts`; all pass.
+  `npx eslint site scripts/check-site.mjs tests/feedback-page.test.ts tests/site-gate.test.ts`; clean.
 - **Out of scope:** linking the feedback page from the home pages (not in the spec), the privacy wording
   (step 13), the Worker.
 
@@ -434,8 +439,12 @@ Answers recorded 2026-11-23 (also in `spec.md`):
 - **Q6 (F1). Answered:** `naciocheck@vgr.cat` is the project's official public address, so it is committed
   as the binding's `destination_address` and used as the sender. If Email Routing rejects sending from and
   to the same address, the builder stops and asks.
-- **Q7 (F6). Partly answered:** widget mode invisible; the feedback and privacy pages link Cloudflare's
-  Turnstile Privacy Addendum. **Open:** the sitekey, provided by the user when step 11 needs it.
+- **Q7 (F6). Answered:** the feedback and privacy pages link Cloudflare's Turnstile Privacy Addendum. The
+  sitekey is `0x4AAAAAAGPHi96wZq5N-xcv` (from the user's 1Password item, 2026-11-23; public by
+  design). The secret stays in 1Password and reaches the Worker only through the user's
+  `wrangler secret put TURNSTILE_SECRET`. The widget was created as Managed; Invisible is still the target,
+  a dashboard change with no code change. Before deploying, the user restricts the widget's hostname to
+  `naciocheck.vgr.cat` (the 1Password item's hostname field is empty).
 - **Q8. Answered:** no store screenshot refresh in this spec.
 - **Q9 (F5, F8). Partly answered:** the `cloudflare/skills` plugin is installed (user scope); builders use
   its skills and may read docs through its MCP server, never change account state. **Open, not blocking:**

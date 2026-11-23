@@ -41,7 +41,7 @@ amendment to ADR 0005.
 - A pure report builder and redactor in `src/core/` whose signature takes a check, never an application or
   identity, so "no identifier" is a property of the types. The Worker reuses the same `redact`.
 - Site: `/feedback/` and `/en/feedback/` pages that read the fragment into a textarea, show what will be sent,
-  render an invisible Turnstile widget, and post the text with the token on an explicit Send click. Copy stays available
+  render a Turnstile widget (Invisible as the target, Managed accepted; the mode is set in the dashboard), and post the text with the token on an explicit Send click. Copy stays available
   on the page and works without Turnstile. The pages carry one same-origin script and Turnstile's
   `https://challenges.cloudflare.com/turnstile/v0/api.js`, loaded from that exact URL (Cloudflare forbids
   proxying it); no other page gains a script. The feedback and privacy pages link to Cloudflare's Turnstile
@@ -157,9 +157,10 @@ amendment to ADR 0005.
 - **F5. Timing.** Resolved by the website channel: it does not depend on the repo being public. Which
   release ships it is still open (not blocking).
 - **F6. Spam protection.** Decided 2026-11-23: Turnstile is required, on top of the size cap, the
-  same-origin check and per-client rate limiting. Widget mode: invisible. The feedback and privacy pages
-  (es + en) link to Cloudflare's Turnstile privacy policy. The sitekey is provided by the user when step 11
-  needs it.
+  same-origin check and per-client rate limiting. Widget mode: Invisible is the target; the widget was
+  created as Managed on 2026-11-23, and switching is a dashboard change with no code change, so the page
+  works in both. The feedback and privacy pages (es + en) link to Cloudflare's Turnstile privacy policy.
+  The public sitekey is recorded in the plan (step 11); the secret stays in 1Password.
 - **F7. Testing the Worker.** Decided 2026-11-23, dependencies approved: `@cloudflare/vitest-plugin`
   (1.9.0 supports Vitest `^4.1.0 || ^5.0.0`; the repo is on 5.1.0), which runs the Worker in the Workers
   runtime locally through Miniflare and replaces the older `@cloudflare/vitest-pool-workers`. Tests call
