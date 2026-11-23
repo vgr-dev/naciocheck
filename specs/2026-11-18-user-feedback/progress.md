@@ -394,3 +394,18 @@ test(e2e): capture the report panel and rewrite the Chrome baselines
 - **Chrome E2E:** `npm run test:e2e` passed all 75 tests on the final changes. All 104 screenshots were within tolerance, and every spec recorded zero unexpected requests.
 - **Static checks:** Typecheck, format, site and extension privacy checks passed. ESLint passed with the generated `.wrangler/` development artifacts excluded.
 - **Open issues:** The manual Firefox check, deployment and a real report reaching the project inbox are pending.
+
+## 2026-11-23 - Hands-on fixes (local `dev:site` in Firefox and Chrome)
+
+- **Status:** partial: the widget renders and issues a token; the local Send still needs the user's `.dev.vars` update and a restart of `dev:site`
+- **Found by:** the user's Firefox run (`turnstile.render is not a function`), then a Chrome run through the chrome MCP tools.
+- **Changed:**
+  - `site/feedback/feedback.js`, `site/feedback/index.html`, `site/en/feedback/index.html`: the container was `<div id="turnstile">`, which browsers expose as a global named `turnstile`, so the script called `render` on the div. Renamed to `feedback-widget`; the script now treats `globalThis.turnstile` as the API only when it has a `render` function.
+  - `site/feedback/feedback.js`: no `turnstile.ready()`; Turnstile throws "Remove async/defer from the Turnstile api.js script tag before using turnstile.ready()", and the site gate requires both. The script already renders only once the API exists.
+  - `tests/feedback-page.test.ts`: an element named `turnstile` before the API loads is ignored, then the real API renders once; no element has `id="turnstile"`; `ready` is never called. `tests/site-gate.test.ts`: fixture id renamed.
+  - `vitest.worker.config.ts`: `FEEDBACK_ORIGIN` and `TURNSTILE_EXPECTED_HOSTNAME` pinned to production values in the test bindings; a local `.dev.vars` had overridden them and failed 22 Worker tests.
+  - `eslint.config.js`: ignores `.wrangler/` (wrangler dev output).
+  - `.dev.vars.example`, `worker/index.ts`, `worker/checks.ts` (comments): `FEEDBACK_ORIGIN=http://naciocheck.vgr.cat`. Under `wrangler dev` the Worker sees `http://naciocheck.vgr.cat/...` (local trace `url.full`), and Wrangler's dev proxy (`rewriteUrlRelatedHeaders` in `ProxyWorker.js`) rewrites the browser's `Origin` from the dev server to that inner origin, so `http://localhost:8787` never matched (`403 origin` on every local Send).
+- **Verified:** Chrome on `http://localhost:8787/en/feedback/#hello%20from%20Chrome`: the box holds the fragment text, the address loses the fragment, the widget renders and issues `XXXX.DUMMY.TOKEN.XXXX`, no console messages; Send posted `{"text":"hello from Chrome","token":"XXXX.DUMMY.TOKEN.XXXX"}` with `Origin: http://localhost:8787` and got `403 origin` (old `.dev.vars`). `npm test` -> pass (711 + 31, with a `.dev.vars` present); lint, format, typecheck, check:site -> pass.
+- **Not verified:** a successful local Send (needs the new origin in `.dev.vars` and a restart); the Firefox `file:///` security message, which comes from no URL in the site; the deployed page.
+- **Commit:** uncommitted
