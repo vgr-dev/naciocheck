@@ -306,3 +306,147 @@ docs(spec): add landing page polish code audit
 - **Open issues:** Decide which `audit.md` Medium findings and `visual-review.md` Low findings to
   fix before step 11, and in which owning step. The visual baseline procedure should mention
   deleting the old `site-*` files before the writer runs.
+
+## 2026-11-24 - Step 11: Compare performance and check the manual states
+
+- **Status:** partial (stopped at the theme-script threshold, as the plan requires)
+- **Changed:** `baseline.md` (new "After (step 11)" section)
+- **Verified:** The recorded Before numbers came from a slower machine state, so the builder built
+  `666b6d9` in a temporary worktree and measured both sites in the same Chrome session (via
+  `chrome-agent`) with the same settings; traced and plain loads are reported separately. Phone
+  FCP/LCP: cold 244 → 430 ms, warm 252 → 488 ms (plain). The LCP element is the hero description
+  on phone and the hero image on desktop. CLS 0.00 in every run. Cold transfer: phone 71,265 →
+  39,205 B, desktop 71,265 → 60,011 B. Budgets met (`theme.js` 2,010 B, hero 10.9 KB).
+- **Verified:** Threshold tripped: warm FCP on the phone profile regressed by 142–236 ms across
+  comparisons, and cold by about 186 ms. First paint waits for the blocking `/theme.js`, which
+  revalidates with a 304 on every view. No `_headers` or source change was made.
+- **Verified:** Manual states pass: opposite-OS theme both ways with persistence and
+  `theme-color`, reduced motion (badge plays once), tab order and focus ring, responsive image
+  selection, missing images (footprint kept), FAQ wrapping at 320 px, reflow at 200%/400%
+  (emulated), feedback theme control offline (Turnstile tag removed in a scratch copy only), hero
+  and theme same-origin only. Fixtures, extension code and baselines, store originals and page
+  metadata unchanged against `666b6d9`; only `theme-color` tags are new.
+- **Verified:** Audit Medium findings all confirmed. The forced-colours logo is worse than stated:
+  with a light system scheme and Dark stored, "Nacio" is white on white in the header and hero.
+  Two Low findings corrected: the logos add one request, not three; `fetchpriority` would not
+  change the phone LCP (the hero description).
+- **Commit:** uncommitted, proposed "docs(specs): record landing page performance and manual state check"
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+docs(specs): record landing page performance and manual state check
+```
+
+- **Open issues:** Owner chose to inline the theme bootstrap and to fix the four Medium findings
+  in a new Phase 7, with the hero showing the changed-result banner; Phase 8 repeats the final
+  checks. Uncovered: Firefox, Safari, real Windows high contrast, real browser zoom, a browser
+  without `light-dark()`, screen readers, live Turnstile, non-Spanish performance, INP and field
+  data, a fresh load at 768 px.
+
+## 2026-11-24 - Phase 6: Verify the finished site
+
+- **Status:** partial
+- **Steps:** 11 partial (threshold tripped; the owner approved Phases 7 and 8 to fix and re-verify).
+- **File check:** pass. Only `baseline.md` (step 11) changed besides the orchestrator's
+  `plan.md`; the builder's temporary worktree and servers were removed.
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && npm run test:e2e && npm run check:privacy`
+  passed: 1,446 application and 31 Worker tests, lint, format, typecheck, the offline gate for
+  15 pages, 6 E2E spec files (147 tests, visual 0 above tolerance, 0 unexpected requests) and
+  the privacy check.
+- **Commit proposal:** one docs commit with `baseline.md`, `plan.md` (Phases 7 and 8 added) and
+  this log.
+- **Open issues:** Phase 7 started on top of this uncommitted phase with the owner's approval.
+
+## 2026-11-24 - Step 12: Inline the theme bootstrap
+
+- **Status:** done
+- **Changed:** `scripts/{build-site,check-site}.mjs`, `docs/adr/0005-distribution-and-public-pages.md`,
+  `tests/{build-site,site-gate}.test.ts`
+- **Verified:** The build reads `site/theme.js` (unchanged) and writes it as one bare inline
+  `<script>` after the `theme-color` metas and before the inline styles on every page, 404
+  included; `theme.js` is no longer copied to the output. The build fails if the source is
+  missing or contains `</script` or `<!--`. The gate requires exactly that script once in
+  `<head>`, byte for byte against `site/theme.js`, runs the dynamic-code and network-API checks on
+  it, and rejects duplicates, misplaced or commented copies, attribute variants, unrelated inline
+  scripts, any `/theme.js` reference and a served `theme.js`. Feedback pages keep their two
+  external scripts. ADR 0005 has a new amendment with the step 11 figures.
+- **Verified:** `npx vitest run tests/{build-site,site-gate}.test.ts` passed 580 tests (678 with
+  `feedback-page`). No other file mentions an external `/theme.js` except the superseded ADR
+  amendment, which now points to the new one.
+- **Commit:** uncommitted, proposed "feat(site): inline the theme bootstrap to avoid a blocking request"
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(site): inline the theme bootstrap to avoid a blocking request
+```
+
+- **Open issues:** The first-paint gain is measured in step 15.
+
+## 2026-11-24 - Step 13: Fix the forced-colours logo and the current-language cue
+
+- **Status:** done
+- **Changed:** `site/_build/partials/base.css`, `tests/site-contrast.test.ts`,
+  `e2e/specs/site-theme.e2e.ts`
+- **Verified:** Under `forced-colors: active` the logo variant follows the forced palette's
+  `prefers-color-scheme` and ignores the stored theme; the rule ties the stored-theme rules'
+  specificity and wins by source order. The current language adds weight 700 and a 2 px
+  underline to the tint, keeps `aria-current="page"`, and the language links gain
+  `touch-action: manipulation`.
+- **Verified:** `npx vitest run tests/site-contrast.test.ts` passed 64 tests. New E2E cases cover
+  the logo under a light and a dark forced palette with each stored theme on the landing and
+  privacy pages, and the language cue in both themes and both forced palettes; they passed in the
+  Phase verify.
+- **Commit:** uncommitted, proposed "fix(site): follow forced palette for logo and mark current language"
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+fix(site): follow forced palette for logo and mark current language
+```
+
+- **Open issues:** The bolder current link is slightly wider; check the 390 px header wrap in
+  step 15.
+
+## 2026-11-24 - Step 14: Make the hero a legible changed-result banner
+
+- **Status:** done
+- **Changed:** `scripts/site-assets.mjs`, `site/{index.html,en/index.html,ca/index.html}`,
+  `site/_build/partials/landing.css` (comment only), `tests/{site-assets,site-landing}.test.ts`,
+  `e2e/specs/site.e2e.ts`
+- **Verified:** The hero is `result-changed-hero-{342,448}.webp` (448 × 318), built by Sharp from
+  the unchanged store screenshots for `es` and `en` (Catalan uses `es`). A contiguous crop that
+  keeps the notice is 664 px wide and would put the old-status line at about 8 px on a 390 px
+  phone, so the image stacks three cropped bands of the same screenshot (notice centre at 416,24
+  448 × 185; new status at 292,296 448 × 68; old status at 292,430 448 × 32) on white. Pixels are
+  cropped, never redrawn; the alt text and code comments say so. The owner approved this
+  composite. At 390 px the 16 px status lines render at about 12.1 px (target 12). The
+  saved-applications hero crop and its assets are removed; step 1 and step 3 images are unchanged.
+- **Verified:** `npx vitest run tests/{site-assets,site-landing}.test.ts` passed 87 tests. The
+  builder viewed the es and en outputs: notice and both statuses intact, fake data only. E2E
+  (hero file, no shared `currentSrc` with any step, footprint, text-size bound at 390 px) passed
+  in the Phase verify.
+- **Commit:** uncommitted, proposed "feat(site): show the changed-result banner in the landing hero"
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(site): show the changed-result banner in the landing hero
+```
+
+- **Open issues:** Below about 388 px the status lines drop under 12 px; the srcset stops at 448w,
+  so high-DPR phones show it slightly soft.
+
+## 2026-11-24 - Phase 7: Fix the measured and audited issues
+
+- **Status:** done
+- **Steps:** 12 done; 13 done; 14 done (composite hero approved by the owner).
+- **File check:** pass. Every changed file is in its step's Files list; `baseline.md`,
+  `plan.md` and `progress.md` carry the uncommitted Phase 6 records and the orchestrator's logs.
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`,
+  then `E2E_SPEC=site npm run test:e2e` and `E2E_SPEC=site-theme npm run test:e2e`: pass. 1,466
+  application and 31 Worker tests, the offline gate for 15 pages, site 67 and site-theme 12 E2E
+  checks, 0 unexpected requests.
+- **Commit proposal:** one commit per step, then the Phase 6 and 7 records together.
+- **Open issues:** Visual baselines are stale until step 15 regenerates them.

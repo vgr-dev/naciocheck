@@ -5,6 +5,8 @@ Spec: `spec.md`
 **Sign-off:** Approved by Victor Gonzalez on 2026-11-24.
 Scope revised on 2026-11-24 at the owner’s request to use static product screenshots.
 Step 9 Files extended on 2026-11-24 with the owner’s approval to include `e2e/specs/visual.e2e.ts`.
+Phases 7 and 8 added on 2026-11-24 with the owner’s approval: inline the theme bootstrap, fix the
+confirmed Medium audit findings, and show the changed-result banner in the hero.
 
 ## Status
 
@@ -32,12 +34,22 @@ Step 9 Files extended on 2026-11-24 with the owner’s approval to include `e2e/
 
 **Phase 5: Baselines and code audit**
 
-- [x] 9. Regenerate and review the site visual baselines (uncommitted)
-- [x] 10. Audit the changed code against the guidelines (uncommitted)
+- [x] 9. Regenerate and review the site visual baselines (0487ac0)
+- [x] 10. Audit the changed code against the guidelines (1fb4f60)
 
 **Phase 6: Verify the finished site**
 
-- [ ] 11. Compare performance and check the manual states
+- [!] 11. Compare performance and check the manual states (theme-script threshold tripped; fixed in phase 7, rerun as step 15)
+
+**Phase 7: Fix the measured and audited issues**
+
+- [x] 12. Inline the theme bootstrap (uncommitted)
+- [x] 13. Fix the forced-colours logo and the current-language cue (uncommitted)
+- [x] 14. Make the hero a legible changed-result banner (uncommitted)
+
+**Phase 8: Re-verify the finished site**
+
+- [ ] 15. Regenerate the baselines and repeat the final checks
 
 ## Running steps in parallel
 
@@ -379,6 +391,89 @@ Withdrawn with the clips. See `progress.md` for prior work.
 - **Verify:** The phase verify above, plus the comparison in `baseline.md`.
 - **Out of scope:** Deployment, store uploads, a deployed-site audit, `_headers` (a follow-up
   only with owner approval).
+
+## Phase 7: Fix the measured and audited issues
+
+Step 11 measured the blocking `/theme.js` request delaying first paint on the phone profile by
+about 186 ms cold and 236 ms warm, and confirmed the four Medium findings in `audit.md`. The owner
+chose to inline the bootstrap (fixes cold and warm) and to fix the findings here. The three steps
+share no files and do not build; builds, the gate and E2E run in the Phase verify.
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`,
+  then `E2E_SPEC=site npm run test:e2e` and `E2E_SPEC=site-theme npm run test:e2e`, one after the
+  other. Zero unexpected requests. No visual compare yet (step 15 regenerates the baselines).
+
+### 12. Inline the theme bootstrap
+
+- **Goal:** The build reads `site/theme.js` (kept as the single source) and emits its contents as
+  one inline classic `<script>` in `<head>`, before the inline styles, on every page including the
+  404 branch; `/theme.js` is no longer served or referenced. Behaviour is unchanged: the same key,
+  values, storage guards, `theme-color` update, `pageshow` and `storage` resync, and control
+  wiring once the DOM is ready. Amend ADR 0005 (new dated amendment) so pages carry exactly one
+  inline script whose text equals the built `theme.js` source, and record why: an external
+  blocking script cost a round trip before first paint even when cached. Teach the gate to require
+  exactly that inline script once per page, compared byte for byte with the source, to apply the
+  existing dynamic-code and network-API checks to it, and to keep rejecting every other inline
+  script, `on*` handler, external script and the old `/theme.js` reference or asset. Feedback
+  pages keep their exact two external scripts.
+- **Files:** `scripts/build-site.mjs`, `scripts/check-site.mjs`,
+  `docs/adr/0005-distribution-and-public-pages.md`, `tests/{build-site,site-gate}.test.ts`.
+- **Verify:** `npx vitest run tests/{build-site,site-gate}.test.ts`. Cases cover the inline script
+  present once, missing, duplicated, modified by one byte, an unrelated inline script, a leftover
+  external `/theme.js`, and the feedback pages.
+- **Out of scope:** Changing what the script does, `_headers`, CSS, landing content.
+
+### 13. Fix the forced-colours logo and the current-language cue
+
+- **Goal:** Under `forced-colors: active`, the header and hero wordmark choose the variant from
+  the forced palette (its `prefers-color-scheme`), not from a stored theme, so no combination of
+  stored theme and system contrast theme leaves part of the wordmark invisible. Outside forced
+  colours, behaviour is unchanged. Mark the current language with a cue that is not colour alone
+  (for example an underline or border plus weight), visible in both themes and in forced colours,
+  keeping `aria-current="page"`. In the same rules, add the `touch-action: manipulation` the audit
+  lists as missing on the language links.
+- **Files:** `site/_build/partials/base.css`, `tests/site-contrast.test.ts`,
+  `e2e/specs/site-theme.e2e.ts`.
+- **Verify:** `npx vitest run tests/site-contrast.test.ts`. The new E2E cases (forced-colours
+  emulation with a light and a dark system scheme against each stored theme, checking the visible
+  logo variant; the current-language cue's non-colour property) run in the Phase verify.
+- **Out of scope:** Landing HTML and CSS, the theme script, new brand assets.
+
+### 14. Make the hero a legible changed-result banner
+
+- **Goal:** The hero shows a tight crop of the changed-result screen around the "status changed"
+  notice and the old → new status, built by Sharp from the unchanged store screenshots for `es` and
+  `en` (Catalan uses `es`), replacing the saved-applications crop so the hero no longer repeats
+  step 1. At a 390 px viewport the key status text renders at 12 CSS px or more at DPR 1. Keep
+  intrinsic dimensions, eager loading, localized alt text that states the change, and the
+  responsive widths. Step 1 keeps the saved-applications screen and step 3 keeps the full
+  changed-result screen. Remove the now-unused hero crop and its assets.
+- **Files:** `site/index.html`, `site/en/index.html`, `site/ca/index.html`,
+  `site/_build/partials/landing.css`, `scripts/site-assets.mjs`,
+  `tests/{site-assets,site-landing}.test.ts`, `e2e/specs/site.e2e.ts`.
+- **Verify:** `npx vitest run tests/{site-assets,site-landing}.test.ts`. Record the crop bounds and
+  the rendered text size calculation in the builder report. E2E (hero image chosen, footprint,
+  no duplicate of step 1) runs in the Phase verify.
+- **Out of scope:** New captures, store screenshots, other sections, `base.css`.
+
+## Phase 8: Re-verify the finished site
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && npm run test:e2e && npm run check:privacy`.
+  Zero unexpected requests and zero screenshot differences above tolerance.
+
+### 15. Regenerate the baselines and repeat the final checks
+
+- **Goal:** First, regenerate the 48 `site-*` baselines (delete the old `site-*` files, then run
+  the writer, as step 9 found the writer only saves missing images), review them per
+  `.claude/commands/review-ui.md`, and update `visual-review.md`. Then repeat step 11 with its
+  same-session method: compare against the `666b6d9` build and the step 11 "After" figures,
+  apply the 50 ms threshold, and recheck the four Medium findings, forced colours and the hero
+  legibility in the visible Chrome via `chrome-agent`. Add an "After phase 7" section to
+  `baseline.md`. Extension baselines and fixture bytes stay unchanged.
+- **Files:** `e2e/baselines/chrome/site-*`, this spec's `visual-review.md` and `baseline.md`.
+- **Verify:** `E2E_SPEC=visual npm run test:e2e` in compare mode passes; the phase verify above.
+- **Out of scope:** Source changes (a failed check goes back to the owning phase 7 step),
+  `_headers`, deployment.
 
 ## Risks / open questions
 
