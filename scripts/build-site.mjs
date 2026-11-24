@@ -284,8 +284,10 @@ export async function buildSite(options) {
       else if (name === 'install') value = install(language, strings, config);
       else {
         const own = strings[language].changelog;
-        const note = `<p class="changelog-note">${escapeHtml(own.englishNote)}</p>`;
-        value = `${note}\n${renderChangelog(releases, {
+        // The changelog is written in English: only the other languages are told so.
+        const note =
+          language === 'en' ? '' : `<p class="changelog-note">${escapeHtml(own.englishNote)}</p>\n`;
+        value = `${note}${renderChangelog(releases, {
           lang: language,
           strings: { noReleases: own.noReleases, githubRelease: own.githubRelease },
           repositoryPublic: config.repositoryPublic,

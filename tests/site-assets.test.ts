@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
@@ -7,13 +7,8 @@ import { writeSiteAssets } from '../scripts/site-assets.mjs';
 
 /** Renders the site images into a temporary directory and checks what the build and the pages rely on. */
 
-const SCREENS = [
-  'onboarding-empty',
-  'options-encrypted',
-  'options-several',
-  'result-changed',
-  'statuses-guide',
-];
+/** The screenshots the pages use; the last test below proves the pages reference these and no others. */
+const SCREENS = ['options-several', 'result-changed', 'statuses-guide'];
 
 let dir = '';
 let written: string[] = [];
@@ -111,5 +106,45 @@ describe('site assets', () => {
         }
       }
     }
+  });
+
+  describe('which screenshots ship', () => {
+    const SITE = join(import.meta.dirname, '..', 'site');
+
+    /** Every `.html` source page, relative to `site/`, leaving `_build/` aside. */
+    function pagesIn(directory: string): string[] {
+      return readdirSync(join(SITE, directory), { withFileTypes: true }).flatMap((entry) => {
+        const path = `${directory}/${entry.name}`.replace(/^\//, '');
+        if (entry.isDirectory()) return entry.name === '_build' ? [] : pagesIn(path);
+        return entry.name.endsWith('.html') ? [path] : [];
+      });
+    }
+
+    /** The `img/screens/…` files the source pages (and their partials) point to. */
+    function referenced(): Set<string> {
+      const files = [
+        ...pagesIn(''),
+        ...readdirSync(join(SITE, '_build', 'partials')).map((f) => `_build/partials/${f}`),
+      ];
+      const found = new Set<string>();
+      for (const file of files) {
+        const text = readFileSync(join(SITE, file), 'utf8');
+        for (const match of text.matchAll(/img\/screens\/[a-z]{2}\/[\w-]+\.webp/g))
+          found.add(match[0]);
+      }
+      return found;
+    }
+
+    it('ships exactly the screenshots the pages reference, and nothing else', () => {
+      const shipped = written.filter((file) => file.startsWith('img/screens/'));
+      expect([...referenced()].sort()).toEqual([...shipped].sort());
+    });
+
+    it('keeps the unused store screenshots out of the output', () => {
+      for (const name of ['onboarding-empty', 'options-encrypted']) {
+        expect(existsSync(join(dir, 'img', 'screens', 'es', `${name}-640.webp`))).toBe(false);
+        expect(existsSync(join(dir, 'img', 'screens', 'en', `${name}-1280.webp`))).toBe(false);
+      }
+    });
   });
 });

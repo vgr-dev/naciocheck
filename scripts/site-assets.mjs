@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 
@@ -12,7 +12,9 @@ import sharp from 'sharp';
  * - `favicon.ico` (a 32 px PNG in an ICO container), `favicon.svg` (the icon) and `apple-touch-icon.png` (180).
  * - `img/icon-animated.svg`, `img/logo-light.svg` and `img/logo-dark.svg`: copies of the brand sources. The
  *   logos are the outlined ones, so the logotype is paths and no font is ever loaded.
- * - `img/screens/<es|en>/<name>-<640|1280>.webp`: the store screenshots, resized.
+ * - `img/screens/<es|en>/<name>-<640|1280>.webp`: the store screenshots the pages use (`SITE_SCREENS`), resized.
+ *   The list is explicit and lives here only; `tests/site-assets.test.ts` checks it against what the pages
+ *   reference, so a screenshot is never shipped unused and never referenced unshipped.
  *
  * `writeSiteAssets(outDir)` is called by the site build; the module never runs on import.
  */
@@ -36,8 +38,11 @@ const FAVICON = 32;
 const SCREEN_LANGUAGES = ['es', 'en'];
 const SCREEN_WIDTHS = [640, 1280];
 
-/** `<name>-<lang>-1280x800.png` in `store/screenshots/<lang>/`. */
-const SCREENSHOT_NAME = /^(?<name>.+)-(?<lang>[a-z]{2})-1280x800\.png$/;
+/**
+ * The store screenshots the pages show (`<name>-<lang>-1280x800.png` in `store/screenshots/<lang>/`). The
+ * others in that directory are for the store listings and are not shipped.
+ */
+const SITE_SCREENS = ['options-several', 'result-changed', 'statuses-guide'];
 
 /**
  * Wraps a PNG in an ICO container: a 6-byte header, one 16-byte directory entry and the PNG itself. Every
@@ -112,12 +117,7 @@ async function writeScreens(outDir) {
   for (const lang of SCREEN_LANGUAGES) {
     const target = join(outDir, 'img', 'screens', lang);
     await mkdir(target, { recursive: true });
-    const names = (await readdir(join(SCREENSHOTS, lang)))
-      .map((file) => SCREENSHOT_NAME.exec(file)?.groups)
-      .filter((groups) => groups?.lang === lang)
-      .map((groups) => groups.name)
-      .sort();
-    for (const name of names) {
+    for (const name of SITE_SCREENS) {
       const source = join(SCREENSHOTS, lang, `${name}-${lang}-1280x800.png`);
       for (const width of SCREEN_WIDTHS) {
         const file = `img/screens/${lang}/${name}-${String(width)}.webp`;

@@ -34,7 +34,7 @@
     "logo:outline": "node scripts/outline-logo.mjs",
     "store:images": "node scripts/store-images.mjs",
     "dev:site": "npm run build:site && wrangler dev",
-    "deploy:site": "npm run build:site && wrangler deploy",
+    "deploy:site": "npm run check:site && wrangler deploy",
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
@@ -47,6 +47,7 @@
     "@wdio/mocha-framework": "^10.2.0",
     "@wdio/spec-reporter": "^10.2.0",
     "@wdio/visual-service": "^11.1.0",
+    "axe-core": "^4.14.1",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "fontkit": "^3.0.0",

@@ -388,7 +388,19 @@ describe('site build', () => {
       expect(es).toContain('<strong>bug</strong>');
       expect(es).not.toContain('Pending.');
       expect(es).not.toContain('github.com');
-      expect(read('en/changelog/index.html')).toContain('In English.');
+    });
+
+    it('does not tell the English page that its entries are in English', async () => {
+      write(source, 'changelog/index.html', PAGE('<!-- @changelog -->'));
+      write(source, 'en/changelog/index.html', PAGE('<!-- @changelog -->', 'en'));
+      write(source, 'ca/changelog/index.html', PAGE('<!-- @changelog -->', 'ca'));
+      await build();
+      const en = read('en/changelog/index.html');
+      expect(en).not.toContain('changelog-note');
+      expect(en).not.toContain('In English.');
+      expect(en).toContain('1.2.3');
+      expect(read('changelog/index.html')).toContain('class="changelog-note"');
+      expect(read('ca/changelog/index.html')).toContain('<p class="changelog-note">En anglès.</p>');
     });
 
     it('links each release to GitHub once the repository is public', async () => {
