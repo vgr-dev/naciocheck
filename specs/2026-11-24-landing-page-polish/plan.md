@@ -4,6 +4,7 @@ Spec: `spec.md`
 
 **Sign-off:** Approved by Victor Gonzalez on 2026-11-24.
 Scope revised on 2026-11-24 at the owner’s request to use static product screenshots.
+Step 9 Files extended on 2026-11-24 with the owner’s approval to include `e2e/specs/visual.e2e.ts`.
 
 ## Status
 
@@ -27,12 +28,12 @@ Scope revised on 2026-11-24 at the owner’s request to use static product scree
 
 **Phase 4: Show static product screenshots**
 
-- [x] 8. Show a static product screenshot in the hero (uncommitted)
+- [x] 8. Show a static product screenshot in the hero (9a5ce81)
 
 **Phase 5: Baselines and code audit**
 
-- [ ] 9. Regenerate and review the site visual baselines
-- [ ] 10. Audit the changed code against the guidelines
+- [x] 9. Regenerate and review the site visual baselines (uncommitted)
+- [x] 10. Audit the changed code against the guidelines (uncommitted)
 
 **Phase 6: Verify the finished site**
 
@@ -341,7 +342,8 @@ Withdrawn with the clips. See `progress.md` for prior work.
   landing and other pages) using the procedure above. Review them with
   `.claude/commands/review-ui.md` and record findings by severity in `visual-review.md`. Extension
   baselines are unchanged against the commit before Phase 2.
-- **Files:** `e2e/baselines/chrome/site-*`, this spec's `visual-review.md`.
+- **Files:** `e2e/specs/visual.e2e.ts` (load lazy images before photographing site pages; test
+  helper only), `e2e/baselines/chrome/site-*`, this spec's `visual-review.md`.
 - **Verify:** The compare run passes; `git diff --stat` shows only `site-*` baselines changed.
 - **Out of scope:** Fixing findings (they go back to the step that owns the file).
 

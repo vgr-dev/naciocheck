@@ -233,3 +233,76 @@ feat(site): show localized product screenshot in hero
 - **Commit proposal:** Commit the localized hero, crop build, tests and workflow records together.
 - **Open issues:** Phase 5 will adapt the visual helper for lazy-loaded images, regenerate the
   site baseline matrix, and audit the changed interface.
+
+## 2026-11-24 - Step 9: Regenerate and review the site visual baselines
+
+- **Status:** done
+- **Changed:** `e2e/specs/visual.e2e.ts` (added to the step's Files with the owner's approval),
+  48 `e2e/baselines/chrome/site-*.png`, `visual-review.md`
+- **Verified:** The first writer run failed both site visual tests: `openSitePage` waited for every
+  image to report `complete`, and the lazy screenshots below the fold never load. The helper now
+  sets each image to eager loading inside the test before the same complete/decode wait.
+  Production keeps `loading="lazy"` and no build flag was added. The writer only saves missing
+  baselines, so the 48 old `site-*` files were deleted and regenerated (4 pages × 3 languages ×
+  2 themes × 2 widths). The procedure in the plan does not mention this deletion.
+- **Verified:** `E2E_SPEC=visual npm run test:e2e` in compare mode passed 22 tests with 0 of 152
+  images above tolerance. `git diff --stat 546835f -- e2e/baselines` lists only the 48 `site-*`
+  files, so the 104 extension baselines are unchanged. Network guard: 1,087 requests, 0 outside
+  the fake site. Review per `.claude/commands/review-ui.md`: 0 High, 0 Medium, 9 Low. The en and
+  ca landing, privacy, changelog and 404 images were reviewed as reduced sheets.
+- **Commit:** uncommitted, proposed "test(site): regenerate site baselines for the polished landing page"
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+test(site): regenerate site baselines for the polished landing page
+```
+
+- **Open issues:** Low findings in `visual-review.md` (hero duplicates step 1, unreadable phone
+  screenshot text, Catalan screenshots in Spanish, header rows differ by locale at 412 px, text
+  pages use a narrower centred column, English footer label versus page title, bright screenshots
+  in dark mode, empty right third at 1280 px in FAQ and agency, check mark would mirror in RTL).
+  The matrix has no hover, focus, open-FAQ, forced-colours, print or Firefox states.
+
+## 2026-11-24 - Step 10: Audit the changed code against the guidelines
+
+- **Status:** done
+- **Changed:** `audit.md`
+- **Verified:** Applied every bundled `web-design-guidelines` rule and the `frontend-design`
+  guidance to `scripts/build-site.mjs`, `site/_build/partials/{base,landing}.css`,
+  `site/_build/strings.json`, `site/theme.js` and the three landing pages, from source only (no
+  build or browser, as the step requires). Findings: 0 High, 4 Medium, 17 Low, 8 Nit, each with a
+  `file:line` and the owning step. Contrast was computed from the token values: all tested pairs
+  pass, and the focus ring is 4.86–11.99:1 on every surface. The orchestrator ran Prettier on
+  `audit.md` to pass `format:check`.
+- **Commit:** uncommitted, proposed "docs(spec): add landing page polish code audit"
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+docs(spec): add landing page polish code audit
+```
+
+- **Open issues:** Medium findings: the logo variant ignores forced colours (steps 6 and 7); the
+  current language is marked only by a 1.13:1 / 1.87:1 tint (step 6); the hero repeats the
+  step 1 saved-applications screenshot and shows neither the captcha nor the result (steps 7 and
+  8); screenshot text renders at about 4–6 px on a phone (arithmetic, unverified; steps 7 and 8).
+  Low and Nit findings are listed in `audit.md`. Rendered checks are candidates for step 11.
+
+## 2026-11-24 - Phase 5: Baselines and code audit
+
+- **Status:** done
+- **Steps:** 9 done (Files extended with the owner's approval after it blocked on the lazy-image
+  helper); 10 done.
+- **File check:** pass. `e2e/specs/visual.e2e.ts`, 48 `site-*` baselines and `visual-review.md`
+  belong to step 9; `audit.md` to step 10. The orchestrator changed `plan.md` (status lines,
+  step 8 reconciled to `9a5ce81`, step 9 Files) and `progress.md`.
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && E2E_SPEC=visual npm run test:e2e`
+  passed after formatting `audit.md`: 1,446 application and 31 Worker tests, lint, format,
+  typecheck, the offline gate for 15 pages, and 22 visual tests with 0 differences above
+  tolerance and 0 unexpected requests.
+- **Commit proposal:** baselines and helper together; the audit and visual review with the plan
+  and progress records.
+- **Open issues:** Decide which `audit.md` Medium findings and `visual-review.md` Low findings to
+  fix before step 11, and in which owning step. The visual baseline procedure should mention
+  deleting the old `site-*` files before the writer runs.
