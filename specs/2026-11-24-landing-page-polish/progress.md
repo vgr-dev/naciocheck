@@ -131,3 +131,65 @@ refactor(site): consolidate theme palette and type scale
   record the phase together.
 - **Open issues:** Theme selection and landing sections are next. Phase 1's static-image policy
   was reconciled to `546835f`.
+
+## 2026-11-24 - Step 6: Apply and persist the theme on every page
+
+- **Status:** done
+- **Changed:** `site/theme.js`, `site/_build/strings.json`, `site/_build/partials/base.css`,
+  `scripts/build-site.mjs`, `scripts/check-site.mjs`, `tests/{build-site,site-gate,feedback-page}.test.ts`,
+  `e2e/specs/site-theme.e2e.ts`
+- **Verified:** `npx vitest run tests/{build-site,site-gate,feedback-page}.test.ts` passed 661
+  tests. `E2E_SPEC=site-theme npm run test:e2e` passed both browser tests with zero unexpected
+  requests. Capturing a frame removed a stale computed background in headless Chrome.
+  Visible Chrome also confirmed that the explicit Dark choice updates the built page.
+- **Commit:** uncommitted, proposed "feat(site): add a persistent site-wide theme selector"
+- **Run by:** implement-phase (builder subagent, model GPT-6 inherited)
+- **Proposed commit (builder):**
+
+```
+feat(site): add a persistent site-wide theme selector
+```
+
+- **Open issues:** None.
+
+## 2026-11-24 - Step 7: Refresh the landing sections and centre the FAQ icons
+
+- **Status:** done
+- **Changed:** `site/index.html`, `site/en/index.html`, `site/ca/index.html`,
+  `site/_build/partials/landing.css`, `tests/site-landing.test.ts`, `e2e/specs/site.e2e.ts`
+- **Verified:** `npx vitest run tests/site-landing.test.ts` passed 72 tests.
+  `E2E_SPEC=site npm run test:e2e` passed 64 browser tests with zero unexpected requests,
+  including FAQ alignment and keyboard interaction at both widths, forced colours, lazy image
+  loading, and axe checks. The image test scrolls in the page and captures a frame before checking
+  the native lazy load and decode. A visible Chrome spot check confirmed the dark mobile FAQ
+  and loaded supporting screenshots. The brand badge plays once and respects reduced motion.
+- **Commit:** uncommitted, proposed "feat(site): refresh localized landing sections and faq"
+- **Run by:** implement-phase (builder subagent, model GPT-6 inherited, GPT-6 Luna for the
+  lazy-image test follow-up)
+- **Proposed commit (builder):**
+
+```
+feat(site): refresh localized landing sections and faq
+```
+
+- **Open issues:** The Phase 5 visual capture must scroll deferred images into view and capture
+  a frame before waiting for decode. The current visual helper waits for all images before
+  scrolling. Phase 4 owns the hero screenshot.
+
+## 2026-11-24 - Phase 3: Theme selection and landing sections
+
+- **Status:** done
+- **Steps:** 6 done, 7 done.
+- **File check:** pass. Builder changes match their Files lists. The orchestrator reconciled
+  Phase 2 to `6f85a9e` and updated the plan and progress.
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`
+  passed after scoped lint fixes. 1,442 application tests and 31 Worker tests passed. The site gate
+  passed all 15 generated pages.
+- **Phase verify:** `E2E_SPEC=site npm run test:e2e` passed 64 checks and
+  `E2E_SPEC=site-theme npm run test:e2e` passed 2 checks. Both runs reported zero unexpected
+  requests. Earlier browser attempts exposed a WebDriver wheel timeout and pending browser
+  rendering. The passing runs use DOM scrolling and a frame capture before assertions.
+- **Commit proposal:** Commit the theme control, site gate and theme tests together. Commit the
+  landing refresh, its tests, and the workflow records together.
+- **Open issues:** The static hero screenshot is next. Formal visual review and the lazy-loading
+  adjustment to the screenshot harness are planned for Phase 5.

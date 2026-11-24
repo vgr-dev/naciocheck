@@ -20,11 +20,21 @@
           <div class="hero-copy">
             <h1 id="hero-title" class="hero-title">
               <img class="hero-mark" src="/img/icon-animated.svg" alt="" width="128" height="128" />
-              <span class="hero-wordmark">
-                <picture>
-                  <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
-                  <img src="/img/logo-light.svg" alt="NacioCheck" width="520" height="128" />
-                </picture>
+              <span class="hero-wordmark" translate="no">
+                <img
+                  class="logo-for-light"
+                  src="/img/logo-light.svg"
+                  alt="NacioCheck"
+                  width="520"
+                  height="128"
+                />
+                <img
+                  class="logo-for-dark"
+                  src="/img/logo-dark.svg"
+                  alt="NacioCheck"
+                  width="520"
+                  height="128"
+                />
               </span>
             </h1>
             <p class="hero-tagline">Your nationality application, up to date.</p>
@@ -60,7 +70,6 @@
 
       <section id="how-it-works" class="section" aria-labelledby="how-title">
         <div class="wrap">
-          <p class="eyebrow">How it works</p>
           <h2 id="how-title">Reminder, captcha, result</h2>
           <p class="section-intro">
             Checking your status stops being a chore: you save your details once, and every check
@@ -86,6 +95,7 @@
                   width="1280"
                   height="800"
                   decoding="async"
+                  loading="lazy"
                   alt="The NacioCheck options with two saved applications, “Solicitud uno” and “Solicitud dos”, and the form to add another."
                 />
               </figure>
@@ -94,15 +104,15 @@
               <div class="step-text">
                 <h3>You solve the captcha</h3>
                 <p>
-                  NacioCheck opens the official status page and fills in the form with your details.
-                  Only the captcha is left on screen: you solve it, as the site asks, and the check
-                  is sent right then.
+                  <span translate="no">NacioCheck</span> opens the official status page and fills in
+                  the form with your details. Only the captcha is left on screen: you solve it, as
+                  the site asks, and the check is sent right then.
                 </p>
               </div>
               <div class="callout">
                 <p>
-                  NacioCheck never solves, skips or sends the captcha anywhere. A person always
-                  solves it: you.
+                  <span translate="no">NacioCheck</span> never solves, skips or sends the captcha
+                  anywhere. A person always solves it: you.
                 </p>
               </div>
             </li>
@@ -111,7 +121,8 @@
                 <h3>You see the result</h3>
                 <p>
                   The status the official page shows goes into your history. If it has changed since
-                  last time, NacioCheck tells you loud and clear and explains what it usually means.
+                  last time, <span translate="no">NacioCheck</span> tells you loud and clear and
+                  explains what it usually means.
                 </p>
               </div>
               <figure class="shot">
@@ -125,6 +136,7 @@
                   width="1280"
                   height="800"
                   decoding="async"
+                  loading="lazy"
                   alt="The NacioCheck “The status has changed” alert: the application moves from “Open - Registered” to “Open - In progress”, with an explanation of the status."
                 />
               </figure>
@@ -135,7 +147,6 @@
 
       <section id="statuses" class="section section-band" aria-labelledby="statuses-title">
         <div class="wrap">
-          <p class="eyebrow">What each status means</p>
           <h2 id="statuses-title">The usual path of an application</h2>
           <p class="status-note">
             <strong>A guide, not official.</strong> These explanations sum up what has been seen on
@@ -208,6 +219,7 @@
                 width="1280"
                 height="800"
                 decoding="async"
+                loading="lazy"
                 alt="The NacioCheck status guide: each status on the usual path with its explanation and sources."
               />
               <figcaption>
@@ -221,13 +233,12 @@
 
       <section id="privacy" class="section" aria-labelledby="privacy-title">
         <div class="wrap">
-          <p class="eyebrow">Privacy</p>
           <h2 id="privacy-title">Your data is yours</h2>
           <p class="section-intro">
             Your NIE, your file number and your date of birth have no reason to leave your computer
-            or phone. NacioCheck is built so that they do not.
+            or phone. <span translate="no">NacioCheck</span> is built so that they do not.
           </p>
-          <ul class="promises">
+          <ul class="promises" role="list">
             <li class="promise">
               <h3>Nothing leaves your browser</h3>
               <p>
@@ -252,8 +263,8 @@
             <li class="promise">
               <h3>Open source</h3>
               <p>
-                NacioCheck is free software under the <span class="nowrap">GPL-3.0</span>: anyone
-                can read what it does and how.
+                <span translate="no">NacioCheck</span> is free software under the
+                <span class="nowrap">GPL-3.0</span>: anyone can read what it does and how.
               </p>
               <!-- @if repository -->
               <p><a href="https://github.com/vgr-dev/naciocheck">Read the code on GitHub</a></p>
@@ -268,37 +279,52 @@
 
       <section id="faq" class="section section-band" aria-labelledby="faq-title">
         <div class="wrap">
-          <p class="eyebrow">Questions</p>
-          <h2 id="faq-title">What people ask</h2>
+          <h2 id="faq-title">Frequently asked questions</h2>
           <div class="faq">
             <details>
-              <summary>Is it an official tool?</summary>
+              <summary>
+                <span class="faq-question">Is it an official tool?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
-                No. NacioCheck is a personal, independent project with no link to the Ministerio de
-                Justicia or any public body. It uses the official status page as it is, and the
-                status explanations are only a guide.
+                No. <span translate="no">NacioCheck</span> is a personal, independent project with
+                no link to the Ministerio de Justicia or any public body. It uses the official
+                status page as it is, and the status explanations are only a guide.
               </p>
             </details>
             <details>
-              <summary>Does it solve the captcha for me?</summary>
+              <summary>
+                <span class="faq-question">Does it solve the captcha for me?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
-                No. You solve the captcha, every time. NacioCheck fills in the form and waits; it
-                does not skip the captcha, solve it or send it to any service.
+                No. You solve the captcha, every time. <span translate="no">NacioCheck</span> fills
+                in the form and waits; it does not skip the captcha, solve it or send it to any
+                service.
               </p>
             </details>
             <details>
-              <summary>Where is my data stored?</summary>
+              <summary>
+                <span class="faq-question">Where is my data stored?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
                 Only in your browser, in the extension's local storage. You can encrypt it with a
                 passphrase, export it to a file or delete it from Options. Nothing is sent to us.
               </p>
             </details>
             <details>
-              <summary>Is it free?</summary>
+              <summary>
+                <span class="faq-question">Is it free?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>Yes. Every current feature is free and will stay free. No ads and no account.</p>
             </details>
             <details>
-              <summary>Which browsers does it work in?</summary>
+              <summary>
+                <span class="faq-question">Which browsers does it work in?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
                 Chrome and Firefox on the desktop. Firefox for Android is a target that has not been
                 tested on a device yet. The install links will appear above as soon as the stores
@@ -310,15 +336,12 @@
       </section>
 
       <section id="agencies" class="agency" aria-labelledby="agencies-title">
-        <div class="agency-art" aria-hidden="true">
-          <span></span><span></span><span></span><span></span>
-        </div>
         <div class="wrap">
           <div class="agency-copy">
             <h2 id="agencies-title">Are you an immigration agency or a law firm?</h2>
             <p>
-              NacioCheck is free for everyone. If you need more, such as following many applications
-              or tools of your own for your team, let's talk.
+              <span translate="no">NacioCheck</span> is free for everyone. If you need more, such as
+              following many applications or tools of your own for your team, let's talk.
             </p>
             <p>Always with the same rule: a person solves the captcha.</p>
             <a class="button" href="https://vgr.cat/">Let's talk on vgr.cat</a>

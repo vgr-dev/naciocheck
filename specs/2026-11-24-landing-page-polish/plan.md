@@ -18,12 +18,12 @@ Scope revised on 2026-11-24 at the owner’s request to use static product scree
 
 **Phase 2: Tokens and type scale**
 
-- [x] 5. Make the palette theme-switchable and set the type scale (uncommitted)
+- [x] 5. Make the palette theme-switchable and set the type scale (6f85a9e)
 
 **Phase 3: Theme selection and landing sections**
 
-- [ ] 6. Apply and persist the theme on every page
-- [ ] 7. Refresh the landing sections and centre the FAQ icons
+- [x] 6. Apply and persist the theme on every page (uncommitted)
+- [x] 7. Refresh the landing sections and centre the FAQ icons (uncommitted)
 
 **Phase 4: Show static product screenshots**
 

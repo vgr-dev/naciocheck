@@ -3,7 +3,7 @@
  *
  * Colours come only from the base.css tokens, so both themes and their contrast checks carry over. The pairs
  * this file adds (text on `--accent-soft`, a button on `--accent-soft`) are checked in
- * `tests/site-landing.test.ts`. Motion runs only under `prefers-reduced-motion: no-preference`.
+ * `tests/site-landing.test.ts`. The animated brand icon handles its own reduced-motion preference.
  */
 
 .landing {
@@ -24,6 +24,7 @@
 /* The hero's facts lead straight into "how it works": no full section gap between them. */
 .hero + .section {
   padding-block-start: clamp(2rem, 4vw, 3rem);
+  border-block-start: 1px solid var(--border);
 }
 
 .section + .section {
@@ -36,30 +37,19 @@
 
 .section h2 {
   margin-block: 0 0.75rem;
-  font-size: clamp(1.5rem, 1.2rem + 1.1vw, 2rem);
 }
 
 .section-intro {
   max-inline-size: var(--measure);
   margin-block: 0 2.25rem;
-  font-size: 1.0625rem;
   color: var(--muted);
-}
-
-.eyebrow {
-  margin-block: 0 0.5rem;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
 }
 
 /* 1. Hero: the logo, whose badge is the animated icon, and the copy beside the "status changed" screenshot. */
 
 .hero {
   padding-block: clamp(2.5rem, 6vw, 5rem) clamp(1rem, 2vw, 1.5rem);
-  background: linear-gradient(180deg, var(--band), var(--bg));
+  background: var(--band);
 }
 
 .hero-grid {
@@ -110,8 +100,8 @@
 
 .hero-tagline {
   margin-block: 0 1rem;
-  font-size: clamp(1.4rem, 1.1rem + 1.2vw, 1.9rem);
-  font-weight: 700;
+  font-size: var(--font-size-hero);
+  font-weight: var(--font-weight-title);
   line-height: 1.25;
   letter-spacing: -0.01em;
   color: var(--heading);
@@ -134,7 +124,7 @@
   gap: 0.4rem 1.25rem;
   margin: 0;
   padding: 0;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-small);
   color: var(--muted);
   list-style: none;
 }
@@ -198,7 +188,6 @@
   align-items: center;
   gap: 0.75rem;
   margin-block: 0 0.5rem;
-  font-size: 1.3rem;
 }
 
 .step-text h3::before {
@@ -230,15 +219,13 @@
   block-size: auto;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow:
-    0 1px 2px var(--border),
-    0 16px 36px -22px var(--control-border);
+  border-radius: var(--radius-small);
 }
 
 .shot figcaption {
+  max-inline-size: var(--measure);
   margin-block-start: 0.6rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-small);
   color: var(--muted);
 }
 
@@ -260,10 +247,6 @@
   .step {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   }
-
-  .step:nth-child(even) .step-text {
-    order: 2;
-  }
 }
 
 /* 3. Status teaser: a short timeline of the usual path beside the guide's screenshot. */
@@ -279,7 +262,7 @@
   max-inline-size: var(--measure);
   margin-block: 0 2rem;
   padding: 0.85rem 1.1rem;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-small);
   color: var(--fg);
   background: var(--surface);
   border: 1px solid var(--card-border);
@@ -345,7 +328,7 @@
 
 .state-sub {
   display: block;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-small);
   font-weight: 550;
   color: var(--heading);
 }
@@ -353,7 +336,7 @@
 .state-text {
   display: block;
   margin-block-start: 0.2rem;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-small);
   color: var(--muted);
 }
 
@@ -368,12 +351,12 @@
   }
 }
 
-/* 4. Privacy promises: four cards. */
+/* 4. Privacy promises share a list, with dividers between the items. */
 
 .promises {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: clamp(2rem, 6vw, 5rem);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -381,22 +364,29 @@
 
 .promise {
   margin: 0;
-  padding: 1.25rem 1.35rem;
-  background: var(--surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
+  padding-block: 1rem 1.25rem;
+  border-block-start: 1px solid var(--border);
 }
 
 .promise h3 {
   margin-block: 0 0.4rem;
-  font-size: 1.0625rem;
   color: var(--heading);
 }
 
 .promise p {
+  max-inline-size: var(--measure);
   margin: 0;
-  font-size: 0.9375rem;
   color: var(--fg);
+}
+
+.promise p + p {
+  margin-block-start: 0.6rem;
+}
+
+@media (min-width: 48rem) {
+  .promises {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .section-more {
@@ -423,37 +413,56 @@
   justify-content: space-between;
   gap: 1rem;
   padding-block: 1rem;
-  font-size: 1.0625rem;
-  font-weight: 650;
+  font-size: var(--font-size-subheading);
+  font-weight: var(--font-weight-subheading);
   color: var(--fg);
   list-style: none;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .faq summary::-webkit-details-marker {
   display: none;
 }
 
-/* A plus that turns into a minus when the answer is open. */
-.faq summary::after {
+/* Grid centers both strokes in the round marker independently of the question's line count. */
+.faq-icon {
+  display: grid;
   flex: none;
+  place-items: center;
   inline-size: 1.75rem;
   block-size: 1.75rem;
-  font-size: 1.25rem;
-  font-weight: 500;
-  line-height: 1.6rem;
-  text-align: center;
   color: var(--accent);
   border: 1px solid var(--control-border);
   border-radius: 50%;
-  content: '+';
 }
 
-.faq details[open] summary::after {
-  content: '\2212';
+.faq-icon::before,
+.faq-icon::after {
+  grid-area: 1 / 1;
+  content: '';
+}
+
+.faq-icon::before {
+  inline-size: 0.625rem;
+  border-block-start: 2px solid currentColor;
+}
+
+.faq-icon::after {
+  block-size: 0.625rem;
+  border-inline-start: 2px solid currentColor;
+}
+
+.faq details[open] .faq-icon::after {
+  display: none;
 }
 
 .faq summary:hover {
+  color: var(--accent-hover);
+}
+
+.faq summary:hover .faq-icon,
+.faq details[open] .faq-icon {
   color: var(--accent-hover);
 }
 
@@ -462,169 +471,46 @@
   color: var(--fg);
 }
 
-/* 6. Agency band: full width, a slow decorative drift of rings that echo the badge. */
+/* 6. Agency contact band. */
 
 .agency {
-  position: relative;
-  overflow: hidden;
-  padding-block: clamp(3.5rem, 8vw, 6rem);
+  padding-block: clamp(3rem, 6vw, 5rem);
   color: var(--accent-soft-fg);
   background: var(--accent-soft);
-  isolation: isolate;
-}
-
-.agency .wrap {
-  position: relative;
-  z-index: 1;
 }
 
 .agency-copy {
-  max-inline-size: 40rem;
+  max-inline-size: var(--measure);
 }
 
 .agency h2 {
   margin-block: 0 1rem;
-  font-size: clamp(1.6rem, 1.25rem + 1.4vw, 2.25rem);
   color: var(--accent-soft-fg);
 }
 
 .agency p {
   margin-block: 0 1rem;
-  font-size: 1.0625rem;
 }
 
 .agency .button {
   margin-block-start: 0.75rem;
 }
 
-.agency-art {
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-end: -6rem;
-  z-index: 0;
-  inline-size: 30rem;
-  aspect-ratio: 1;
-  pointer-events: none;
-  translate: 0 -50%;
-}
-
-.agency-art span {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  border: 2px solid var(--accent);
-  border-radius: 50%;
-  opacity: 0.22;
-}
-
-.agency-art span:nth-child(1) {
-  inline-size: 100%;
-  block-size: 100%;
-}
-
-.agency-art span:nth-child(2) {
-  inline-size: 72%;
-  block-size: 72%;
-  opacity: 0.3;
-}
-
-.agency-art span:nth-child(3) {
-  inline-size: 44%;
-  block-size: 44%;
-  opacity: 0.4;
-}
-
-/* The check in the middle: two borders, like the hero facts. */
-.agency-art span:nth-child(4) {
-  inline-size: 9%;
-  block-size: 16%;
-  border: 0;
-  border-block-end: 6px solid var(--accent);
-  border-inline-end: 6px solid var(--accent);
-  border-radius: 2px;
-  opacity: 0.55;
-  transform: translateY(-12%) rotate(45deg);
-}
-
-/* On a phone the text takes the full width, so the rings leave the background and sit, whole, under the
-   button: nothing behind the text and no cut-off check. */
-@media (max-width: 52rem) {
-  .agency {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .agency-art {
-    position: relative;
-    inset: auto;
-    order: 1;
-    align-self: center;
-    inline-size: 11rem;
-    margin-block-start: 2.5rem;
-    translate: none;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .agency-art span:nth-child(-n + 3) {
-    animation: agency-breathe 9s ease-in-out infinite;
-  }
-
-  .agency-art span:nth-child(2) {
-    animation-delay: -3s;
-  }
-
-  .agency-art span:nth-child(3) {
-    animation-delay: -6s;
-  }
-
-  .agency-art span:nth-child(4) {
-    animation: agency-tick 9s ease-in-out infinite;
-  }
-}
-
-@keyframes agency-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.08);
-  }
-}
-
-@keyframes agency-tick {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-
-  50% {
-    opacity: 0.85;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .agency-art span {
-    animation: none;
-  }
-}
-
 @media (forced-colors: active) {
-  .agency-art {
-    display: none;
-  }
-
-  .promise,
   .status-note,
   .callout {
     border: 1px solid CanvasText;
   }
+
+  .faq-icon,
+  .faq summary:hover .faq-icon,
+  .faq details[open] .faq-icon {
+    border-color: ButtonText;
+    color: ButtonText;
+  }
 }
 
 @media print {
-  .agency-art,
   .hero-art {
     display: none;
   }

@@ -234,21 +234,213 @@ for (const { lang, prefix } of LANGUAGES) {
     }
 
     describe('landing page images', () => {
-      it('renders every image, the hero ones included', async () => {
+      it('loads eager images and decodes deferred screenshots on scroll', async () => {
         await openSitePage(`${prefix}/`);
 
         const images = await browser.execute(() => {
           const hero = document.querySelector('.hero');
-          return [...document.images].map((image) => ({
-            src: image.currentSrc,
-            hero: hero?.contains(image) ?? false,
-            loaded: image.complete && image.naturalWidth > 0,
-          }));
+          return [...document.images]
+            .filter((image) => image.loading !== 'lazy')
+            .map((image) => ({
+              src: image.currentSrc || image.src,
+              hero: hero?.contains(image) ?? false,
+              loaded: image.complete && image.naturalWidth > 0,
+            }));
         });
 
         expect(images.some((image) => image.hero)).toBe(true);
         const broken = images.filter((image) => !image.loaded).map((image) => image.src);
         expect(broken).toEqual([]);
+
+        const deferred = await browser.execute(() =>
+          [...document.querySelectorAll<HTMLImageElement>('#main img[loading="lazy"]')].map(
+            (image, index) => ({ index, src: image.currentSrc || image.src }),
+          ),
+        );
+        expect(deferred.length).toBeGreaterThan(0);
+        for (const { index, src } of deferred) {
+          await browser.execute((imageIndex: number) => {
+            const image = document.querySelectorAll<HTMLImageElement>('#main img[loading="lazy"]')[
+              imageIndex
+            ];
+            image?.scrollIntoView({ block: 'center', behavior: 'instant' });
+          }, index);
+          // Capture a compositor frame so headless Chromium advances lazy-load observation.
+          await browser.takeScreenshot();
+          await browser
+            .waitUntil(
+              async () => {
+                const image = await browser.execute((imageIndex: number) => {
+                  const element = document.querySelectorAll<HTMLImageElement>(
+                    '#main img[loading="lazy"]',
+                  )[imageIndex];
+                  if (!element) return null;
+                  const rect = element.getBoundingClientRect();
+                  return {
+                    src: element.currentSrc || element.src,
+                    complete: element.complete,
+                    naturalWidth: element.naturalWidth,
+                    naturalHeight: element.naturalHeight,
+                    rect: {
+                      top: rect.top,
+                      bottom: rect.bottom,
+                      width: rect.width,
+                      height: rect.height,
+                    },
+                  };
+                }, index);
+                return image !== null && image.complete && image.naturalWidth > 0;
+              },
+              {
+                timeoutMsg: `Deferred screenshot did not load after scrolling into view: ${src}`,
+              },
+            )
+            .catch(async (error: unknown) => {
+              const diagnostics = await browser.execute((imageIndex: number) => {
+                const element = document.querySelectorAll<HTMLImageElement>(
+                  '#main img[loading="lazy"]',
+                )[imageIndex];
+                if (!element) return { url: location.href, image: null };
+                const rect = element.getBoundingClientRect();
+                return {
+                  url: location.href,
+                  image: {
+                    src: element.currentSrc || element.src,
+                    complete: element.complete,
+                    naturalWidth: element.naturalWidth,
+                    naturalHeight: element.naturalHeight,
+                    rect: {
+                      top: rect.top,
+                      bottom: rect.bottom,
+                      width: rect.width,
+                      height: rect.height,
+                    },
+                  },
+                };
+              }, index);
+              throw new Error(
+                `${String(error)}\nImage diagnostics: ${JSON.stringify(diagnostics)}`,
+              );
+            });
+          await browser.execute(async (imageIndex: number) => {
+            const image = document.querySelectorAll<HTMLImageElement>('#main img[loading="lazy"]')[
+              imageIndex
+            ];
+            if (image) await image.decode();
+          }, index);
+        }
+      });
+    });
+
+    describe('landing page FAQ', () => {
+      for (const [device, viewport] of [
+        ['phone', { width: 412, height: 915 }],
+        ['desktop', { width: 1280, height: 800 }],
+      ] as const) {
+        it(`keeps its strokes centered and responds to click and keyboard on ${device}`, async () => {
+          await browser.setViewport(viewport);
+          await openSitePage(`${prefix}/`);
+
+          const summary = browser.$('.faq details:first-of-type summary');
+          const details = browser.$('.faq details:first-of-type');
+          const question = summary.$('.faq-question');
+          const icon = summary.$('.faq-icon');
+
+          const layout = await browser.execute(
+            (summary, question, icon) => {
+              // Use the locale's own question to exercise wrapping at each viewport.
+              const text = question.textContent?.trim() ?? '';
+              question.textContent = Array.from({ length: 6 }, () => text).join(' ');
+              summary.scrollIntoView({ block: 'center', behavior: 'instant' });
+              const range = document.createRange();
+              range.selectNodeContents(question);
+              const summaryBox = summary.getBoundingClientRect();
+              const iconBox = icon.getBoundingClientRect();
+              const styles = getComputedStyle(icon);
+              const horizontal = getComputedStyle(icon, '::before');
+              const vertical = getComputedStyle(icon, '::after');
+
+              return {
+                lines: range.getClientRects().length,
+                summaryHeight: summaryBox.height,
+                iconOffset:
+                  iconBox.top + iconBox.height / 2 - summaryBox.top - summaryBox.height / 2,
+                fitsInline: iconBox.right <= summaryBox.right,
+                alignment: [styles.alignItems, styles.justifyItems],
+                gridSize: [styles.gridTemplateRows, styles.gridTemplateColumns],
+                cell: [horizontal.gridArea, vertical.gridArea],
+                lengths: [horizontal.width, vertical.height],
+                thicknesses: [horizontal.borderBlockStartWidth, vertical.borderInlineStartWidth],
+              };
+            },
+            await summary,
+            await question,
+            await icon,
+          );
+          expect(layout.lines).toBeGreaterThan(1);
+          expect(layout.summaryHeight).toBeGreaterThanOrEqual(44);
+          expect(Math.abs(layout.iconOffset)).toBeLessThan(1);
+          expect(layout.fitsInline).toBe(true);
+          expect(layout.alignment).toEqual(['center', 'center']);
+          expect(layout.gridSize[0]).toBe(layout.gridSize[1]);
+          expect(layout.cell[0]).toBe(layout.cell[1]);
+          expect(layout.lengths[0]).toBe(layout.lengths[1]);
+          expect(layout.thicknesses).toEqual(['2px', '2px']);
+
+          await summary.click();
+          expect(await details.getProperty('open')).toBe(true);
+          expect(
+            await browser.execute(
+              (element) => getComputedStyle(element, '::after').display,
+              await icon,
+            ),
+          ).toBe('none');
+
+          await browser.keys('Enter');
+          expect(await details.getProperty('open')).toBe(false);
+          expect(
+            await browser.execute(
+              (summary) =>
+                summary.matches(':focus-visible') &&
+                getComputedStyle(summary).outlineStyle !== 'none',
+              await summary,
+            ),
+          ).toBe(true);
+
+          await browser.keys('Space');
+          expect(await details.getProperty('open')).toBe(true);
+          await summary.click();
+          expect(await details.getProperty('open')).toBe(false);
+        });
+      }
+
+      it('keeps the round marker and both strokes visible in forced colours', async () => {
+        const restore = await browser.emulate('forcedColors', 'dark');
+        try {
+          await openSitePage(`${prefix}/`);
+          const styles = await browser.execute(() => {
+            const icon = document.querySelector('.faq-icon');
+            if (!icon) return null;
+            const buttonText = document.createElement('span');
+            buttonText.style.color = 'ButtonText';
+            document.body.append(buttonText);
+            const expected = getComputedStyle(buttonText).color;
+            buttonText.remove();
+            return {
+              expected,
+              active: matchMedia('(forced-colors: active)').matches,
+              border: getComputedStyle(icon).borderBlockStartColor,
+              horizontal: getComputedStyle(icon, '::before').borderBlockStartColor,
+              vertical: getComputedStyle(icon, '::after').borderInlineStartColor,
+            };
+          });
+          expect(styles?.active).toBe(true);
+          expect(styles?.border).toBe(styles?.expected);
+          expect(styles?.horizontal).toBe(styles?.expected);
+          expect(styles?.vertical).toBe(styles?.expected);
+        } finally {
+          await restore();
+        }
       });
     });
 

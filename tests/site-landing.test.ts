@@ -8,8 +8,8 @@ import { MAIN_PATH_STATES } from '../src/core/paths';
  * read as they are written, before the build expands the markers. Each one must carry the seven sections of
  * the spec in order, the status teaser in the catalogue's order with its "not official" note, the install
  * marker, a clean heading outline, `alt` text on every image and no script. The landing stylesheet is checked
- * too: tokens only, nothing loaded, motion only for people who have not asked for less, and AA contrast for
- * the colour pairs it adds on top of base.css.
+ * too: tokens only, nothing loaded, no section motion, and AA contrast for the colour pairs it adds on top of
+ * base.css. The brand badge handles reduced motion within its SVG.
  */
 
 const SITE = resolve(import.meta.dirname, '../site');
@@ -84,8 +84,12 @@ describe.each(PAGES)('the $lang landing page', (page) => {
     const hero = html.slice(html.indexOf('id="hero"'), html.indexOf('id="how-it-works"'));
     expect(hero).toContain('<!-- @install -->');
     expect(hero).toContain('src="/img/icon-animated.svg"');
-    expect(hero).toContain('src="/img/logo-light.svg"');
-    expect(hero).toContain('srcset="/img/logo-dark.svg"');
+    const wordmark = doc.querySelector('#hero .hero-wordmark[translate="no"]');
+    for (const theme of ['light', 'dark']) {
+      const logo = wordmark?.querySelector(`.logo-for-${theme}`);
+      expect(logo?.getAttribute('src')).toBe(`/img/logo-${theme}.svg`);
+      expect(logo?.getAttribute('alt')).toBe('NacioCheck');
+    }
     expect(doc.querySelector('#hero .hero-tagline')?.textContent?.trim()).toBe(page.tagline);
   });
 
@@ -110,9 +114,19 @@ describe.each(PAGES)('the $lang landing page', (page) => {
   it('answers the FAQ in disclosure widgets, with no script', () => {
     const questions = doc.querySelectorAll('#faq details > summary');
     expect(questions.length).toBeGreaterThanOrEqual(5);
+    for (const question of questions) {
+      expect(question.querySelector('.faq-question')?.textContent?.trim()).toBeTruthy();
+      expect(question.querySelector('.faq-icon[aria-hidden="true"]')?.textContent).toBe('');
+    }
     expect(html).not.toMatch(/<script\b/i);
     expect(html).not.toMatch(/\son[a-z]+\s*=/i);
     expect(html).not.toMatch(/javascript:/i);
+  });
+
+  it('uses plain section headings, a privacy list and a quiet agency call to action', () => {
+    expect(doc.querySelector('.eyebrow, .agency-art')).toBeNull();
+    expect(doc.querySelectorAll('#privacy ul.promises[role="list"] > li')).toHaveLength(4);
+    expect(doc.querySelector('#agencies .button')?.textContent?.trim()).toBeTruthy();
   });
 
   it('has one h1 and no skipped heading level', () => {
@@ -153,6 +167,11 @@ describe.each(PAGES)('the $lang landing page', (page) => {
       expect(srcset).toContain(`/img/screens/${page.screens}/${name?.[2] ?? ''}-640.webp 640w`);
       expect(srcset).toContain(`/img/screens/${page.screens}/${name?.[2] ?? ''}-1280.webp 1280w`);
       expect(shot.getAttribute('sizes')).toBeTruthy();
+      if (shot.closest('#hero')) {
+        expect(shot.getAttribute('loading')).not.toBe('lazy');
+      } else {
+        expect(shot.getAttribute('loading')).toBe('lazy');
+      }
     }
     for (const attribute of ['src', 'srcset']) {
       for (const node of doc.querySelectorAll(`[${attribute}]`)) {
@@ -213,13 +232,12 @@ describe('the landing stylesheet', () => {
     }
   });
 
-  it('animates only under prefers-reduced-motion: no-preference', () => {
-    const noPreference =
-      /@media\s*\(prefers-reduced-motion:\s*no-preference\)\s*\{(?:[^{}]*\{[^}]*\})*\s*\}/g;
-    const outside = RULES.replace(noPreference, '');
-    expect(outside).not.toMatch(/\banimation(-name)?\s*:(?!\s*none\s*;)/);
-    expect(outside).not.toMatch(/\btransition\s*:/);
-    expect(RULES).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  it('leaves motion to the single-play brand badge', () => {
+    expect(RULES).not.toMatch(/\b(?:animation|transition)(?:-[\w-]+)?\s*:/);
+    const badge = readFileSync(resolve(SITE, '../brand/icon-animated.svg'), 'utf8');
+    expect(badge).toMatch(/animation:\s*pop\b/);
+    expect(badge).not.toMatch(/\binfinite\b/);
+    expect(badge).toMatch(/prefers-reduced-motion:\s*reduce/);
   });
 
   describe('contrast of the pairs it adds', () => {
@@ -248,11 +266,19 @@ describe('the landing stylesheet', () => {
     const PAIRS: [string, string, number, string][] = [
       ['accent-soft-fg', 'accent-soft', 4.5, 'agency band text and the captcha callout'],
       ['button-bg', 'accent-soft', 3, 'the agency button against the band'],
+      ['button-bg-hover', 'accent-soft', 3, 'the hovered agency button against the band'],
       ['focus', 'accent-soft', 3, 'the focus ring in the agency band'],
-      ['heading', 'surface', 4.5, 'privacy card headings'],
+      ['focus', 'bg', 3, 'the focus ring on the privacy link'],
+      ['focus', 'band', 3, 'the focus ring on the FAQ questions and hero actions'],
+      ['heading', 'bg', 4.5, 'privacy promise headings'],
       ['muted', 'band', 4.5, 'state explanations on the status band'],
       ['heading', 'band', 4.5, 'sub-status lines on the status band'],
       ['accent', 'band', 3, 'timeline dots on the status band'],
+      ['fg', 'band', 4.5, 'FAQ questions and answers'],
+      ['accent-hover', 'band', 4.5, 'FAQ question hover'],
+      ['accent', 'band', 3, 'FAQ plus strokes'],
+      ['accent-hover', 'band', 3, 'FAQ open and hovered strokes'],
+      ['control-border', 'band', 3, 'FAQ icon outline'],
     ];
 
     for (const [theme, valueIndex] of [

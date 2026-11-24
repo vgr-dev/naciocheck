@@ -20,11 +20,21 @@
           <div class="hero-copy">
             <h1 id="hero-title" class="hero-title">
               <img class="hero-mark" src="/img/icon-animated.svg" alt="" width="128" height="128" />
-              <span class="hero-wordmark">
-                <picture>
-                  <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
-                  <img src="/img/logo-light.svg" alt="NacioCheck" width="520" height="128" />
-                </picture>
+              <span class="hero-wordmark" translate="no">
+                <img
+                  class="logo-for-light"
+                  src="/img/logo-light.svg"
+                  alt="NacioCheck"
+                  width="520"
+                  height="128"
+                />
+                <img
+                  class="logo-for-dark"
+                  src="/img/logo-dark.svg"
+                  alt="NacioCheck"
+                  width="520"
+                  height="128"
+                />
               </span>
             </h1>
             <p class="hero-tagline">Tu expediente de nacionalidad, al día.</p>
@@ -60,7 +70,6 @@
 
       <section id="how-it-works" class="section" aria-labelledby="how-title">
         <div class="wrap">
-          <p class="eyebrow">Cómo funciona</p>
           <h2 id="how-title">Aviso, captcha y resultado</h2>
           <p class="section-intro">
             Consultar el estado deja de ser un trámite: guardas tus datos una vez y cada
@@ -86,6 +95,7 @@
                   width="1280"
                   height="800"
                   decoding="async"
+                  loading="lazy"
                   alt="Las opciones de NacioCheck con dos solicitudes guardadas, «Solicitud uno» y «Solicitud dos», y el formulario para añadir otra."
                 />
               </figure>
@@ -94,15 +104,15 @@
               <div class="step-text">
                 <h3>Tú resuelves el captcha</h3>
                 <p>
-                  NacioCheck abre la consulta oficial y rellena el formulario con tus datos. En la
-                  pantalla queda solo el captcha: lo resuelves tú, como pide la web, y la consulta
-                  se envía en ese momento.
+                  <span translate="no">NacioCheck</span> abre la consulta oficial y rellena el
+                  formulario con tus datos. En la pantalla queda solo el captcha: lo resuelves tú,
+                  como pide la web, y la consulta se envía en ese momento.
                 </p>
               </div>
               <div class="callout">
                 <p>
-                  NacioCheck nunca resuelve, salta ni envía el captcha a nadie. Siempre lo resuelve
-                  una persona: tú.
+                  <span translate="no">NacioCheck</span> nunca resuelve, salta ni envía el captcha a
+                  nadie. Siempre lo resuelve una persona: tú.
                 </p>
               </div>
             </li>
@@ -111,7 +121,8 @@
                 <h3>Ves el resultado</h3>
                 <p>
                   El estado que muestra la sede se guarda en tu historial. Si ha cambiado desde la
-                  última vez, NacioCheck te lo dice bien claro y te explica qué suele significar.
+                  última vez, <span translate="no">NacioCheck</span> te lo dice bien claro y te
+                  explica qué suele significar.
                 </p>
               </div>
               <figure class="shot">
@@ -125,6 +136,7 @@
                   width="1280"
                   height="800"
                   decoding="async"
+                  loading="lazy"
                   alt="El aviso «El estado ha cambiado» de NacioCheck: la solicitud pasa de «Abierto - Registrado» a «Abierto - En tramitación», con una explicación del estado."
                 />
               </figure>
@@ -135,7 +147,6 @@
 
       <section id="statuses" class="section section-band" aria-labelledby="statuses-title">
         <div class="wrap">
-          <p class="eyebrow">Qué significa cada estado</p>
           <h2 id="statuses-title">El camino habitual de un expediente</h2>
           <p class="status-note">
             <strong>Orientativo, no oficial.</strong> Estas explicaciones resumen lo observado en
@@ -204,6 +215,7 @@
                 width="1280"
                 height="800"
                 decoding="async"
+                loading="lazy"
                 alt="La guía de estados de NacioCheck: cada estado del camino habitual con su explicación y sus fuentes."
               />
               <figcaption>
@@ -217,13 +229,13 @@
 
       <section id="privacy" class="section" aria-labelledby="privacy-title">
         <div class="wrap">
-          <p class="eyebrow">Privacidad</p>
           <h2 id="privacy-title">Tus datos son tuyos</h2>
           <p class="section-intro">
             Tu NIE, tu número de expediente y tu fecha de nacimiento no tienen por qué salir de tu
-            ordenador o tu móvil. NacioCheck está hecho para que no lo hagan.
+            ordenador o tu móvil. <span translate="no">NacioCheck</span> está hecho para que no lo
+            hagan.
           </p>
-          <ul class="promises">
+          <ul class="promises" role="list">
             <li class="promise">
               <h3>Nada sale de tu navegador</h3>
               <p>
@@ -249,8 +261,8 @@
             <li class="promise">
               <h3>Código abierto</h3>
               <p>
-                NacioCheck es software libre con licencia <span class="nowrap">GPL-3.0</span>:
-                cualquiera puede leer qué hace y cómo lo hace.
+                <span translate="no">NacioCheck</span> es software libre con licencia
+                <span class="nowrap">GPL-3.0</span>: cualquiera puede leer qué hace y cómo lo hace.
               </p>
               <!-- @if repository -->
               <p><a href="https://github.com/vgr-dev/naciocheck">Ver el código en GitHub</a></p>
@@ -265,27 +277,36 @@
 
       <section id="faq" class="section section-band" aria-labelledby="faq-title">
         <div class="wrap">
-          <p class="eyebrow">Preguntas frecuentes</p>
-          <h2 id="faq-title">Lo que más se pregunta</h2>
+          <h2 id="faq-title">Preguntas frecuentes</h2>
           <div class="faq">
             <details>
-              <summary>¿Es una herramienta oficial?</summary>
+              <summary>
+                <span class="faq-question">¿Es una herramienta oficial?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
-                No. NacioCheck es un proyecto personal e independiente, sin ninguna relación con el
-                Ministerio de Justicia ni con ningún organismo público. Usa la consulta oficial de
-                la sede electrónica tal como es, y las explicaciones de los estados son
-                orientativas.
+                No. <span translate="no">NacioCheck</span> es un proyecto personal e independiente,
+                sin ninguna relación con el Ministerio de Justicia ni con ningún organismo público.
+                Usa la consulta oficial de la sede electrónica tal como es, y las explicaciones de
+                los estados son orientativas.
               </p>
             </details>
             <details>
-              <summary>¿Resuelve el captcha por mí?</summary>
+              <summary>
+                <span class="faq-question">¿Resuelve el captcha por mí?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
-                No. El captcha lo resuelves tú, siempre. NacioCheck rellena el formulario y espera;
-                no lo salta, no lo resuelve y no lo envía a ningún servicio.
+                No. El captcha lo resuelves tú, siempre.
+                <span translate="no">NacioCheck</span> rellena el formulario y espera; no lo salta,
+                no lo resuelve y no lo envía a ningún servicio.
               </p>
             </details>
             <details>
-              <summary>¿Dónde se guardan mis datos?</summary>
+              <summary>
+                <span class="faq-question">¿Dónde se guardan mis datos?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
                 Solo en tu navegador, en el almacenamiento local de la extensión. Puedes cifrarlos
                 con una contraseña, exportarlos a un archivo o borrarlos desde Opciones. Nada se
@@ -293,14 +314,20 @@
               </p>
             </details>
             <details>
-              <summary>¿Es gratis?</summary>
+              <summary>
+                <span class="faq-question">¿Es gratis?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
                 Sí. Todas las funciones actuales son gratuitas y lo seguirán siendo. Sin anuncios y
                 sin cuentas.
               </p>
             </details>
             <details>
-              <summary>¿En qué navegadores funciona?</summary>
+              <summary>
+                <span class="faq-question">¿En qué navegadores funciona?</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </summary>
               <p>
                 En Chrome y en Firefox, en el ordenador. Firefox para Android es un objetivo que aún
                 no se ha probado en un dispositivo. Los enlaces para instalarla aparecerán arriba en
@@ -312,15 +339,13 @@
       </section>
 
       <section id="agencies" class="agency" aria-labelledby="agencies-title">
-        <div class="agency-art" aria-hidden="true">
-          <span></span><span></span><span></span><span></span>
-        </div>
         <div class="wrap">
           <div class="agency-copy">
             <h2 id="agencies-title">¿Sois una gestoría o un despacho?</h2>
             <p>
-              NacioCheck es gratis para todos. Si necesitáis más, como el seguimiento de muchos
-              expedientes o herramientas propias para vuestro equipo, hablemos.
+              <span translate="no">NacioCheck</span> es gratis para todos. Si necesitáis más, como
+              el seguimiento de muchos expedientes o herramientas propias para vuestro equipo,
+              hablemos.
             </p>
             <p>Siempre con la misma regla: el captcha lo resuelve una persona.</p>
             <a class="button" href="https://vgr.cat/es/">Hablemos en vgr.cat</a>
