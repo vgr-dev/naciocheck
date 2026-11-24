@@ -55,7 +55,7 @@ segmented footer switcher. The re-verify moved to Phase 9 as step 16.
 
 **Phase 9: Re-verify the finished site**
 
-- [~] 16. Regenerate the baselines and repeat the final checks
+- [x] 16. Regenerate the baselines and repeat the final checks (f84c506)
 
 ## Running steps in parallel
 

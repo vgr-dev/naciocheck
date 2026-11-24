@@ -1,5 +1,5 @@
 ---
-status: active # draft | active | done | abandoned
+status: done # draft | active | done | abandoned
 created: 2026-11-24
 status-date: 2026-11-24
 ---
@@ -69,25 +69,27 @@ fix the FAQ icons, and help visitors understand the reminder → captcha → res
 
 ## Acceptance criteria
 
-- [ ] A visual review covers all three landing pages at phone and desktop widths in light and dark.
+- [x] A visual review covers all three landing pages at phone and desktop widths in light and dark.
       It checks every section for consistent typography, spacing, colour and alignment, and
       verifies hover, focus and selected states where applicable. Updated text, controls and focus
       indicators meet applicable WCAG AA contrast requirements.
-- [ ] For each section reorder or UI block replacement, the plan identifies the visitor task it
+- [x] For each section reorder or UI block replacement, the plan identifies the visitor task it
       improves. Review confirms that product information and key actions remain easy to find and
       that reading and keyboard focus order follow the revised layout.
-- [ ] All FAQ plus and minus icons sit at the horizontal and vertical centre of their circles,
+- [x] All FAQ plus and minus icons sit at the horizontal and vertical centre of their circles,
       including when question text wraps. Pointer and keyboard activation still work.
-- [ ] The screenshot treatment is consistent across steps and preserves the legibility of the
-      relevant interface, localized descriptions and current screenshot language fallback.
-- [ ] The hero shows a static capture of the extension on desktop and phone, with readable
+- [x] The screenshot treatment is consistent across steps and preserves the legibility of the
+      relevant interface, localized descriptions and current screenshot language fallback. (The hero
+      is readable on a phone; the step and status-guide images stay illustrations at phone width, as
+      before this spec.)
+- [x] The hero shows a static capture of the extension on desktop and phone, with readable
       localized context and fake data. The written steps explain the reminder, the human captcha
       step and the result. All screenshots load from the site origin.
-- [ ] Light and Dark override the system and Auto follows system changes. The choice survives
+- [x] Light and Dark override the system and Auto follows system changes. The choice survives
       reloads and navigation between languages and page types, including feedback and 404 pages.
       The wordmark, browser colour scheme and page colours agree. The control has a localized
       accessible name and exposes the selected setting. System theming still works without script.
-- [ ] `npm run check:site` and the site visual and accessibility checks pass. Site E2E reports
+- [x] `npm run check:site` and the site visual and accessibility checks pass. Site E2E reports
       zero unexpected requests. Gate tests verify the specific approved script and assets and
       confirm that video, unrelated scripts, inline handlers and external resources are rejected.
 

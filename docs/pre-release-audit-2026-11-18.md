@@ -574,6 +574,12 @@ also exited 0. No local font cache, private plans, existing node_modules or gene
   `vgr.cat` links are finalised with `vgr-dev/vgr.cat` `specs/2026-11-23-naciocheck-tie-in/`; 108 axe
   colour-contrast elements over the hero gradient and the language pill get a manual AA look
   (`e2e/.artifacts/axe-incomplete.json`).
+- **Landing polish (added 2026-11-24):** from `specs/2026-11-24-landing-page-polish/`, still open at release:
+  Firefox and Safari checks of the footer theme switcher (including its `:has()` focus ring) and of the light
+  palette fallback for browsers without `light-dark()`; a real Windows high-contrast pass; a screen-reader pass
+  of the switcher and the language links; the feedback page's switcher with Turnstile in a real browser after
+  `npm run deploy:site`. Non-blocking: the open Low findings in that spec's `visual-review.md` (findings 1, 4,
+  5, 6, 8, 9, 11, 12) and `audit.md`, for example the English "Changelog" label and 36 px switcher segments.
 - **Site analytics (added 2026-11-23, resolved the same day):** Cloudflare Web Analytics is injected at the
   edge into every page of `naciocheck.vgr.cat`. The owner keeps it on; the privacy pages (es, en) and README
   now disclose it and state that it applies to the website only, not the extension (ADR 0005).

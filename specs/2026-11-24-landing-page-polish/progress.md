@@ -499,3 +499,67 @@ feat(site): move the theme control to a segmented footer switcher
   checks, 0 unexpected requests.
 - **Commit proposal:** the switcher as one commit, then the plan and progress records.
 - **Open issues:** Visual baselines are stale until step 16 regenerates them.
+
+## 2026-11-24 - Step 16: Regenerate the baselines and repeat the final checks
+
+- **Status:** done (the owner accepted the traced warm-load figure below as not a threshold trip)
+- **Changed:** 48 `e2e/baselines/chrome/site-*.png`, `visual-review.md` (new section),
+  `baseline.md` ("After phases 7 and 8 (step 16)")
+- **Verified:** The 48 old `site-*` baselines were deleted and regenerated; extension baselines
+  are unchanged against `546835f`. The first compare run failed one extension test once
+  (`options: editing an application`, "The application card offers no edit action"); the second
+  compare run and the Phase verify passed with 152 images at 0 %. Review: 0 High, 0 Medium, three
+  new Low (hero and step 3 show the same alert, 36 px switcher segments on phones, footer cut in
+  the 412 × 915 changelog and 404 captures). Earlier Low 2 (hero repeats step 1) and 3 (header
+  wrap by locale) are fixed; 7 (phone legibility) is fixed for the hero.
+- **Verified:** Same-session comparison against a `666b6d9` build on the phone profile: warm FCP
+  260 → 260 ms plain (step 11: 488), +8 ms over in-page frames, +50 ms traced from four noisy
+  samples per site; cold traced FCP 508 → 472 ms. CLS 0.00. Phone cold transfer 71,265 →
+  36,305 B, desktop −11,740 B; no external script request remains. All four Medium audit findings
+  are fixed in the visible Chrome: the logo follows the forced palette in every combination, the
+  current language is bold and underlined, the hero no longer repeats step 1, and its status lines
+  render at 12.3 px at 390 px (11.2 px at 360). The footer switcher works by keyboard, pointer and
+  forced colours; the header is one row at 390 and 412 px in all three languages; the feedback
+  switcher works on a scratch copy without Turnstile. Fixture bytes and extension sources are
+  unchanged.
+- **Commit:** `f84c506` (baselines) and `ff1780f` (review and performance records)
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+test(site): regenerate site baselines and record the final checks
+```
+
+- **Open issues:** The cold plain phone FCP is bimodal (252–384 ms); a point to watch. Uncovered:
+  Firefox, Safari, real Windows high contrast, real browser zoom, a browser without
+  `light-dark()`, screen readers, live Turnstile, en and ca traces, INP and field data.
+
+## 2026-11-24 - Phase 9: Re-verify the finished site
+
+- **Status:** done
+- **Steps:** 16 done.
+- **File check:** pass. 48 `site-*` baselines, `visual-review.md` and `baseline.md` belong to
+  step 16; `plan.md` carries the orchestrator's status lines. The builder's temporary worktree and
+  servers were removed.
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && npm run test:e2e && npm run check:privacy`
+  passed: 1,499 application and 31 Worker tests, lint, format, typecheck, the offline gate for
+  15 pages, 6 E2E spec files (170 tests, visual 0 above tolerance, 0 unexpected requests) and the
+  privacy check.
+- **Commit proposal:** the baselines, then the spec records.
+- **Open issues:** None blocking; see the spec close entry.
+
+## 2026-11-24 - Spec closed
+
+- **Status:** done, at the owner's request
+- **Acceptance:** all seven criteria met and verified in this spec. Criterion 4 notes that the step
+  and status-guide images stay illustrations at phone width, as before this spec; the hero is
+  readable.
+- **Scope changes, all approved by the owner:** the walkthrough video was withdrawn for static
+  screenshots (steps 3 and 4); the theme bootstrap became inline after step 11 measured a
+  blocking-request regression (step 12); the four Medium audit findings were fixed (steps 13 and
+  14); the theme select moved to a segmented footer switcher (step 15).
+- **Carried to the release gates** in `docs/pre-release-audit-2026-11-18.md`: Firefox and Safari
+  checks of the footer switcher and the `light-dark()` fallback, real Windows high contrast, a
+  screen-reader pass, and the feedback switcher with Turnstile after the deploy. The open Low
+  findings in `visual-review.md` and `audit.md` are non-blocking.
+- **Commit:** uncommitted
