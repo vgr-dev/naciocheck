@@ -1,0 +1,390 @@
+# Plan: NacioCheck landing page polish
+
+Spec: `spec.md`
+
+**Sign-off:** Approved by Victor Gonzalez on 2026-11-24.
+Scope revised on 2026-11-24 at the owner’s request to use static product screenshots.
+
+## Status
+
+<!-- One line per step. Only this section changes after sign-off. Details and verification evidence go in progress.md. -->
+
+**Phase 1: Baseline and site policy**
+
+- [x] 1. Record the performance and visual baseline (c563e0b)
+- [x] 2. Allow the theme script and enforce the static-image policy (uncommitted)
+- [-] 3. Produce the offline demo clips and posters (withdrawn)
+- [-] 4. Serve WebM and byte ranges from the offline site server (withdrawn)
+
+**Phase 2: Tokens and type scale**
+
+- [ ] 5. Make the palette theme-switchable and set the type scale
+
+**Phase 3: Theme selection and landing sections**
+
+- [ ] 6. Apply and persist the theme on every page
+- [ ] 7. Refresh the landing sections and centre the FAQ icons
+
+**Phase 4: Show static product screenshots**
+
+- [ ] 8. Show a static product screenshot in the hero
+
+**Phase 5: Baselines and code audit**
+
+- [ ] 9. Regenerate and review the site visual baselines
+- [ ] 10. Audit the changed code against the guidelines
+
+**Phase 6: Verify the finished site**
+
+- [ ] 11. Compare performance and check the manual states
+
+## Running steps in parallel
+
+Steps in one phase run side by side in the same working tree, so:
+
+- `npm run build:site`, `npm run check:site`, `npm run dev:site` and `npm run test:e2e` all rewrite
+  `.output/`. A step that shares its phase with another step verifies with `vitest`, `lint` and
+  `typecheck` only. Builds, the site gate and E2E run in the Phase verify, one after another. The
+  only exception is step 1, which builds the original site to capture the baseline.
+- Builders never write `progress.md` or `plan.md` (`/implement-phase` owns them). Evidence a
+  step produces goes to its own file in this spec folder: `baseline.md`, `visual-review.md` and `audit.md`.
+- Visual baselines (`e2e/baselines/`) are regenerated once, in step 9. Until then no Phase verify
+  runs `E2E_SPEC=visual`, and no step touches the baselines.
+- Phase 3 uses separate E2E files for landing sections (`site.e2e.ts`, step 7) and the theme
+  (`site-theme.e2e.ts`, step 6). Step 8 extends the landing coverage in its own phase.
+- The gate allows the exact theme script as optional in step 2. Step 6 requires it on every
+  generated page.
+
+## Design direction
+
+Applicants arrive to learn what NacioCheck does, whether they can trust it, and how to install it.
+Make the reminder, human captcha step and changed result the main story. Give the hero
+screenshot enough space to show the extension and keep its framing quiet. Use the existing teal
+wordmark and neutral surfaces. Start with six palette anchors already present in the site: white
+`#FFFFFF`, dark canvas `#111827`, light ink `#0F172A`, dark-mode text `#F1F5F9`, light-mode teal
+`#0F766E` and dark-mode teal `#5EEAD4`. Derive secondary surfaces and interactive colours through
+semantic tokens and test each used pairing.
+
+Typography stays on system UI (ADR 0005: nothing loaded from elsewhere, and no font request on the
+critical path). It carries hierarchy through a deliberate scale rather than a new face:
+
+| Role                       | Size (min → max)          | Weight | Notes                                  |
+| -------------------------- | ------------------------- | ------ | -------------------------------------- |
+| Hero tagline (the message) | `clamp(1.75rem … 2.5rem)` | 750    | Largest text on the page, balanced     |
+| Section `h2`               | `clamp(1.4rem … 1.75rem)` | 700    | Always smaller than the tagline        |
+| `h3`, FAQ question         | `1.15rem … 1.25rem`       | 650    |                                        |
+| Body                       | `1.0625rem`, line 1.65    | 400    | Prose `max-inline-size: 68ch` (~70 ch) |
+| Small (captions, notes)    | `0.9375rem`               | 400    | Never below this for running text      |
+
+Today the section headings (up to 2rem) outrank the tagline (up to 1.9rem), and `--measure: 46rem`
+gives about 85 characters per line; both are corrected. Keep prose left aligned. Use spacing and
+quiet dividers to show grouping, and reserve visual prominence for the screenshots and install
+actions.
+
+```text
+Desktop
+  Wordmark                           Language     Theme
+  Tagline, value, install          | Product screenshot
+  Privacy and independence facts   | Localized screenshot caption
+  Reminder → human captcha → result  (three-step overview)
+  Status guide and privacy
+  FAQ
+  Agency contact and footer
+
+Phone
+  Wordmark
+  Language     Theme
+  Tagline, value, install, facts
+  Product screenshot
+  Reminder → human captcha → result
+  Status guide, privacy, FAQ
+  Agency contact and footer
+```
+
+Keep the section order. Each replaced block and the visitor task it serves:
+
+- **Hero screenshot visible on desktop and phone.** Use an authentic localized capture that
+  shows a distinct product capability. The current hero repeats the changed-result shot from
+  the steps and disappears on phones. Pick a different existing capture or crop a relevant
+  area while keeping the install actions near the opening copy.
+- **Tracked all-caps labels above every `h2` → removed.** Each label repeats its heading ("Cómo
+  funciona" over "Aviso, captcha y resultado"). Without them, visitors scanning for a section read
+  one line per section instead of two. The label text that carries information the heading lacks
+  moves into the heading or the intro; the anchors stay.
+- **Four identical privacy cards → a two-column list with quiet dividers.** The four promises are
+  parallel statements, not separate objects. A divided list reads faster, matches the FAQ and
+  timeline treatment, and stops competing with the product screenshots for attention.
+- **Hero gradient wash → a flat band surface.** It is decoration with no information.
+- **Agency band rings and motion → a quiet contact treatment.** Keep the contact link as easy
+  to find and let the copy carry the invitation.
+- **Native FAQ disclosures stay.** Visitors scan the questions and expand only the ones they need.
+
+Check that the animated brand badge plays once. If it loops, raise it with the owner under
+the brand rules. The numbered steps
+stay numbered because they are a real sequence. Preserve each locale's anchors, reading order, key
+actions, factual terms and the stores' coming-soon behaviour.
+
+### Styling decision
+
+Keep the existing CSS and use shared component classes and semantic tokens. The current build
+already combines a shared stylesheet with a landing stylesheet and uses the same classes across
+all three locales. Tailwind's build-time CLI could provide consistent primitives, but would
+require a dependency, a compile step, source discovery across HTML and build templates, and a
+decision about its base reset. It would also repeat more presentation choices across localized
+markup. Its generated CSS size would depend on the final class set. Compare the delivered CSS
+against the baseline below and revisit tooling only if the implementation exposes a specific
+maintenance or size problem that justifies a separately approved change.
+[Tailwind CLI](https://tailwindcss.com/docs/installation/tailwind-cli)
+
+Define each colour once with `light-dark()` and drive it with `color-scheme`: Auto keeps
+`color-scheme: light dark` (system theming with no script), and the explicit modes set
+`:root[data-theme="light"] { color-scheme: light }` and `:root[data-theme="dark"] { color-scheme:
+dark }`. One palette source then serves page colours, native controls and scrollbars. Browsers
+without `light-dark()` (Safari before 17.5) get the light palette from an
+`@supports not (color: light-dark(#000, #fff))` block, so they still render legibly.
+
+### Performance and visual evidence
+
+- **Baseline (step 1), before any site change:** save the commit, Chrome version, viewport,
+  throttling profile (Chrome's "Fast 4G" plus 4× CPU for phone, none for desktop) and three
+  **cold** and three **warm** (cached, reload) traces each for a representative phone and desktop
+  landing. Use the built local site via `npm run dev:site` and the Chrome MCP performance and
+  network tools. Record median FCP, LCP and CLS, the LCP element, transferred HTML/CSS/script/image
+  bytes before interaction, and the response headers of each asset (Wrangler's `Cache-Control`,
+  `ETag`, content type). If traces are unavailable, record request counts, sizes and observed
+  layout shifts separately and name the unmeasured metrics.
+- **Known figures at planning time:** about 42 KB of HTML per landing (10.7 KB gzip) with about
+  24 KB of source CSS inlined. On a phone the hidden hero image still downloads its 640w file
+  (`result-changed-640.webp`, 20.5 KB), and the below-fold step and status screenshots load
+  eagerly (about 55 KB at 640w). A correctly sized hero source and lazy-loading the other
+  screenshots should make the phone first load lighter. Record the actual change.
+- **Budgets:** 3 KiB raw for the theme script, aim for up to 35 KiB for the hero image selected at
+  the measured viewport, and at most 45 KiB extra first-load transfer at each measured width.
+  Preserve screenshot legibility. Measure before raising a budget and record material trade-offs
+  for owner review.
+- **The theme script on repeat visits.** The site has no `_headers` file, so static assets are
+  likely served with Workers' default revalidating cache policy (confirm in step 1). A blocking
+  `/theme.js` in `<head>` would then wait for a conditional round trip before first paint on every
+  page view, even when cached. Cold-only traces would miss this, hence the warm runs. If step 11
+  shows a warm-load FCP regression of 50 ms or more at the phone profile, stop and propose a
+  follow-up: a content-hashed script name plus a `_headers` rule with `immutable`. That adds a
+  served file and changes the gate, so it needs owner approval.
+- **Request waterfall:** Check hero image discovery and responsive source selection, whether both
+  logo variants download, and the cost of the early theme script. Keep the hero image eager with
+  fixed dimensions. Give screenshots in the steps and status sections `loading="lazy"`, intrinsic
+  dimensions and accurate `sizes`.
+- **Reading the numbers:** compare repeat runs for practical regressions. Use LCP ≤ 2.5 s and
+  CLS ≤ 0.1 as lab reference values. Describe interaction traces as lab samples: the Core Web
+  Vitals thresholds apply to the 75th percentile of field loads.
+  [Web Vitals](https://web.dev/articles/vitals) · [Chrome Performance panel](https://developer.chrome.com/docs/devtools/performance/overview)
+- **Visual baselines (step 9 only):** `E2E_UPDATE_BASELINES=1 E2E_SPEC=visual npm run test:e2e`
+  runs the existing writer without deleting the baseline directory. Keep only reviewed `site-*`
+  baseline changes. Compare the extension baselines against the commit before Phase 2 and
+  investigate any difference. Rerun `E2E_SPEC=visual npm run test:e2e` in compare mode. Follow
+  `.claude/commands/review-ui.md` for screenshot review, and track font and coverage limits.
+
+## Phase 1: Baseline and site policy
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`.
+  The site builds offline, the gate allows the approved theme bootstrap, and the baseline is recorded.
+
+### 1. Record the performance and visual baseline
+
+- **Goal:** `baseline.md` records the baseline protocol for the original site, cold and warm,
+  phone and desktop, including asset response headers.
+- **Files:** This spec's `baseline.md`.
+- **Verify:** The record lists every metric or names what could not be measured.
+- **Out of scope:** Changes to the site, tests or tools.
+
+### 2. Allow the theme script and enforce the static-image policy
+
+- **Goal:** ADR 0005 and the site gate allow at most one exact classic
+  `<script src="/theme.js"></script>` in the head of each page. The site gate rejects unrelated
+  scripts, inline handlers and network or dynamic code in the theme script. Feedback keeps its
+  existing script pair. Images use the existing allowlist and the gate rejects video.
+- **Files:** `docs/adr/0005-distribution-and-public-pages.md`, `scripts/check-site.mjs`,
+  `tests/site-gate.test.ts`.
+- **Verify:** `npx vitest run tests/site-gate.test.ts`. The site gate runs in Phase verify.
+- **Out of scope:** Creating `theme.js`, changing page markup or adding asset types.
+
+### 3. Produce the offline demo clips and posters
+
+Withdrawn when the owner chose static product screenshots. See `progress.md` for prior work.
+
+### 4. Serve WebM and byte ranges from the offline site server
+
+Withdrawn with the clips. See `progress.md` for prior work.
+
+## Phase 2: Tokens and type scale
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`.
+  All 15 generated pages and both contrast modes pass.
+
+### 5. Make the palette theme-switchable and set the type scale
+
+- **Goal:** Rewrite the two token blocks in `base.css` as one palette using `light-dark()` per
+  the styling decision, with Auto on `:root`, explicit `[data-theme="light"|"dark"]` modes setting
+  `color-scheme`, and a light fallback for browsers without `light-dark()`. Add the semantic tokens
+  the refresh needs and the type-scale tokens from the design direction; set `--measure` to `68ch`.
+  Add logo-variant classes (`.logo-for-light`, `.logo-for-dark`) that show exactly one variant for
+  the effective theme, in Auto through the media query and in explicit modes through the root
+  attribute, so they also work with JavaScript disabled. Without a `data-theme` attribute the
+  pages look as before apart from the measure and type scale.
+- **Files:** `site/_build/partials/base.css`, `tests/site-contrast.test.ts`.
+- **Verify:** `npx vitest run tests/site-contrast.test.ts`. The test reads both sides of every
+  `light-dark()` pair and checks each text, icon and focus pairing in both modes.
+- **Out of scope:** Header markup, the theme control, landing sections.
+
+## Phase 3: Theme selection and landing sections
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`,
+  then `E2E_SPEC=site npm run test:e2e` and `E2E_SPEC=site-theme npm run test:e2e`, one after
+  the other. Zero unexpected requests. No visual compare yet.
+
+### 6. Apply and persist the theme on every page
+
+- **Goal:** Emit a single classic `/theme.js` via `@head` before the inline styles, including the
+  404 branch, and a `<meta name="theme-color">` per scheme (`media` attributes) that matches the
+  page background. Emit a labelled, localized native `<select>` via `@header` with
+  `autocomplete="off"` (Firefox would otherwise restore a stale value on reload), explicit
+  `background-color` and `color` (Windows dark mode), and `touch-action: manipulation`. Keep it
+  hidden with `visibility` until the script marks the root ready, so its space is reserved and
+  revealing it shifts nothing.
+- Before first paint, accept only `light`, `dark` or `auto` under one site-specific localStorage
+  key. Apply explicit modes as `data-theme` on the root; Auto removes it and the CSS handles live
+  system changes. Update `theme-color` for explicit modes. Guard storage reads and writes: invalid
+  or missing data falls back to Auto, and denied storage still allows a choice for the current
+  page. Set the select's value from storage, and resync on `pageshow` (back/forward cache) and on
+  `storage` events.
+- Replace the OS-only `<picture>` logo in the generated header with both outlined assets using the
+  step 5 classes, one reserved footprint, and one accessible name. Localize labels in the shared
+  strings file. Make the gate require the script exactly once on each built page and reject a
+  missing asset.
+- Tests: all generated locale/page combinations, including 404 and feedback. Keep the feedback
+  tests offline by exercising its built header and bootstrap in the existing DOM test harness with
+  external resources disabled; preserve the existing feedback script tests. In Chrome E2E, use the
+  real control and verify both overrides, Auto after live emulated OS changes, reload,
+  cross-page/locale navigation, a nested 404, matching computed colours, `theme-color` and the
+  visible logo, with a clean storage reset between examples. Exercise storage exceptions and the
+  script-disabled fallback in the DOM or browser harness.
+- **Files:** `site/theme.js`, `site/_build/strings.json`, `site/_build/partials/base.css` (header
+  and theme-control rules only), `scripts/build-site.mjs`, `scripts/check-site.mjs`,
+  `tests/{build-site,site-gate,feedback-page}.test.ts`, `e2e/specs/site-theme.e2e.ts`.
+- **Verify:** `npx vitest run tests/{build-site,site-gate,feedback-page}.test.ts`. E2E runs in the
+  Phase verify.
+- **Out of scope:** Landing HTML (the hero wordmark is step 7), extra storage, cookies, feedback
+  behaviour, extension code, baselines.
+
+### 7. Refresh the landing sections and centre the FAQ icons
+
+- **Goal:** Apply the design direction across all three landing sources: the type scale, the
+  block replacements listed there (labels removed, privacy list, flat hero band, quiet agency
+  band), install actions and their availability easy to scan, and the same semantic colour roles
+  for surfaces, links, borders and focus across the steps, status guide, privacy, FAQ and agency
+  blocks. Give existing product screenshots one restrained frame and preserve aspect ratios,
+  content, alt text and responsive variants; add `loading="lazy"` to every screenshot below the
+  hero. Balance long captions and paragraph widths across languages. Keep the status disclaimer
+  next to the guide and source visibility conditional. Preserve footer destinations, credit and
+  independence wording. Switch the hero wordmark to the step 5 logo classes. Mark the brand name
+  `translate="no"` where it appears as a name. Check whether the animated badge loops (see design
+  direction). Step 8 picks and frames the hero screenshot.
+- Centre the FAQ mark with two equal CSS-drawn strokes (`::before` and `::after` on the indicator,
+  using borders or `currentColor`, not background gradients) inside the circular indicator. Show
+  only the horizontal stroke when open. Keep the whole `summary` as the native hit target with
+  `touch-action: manipulation` and visible focus when the question wraps. Check the icon in
+  `forced-colors: active`.
+- **Files:** `site/index.html`, `site/en/index.html`, `site/ca/index.html`,
+  `site/_build/partials/landing.css`, `tests/site-landing.test.ts`, `e2e/specs/site.e2e.ts`.
+- **Verify:** `npx vitest run tests/site-landing.test.ts` (new colour pairs, including focus
+  against each surface and the FAQ open/hover states). E2E (FAQ pointer and keyboard expand and
+  collapse, icon geometry at phone and desktop widths with wrapped questions) runs in the Phase
+  verify.
+- **Out of scope:** The hero screenshot replacement, `base.css`, new brand assets, policy-page copy, styling
+  dependencies, baselines.
+
+## Phase 4: Show static product screenshots
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`,
+  then `E2E_SPEC=site npm run test:e2e` and `E2E_SPEC=site-theme npm run test:e2e`.
+  The hero screenshot is visible at both widths in all locales, and no unexpected requests occur.
+
+### 8. Show a static product screenshot in the hero
+
+- **Goal:** Choose a genuine extension capture that shows a capability distinct from the
+  changed-result shot in the steps. Start with the existing localized options or status guide
+  captures, and use the existing Sharp build if a new crop or responsive derivative is needed.
+  Keep the capture visible on phones and desktop without moving the install actions below it.
+  Use English imagery on English pages and the Spanish capture on Catalan pages with localized
+  alt text and context. Keep the reminder, human captcha and result explanation in localized HTML.
+- Match the hero screenshot framing to the supporting images. Use intrinsic dimensions,
+  responsive sources and accurate `sizes`. Keep the hero image eager and verify that the
+  deferred images decode after scrolling. Check narrow widths and both themes for legibility,
+  overflow, early image discovery and a stable layout when the image is absent.
+- **Files:** `site/index.html`, `site/en/index.html`, `site/ca/index.html`,
+  `site/_build/partials/landing.css`, `scripts/site-assets.mjs` and
+  `tests/site-assets.test.ts` if derivatives are added, `tests/site-landing.test.ts`,
+  and `e2e/specs/site.e2e.ts`.
+- **Verify:** `npx vitest run tests/{site-assets,site-landing}.test.ts`, `npm run check:site` and
+  `E2E_SPEC=site npm run test:e2e`. Check selected image URLs and their rendered dimensions
+  in local Chrome at phone and desktop widths.
+- **Out of scope:** Video, player controls, new file types, changes to store originals and baselines.
+
+## Phase 5: Baselines and code audit
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && E2E_SPEC=visual npm run test:e2e`.
+  Zero screenshot differences above tolerance.
+
+### 9. Regenerate and review the site visual baselines
+
+- **Goal:** Regenerate the 48 site visual combinations (three locales, two schemes, both widths,
+  landing and other pages) using the procedure above. Review them with
+  `.claude/commands/review-ui.md` and record findings by severity in `visual-review.md`. Extension
+  baselines are unchanged against the commit before Phase 2.
+- **Files:** `e2e/baselines/chrome/site-*`, this spec's `visual-review.md`.
+- **Verify:** The compare run passes; `git diff --stat` shows only `site-*` baselines changed.
+- **Out of scope:** Fixing findings (they go back to the step that owns the file).
+
+### 10. Audit the changed code against the guidelines
+
+- **Goal:** Read-only. Review the changed HTML, CSS, `theme.js` and the generated header with the
+  bundled `web-design-guidelines` rules, and critique the result against the design direction with
+  `frontend-design`. Report findings in `audit.md` as `file:line` with severity, including forced
+  colours, the theme control, screenshot text alternatives and layout, and contrast evidence for
+  focus, icons and overlays.
+- **Files:** this spec's `audit.md`.
+- **Verify:** Every finding cites a file and line or says why it cannot.
+- **Out of scope:** Edits to source, builds, browser runs.
+
+## Phase 6: Verify the finished site
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && npm run test:e2e && npm run check:privacy`.
+  E2E builds both browsers before the privacy check. Zero unexpected requests and zero screenshot
+  differences above tolerance.
+
+### 11. Compare performance and check the manual states
+
+- **Goal:** Repeat the baseline protocol with the same settings and add an "After" section to
+  `baseline.md` comparing metrics, budgets and the request waterfall. Apply the theme-script
+  revalidation threshold above and stop for owner approval if it trips. Check by hand the states
+  screenshots miss: opposite-OS theme, reduced motion, tab order, responsive image selection, missing
+  images, FAQ wrapping, reflow at narrow width and 200%/400% zoom, forced colours. Check feedback's
+  theme control offline without contacting Turnstile, and confirm the hero and theme work without
+  external services. Record actual metrics, uncovered cases and deviations. Confirm fixture bytes,
+  extension code and baselines, store originals, privacy promises and metadata are unchanged.
+  Final release and Firefox gates stay in the existing checklist and audit trail.
+- **Files:** this spec's `baseline.md`.
+- **Verify:** The phase verify above, plus the comparison in `baseline.md`.
+- **Out of scope:** Deployment, store uploads, a deployed-site audit, `_headers` (a follow-up
+  only with owner approval).
+
+## Risks / open questions
+
+- **Theme script caching.** With no `_headers`, repeat visits may pay a revalidation round trip
+  before first paint. The fix (hashed name plus `immutable`) adds a served file and changes the
+  gate, so it is a separate, owner-approved follow-up, triggered only by the step 11 measurement.
+- **`light-dark()` support.** Older browsers get the light palette via the `@supports` fallback;
+  step 11 checks one with the property disabled or a fallback test.
+- **Parallel builders share one working tree.** A builder that runs a site build or E2E outside
+  the Phase verify will corrupt another builder's run. Builders stop and report instead.
+- Review the first-paint cost of the theme bootstrap and the hero image against the baseline. Fix an
+  avoidable regression before regenerating baselines in step 9.

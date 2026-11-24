@@ -98,18 +98,12 @@ describe('site page gate', () => {
   });
 });
 
-describe('site gate: optional theme bootstrap and walkthrough media', () => {
+describe('site gate: optional theme bootstrap', () => {
   const THEME = '<script src="/theme.js"></script>';
-  const VIDEO =
-    '<video src="/img/demo/es/walkthrough.webm" poster="/img/demo/es/poster.webp" controls playsinline preload="none" width="960" height="540"></video>';
 
-  it('accepts one exact theme script in head and a valid landing video', () => {
-    const page = VALID.replace('<head>', `<head>${THEME}`).replace('</body>', `${VIDEO}</body>`);
+  it('accepts one exact theme script in the document head', () => {
+    const page = VALID.replace('<head>', `<head>${THEME}`);
     expect(pageProblems('index.html', page)).toEqual([]);
-    expect(
-      pageProblems('en/index.html', page.replaceAll('/img/demo/es/', '/img/demo/en/')),
-    ).toEqual([]);
-    expect(pageProblems('ca/index.html', page)).toEqual([]);
   });
 
   it('rejects duplicate or modified theme script tags and a missing theme asset', () => {
@@ -136,76 +130,19 @@ describe('site gate: optional theme bootstrap and walkthrough media', () => {
     }
   });
 
-  it('rejects wrong media paths, video outside a landing page, autoplay and malformed video markup', () => {
-    expect(
-      pageProblems(
-        'index.html',
-        VALID.replace('</body>', `${VIDEO.replace('/img/demo/es/', '/img/demo/no/')}</body>`),
-      ),
-    ).not.toEqual([]);
-    expect(
-      pageProblems('privacy/index.html', VALID.replace('</body>', `${VIDEO}</body>`)).join('\n'),
-    ).toMatch(/only once on a landing page/);
-    expect(
-      pageProblems(
-        'index.html',
-        VALID.replace('</body>', `${VIDEO.replace(' controls', ' autoplay controls')}</body>`),
-      ).join('\n'),
-    ).toMatch(/may not autoplay/);
-    expect(
-      pageProblems(
-        'index.html',
-        VALID.replace('</body>', `${VIDEO.replace('walkthrough.webm', 'walkthrough.mp4')}</body>`),
-      ),
-    ).not.toEqual([]);
-    expect(
-      pageProblems(
-        'index.html',
-        VALID.replace(
-          '</body>',
-          `${VIDEO.replace('poster="/img/demo/es/poster.webp"', 'src="/wrong" poster="/img/demo/es/poster.webp"')}</body>`,
-        ),
-      ).join('\n'),
-    ).toMatch(/exactly one src and poster/);
-    expect(
-      pageProblems(
-        'index.html',
-        VALID.replace(
-          '</body>',
-          `${VIDEO.replace(' width=', ' aria-label="controls playsinline" width=')}</body>`,
-        ),
-      ),
-    ).toEqual([]);
-    expect(
-      pageProblems(
-        'index.html',
-        VALID.replace('</body>', '<video src="/img/demo/es/walkthrough.webm">'),
-      ),
-    ).toEqual(expect.arrayContaining([expect.stringContaining('malformed or unclosed')]));
-    expect(
-      pageProblems(
-        'index.html',
-        VALID.replace(
-          '</body>',
-          `${VIDEO.replace('</video>', '<source src="/x"></video>')}</body>`,
-        ),
-      ).join('\n'),
-    ).toMatch(/source elements/);
-  });
-
-  it('checks demo file paths, extensions and the EBML header', () => {
-    const webm = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x93]);
-    expect(binaryProblems('img/demo/es/walkthrough.webm', webm)).toEqual([]);
-    expect(binaryProblems('img/demo/es/walkthrough.webm', Buffer.from('not webm'))).not.toEqual([]);
-    expect(binaryProblems('img/demo/fr/walkthrough.webm', webm)).not.toEqual([]);
-    expect(assetProblems('img/demo/es/walkthrough.mp4', '')).not.toEqual([]);
-    expect(assetProblems('img/demo/fr/poster.webp', '')).not.toEqual([]);
-  });
-
   it.each(['fetch', 'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'EventSource', 'import('])(
     'rejects theme.js with network or dynamic code API %s',
     (api) => expect(assetProblems('theme.js', `window.${api}('/x');`)).not.toEqual([]),
   );
+});
+
+describe('site gate: static product images', () => {
+  it('rejects local video markup and WebM and MP4 assets', () => {
+    const page = VALID.replace('</body>', '<video src="/clip.webm"></video></body>');
+    expect(pageProblems('index.html', page).join('\n')).toMatch(/site uses static images/);
+    expect(assetProblems('img/demo/es/walkthrough.webm', '')).not.toEqual([]);
+    expect(assetProblems('img/demo/es/walkthrough.mp4', '')).not.toEqual([]);
+  });
 });
 
 /** A page with `extra` before the end of its body, whatever it is. */

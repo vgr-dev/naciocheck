@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
  *   in `<link rel="me">`. Nothing absolute is ever allowed in `src`, `srcset`, `poster`, `data`, `action`,
  *   CSS `url()` or `@import`;
  * - the files served besides pages are `feedback/feedback.js`, `theme.js`, images (`.png`, `.webp`, `.svg`,
- *   `.ico`), the exact demo media paths, and one text file, `img/OFL.txt` (the Nunito licence, which must sit
+ *   `.ico`) and one text file, `img/OFL.txt` (the Nunito licence, which must sit
  *   next to the outlined logos whenever `img/logo-light.svg` or `img/logo-dark.svg` ships); an SVG may not
  *   script, embed or reach anything outside itself.
  * - no element carries an event-handler attribute (`on<name>`, any case, quoted, unquoted or empty), on any
@@ -81,9 +81,6 @@ const TURNSTILE_LINK_PAGES = [
 /** The one script file served. */
 const FEEDBACK_SCRIPT = 'feedback/feedback.js';
 const THEME_SCRIPT = 'theme.js';
-const DEMO_CLIPS = new Set(['img/demo/es/walkthrough.webm', 'img/demo/en/walkthrough.webm']);
-const DEMO_POSTERS = new Set(['img/demo/es/poster.webp', 'img/demo/en/poster.webp']);
-
 /** The image types served besides pages. */
 const IMAGE_TYPES = ['.png', '.webp', '.svg', '.ico'];
 
@@ -130,6 +127,7 @@ const FORBIDDEN = [
   { pattern: /@import/i, why: 'imports a stylesheet from CSS (@import)' },
   { pattern: /url\(\s*['"]?\s*(?:https?:)?\/\//i, why: 'loads a remote url() from CSS' },
   { pattern: /<iframe\b/i, why: 'has an <iframe>' },
+  { pattern: /<video\b/i, why: 'has a <video> element: the site uses static images' },
   {
     pattern:
       /\b(?:src|srcset|poster|data|action|href|formaction|cite)\s*=\s*["']?(?:https?:)?\/\//i,
@@ -172,20 +170,6 @@ function attributeValue(attributes, name) {
     'i',
   ).exec(attributes);
   return match ? (match[1] ?? match[2] ?? match[3] ?? '') : null;
-}
-
-/** Whether an attribute is present, including a bare boolean attribute. */
-function hasAttribute(attributes, name) {
-  return [...attributes.matchAll(ATTRIBUTE)].some(
-    ([, rawName = '']) => rawName.toLowerCase() === name,
-  );
-}
-
-/** Counts parsed attributes, including bare boolean attributes and duplicates. */
-function attributeCount(attributes, name) {
-  return [...attributes.matchAll(ATTRIBUTE)].filter(
-    ([, rawName = '']) => rawName.toLowerCase() === name,
-  ).length;
 }
 
 /** The named character references that can spell a URL character; anything else cannot hide an address. */
@@ -441,48 +425,6 @@ export function pageProblems(name, text) {
     problems.push(`site/${name}: only the optional exact theme script is allowed`);
   }
 
-  const videoTags = [...text.matchAll(/<video\b([^>]*)>/gi)];
-  const videos = [...text.matchAll(/<video\b([^>]*)>([\s\S]*?)<\/video\s*>/gi)];
-  if (videoTags.length !== videos.length) {
-    problems.push(`site/${name}: video element is malformed or unclosed`);
-  }
-  if (videoTags.length > 0) {
-    const expected =
-      name === 'index.html' || name === 'ca/index.html'
-        ? ['img/demo/es/walkthrough.webm', 'img/demo/es/poster.webp']
-        : name === 'en/index.html'
-          ? ['img/demo/en/walkthrough.webm', 'img/demo/en/poster.webp']
-          : null;
-    if (expected === null || videoTags.length !== 1) {
-      problems.push(`site/${name}: video is allowed only once on a landing page`);
-    }
-    for (const [, attributes = '', content = ''] of videos) {
-      const src = attributeValue(attributes, 'src');
-      const poster = attributeValue(attributes, 'poster');
-      const srcCount = attributeCount(attributes, 'src');
-      const posterCount = attributeCount(attributes, 'poster');
-      if (expected === null || src !== `/${expected[0]}` || poster !== `/${expected[1]}`) {
-        problems.push(`site/${name}: video must use its exact same-origin clip and poster`);
-      }
-      if (srcCount !== 1 || posterCount !== 1) {
-        problems.push(`site/${name}: video must have exactly one src and poster`);
-      }
-      if (
-        attributeCount(attributes, 'controls') !== 1 ||
-        attributeCount(attributes, 'playsinline') !== 1 ||
-        attributeCount(attributes, 'preload') !== 1 ||
-        attributeValue(attributes, 'preload') !== 'none'
-      ) {
-        problems.push(`site/${name}: video needs controls, playsinline and preload="none"`);
-      }
-      if (hasAttribute(attributes, 'autoplay') || hasAttribute(attributes, 'loop')) {
-        problems.push(`site/${name}: video may not autoplay or loop`);
-      }
-      if (/<source\b/i.test(content))
-        problems.push(`site/${name}: video may not contain source elements`);
-    }
-  }
-
   if (TURNSTILE_LINK_PAGES.includes(name)) {
     checked = checked.replace(TURNSTILE_LINK_TAG, '<a>');
   }
@@ -614,7 +556,6 @@ const MAGIC = {
     bytes.subarray(0, 4).toString('latin1') === 'RIFF' &&
     bytes.subarray(8, 12).toString('latin1') === 'WEBP',
   '.ico': (bytes) => bytes.length >= 6 && [0, 0, 1, 0].every((b, i) => bytes[i] === b),
-  '.webm': (bytes) => bytes.length >= 4 && [0x1a, 0x45, 0xdf, 0xa3].every((b, i) => bytes[i] === b),
 };
 
 /**
@@ -625,12 +566,6 @@ const MAGIC = {
  */
 export function binaryProblems(name, bytes) {
   const extension = extensionOf(name);
-  if (name.startsWith('img/demo/') && !DEMO_CLIPS.has(name) && !DEMO_POSTERS.has(name)) {
-    return [`site/${name}: demo directory contains only the two approved clips and posters`];
-  }
-  if (extension === '.webm' && !DEMO_CLIPS.has(name)) {
-    return [`site/${name}: WebM is allowed only at the two approved demo paths`];
-  }
   const matches = MAGIC[extension];
   if (!matches) return [`site/${name}: not a binary image type`];
   return matches(Buffer.from(bytes)) ? [] : [`site/${name}: is not a real ${extension} file`];
@@ -653,17 +588,6 @@ function extensionOf(name) {
  */
 export function assetProblems(name, text) {
   if (name === LICENCE_FILE) return [];
-  if (name.startsWith('img/demo/') && !DEMO_CLIPS.has(name) && !DEMO_POSTERS.has(name)) {
-    return [`site/${name}: demo directory contains only the two approved clips and posters`];
-  }
-  if (extensionOf(name) === '.webm') {
-    return DEMO_CLIPS.has(name)
-      ? []
-      : [`site/${name}: WebM is allowed only at the two approved demo paths`];
-  }
-  if (extensionOf(name) === '.webp' && name.startsWith('img/demo/') && !DEMO_POSTERS.has(name)) {
-    return [`site/${name}: demo poster is allowed only at the two approved paths`];
-  }
   if (name === THEME_SCRIPT) return scriptProblems(name, text, true);
   if (name !== FEEDBACK_SCRIPT) {
     if (IMAGE_TYPES.includes(extensionOf(name))) {
@@ -761,14 +685,6 @@ export function siteProblems(siteDir = SITE_DIR) {
       if (text.includes(THEME_SCRIPT_TAG) && !names.has(THEME_SCRIPT)) {
         problems.push(`site/${name}: references /theme.js, but the asset is missing`);
       }
-      for (const [, attributes = ''] of text.matchAll(/<video\b([^>]*)>/gi)) {
-        for (const attribute of ['src', 'poster']) {
-          const value = attributeValue(attributes, attribute);
-          if (value?.startsWith('/') && !names.has(value.slice(1))) {
-            problems.push(`site/${name}: video ${attribute} ${value} is missing`);
-          }
-        }
-      }
     } else if (MAGIC[extensionOf(name)]) {
       problems.push(...binaryProblems(name, readFileSync(file)));
     } else {
@@ -794,6 +710,6 @@ if (resolve(process.argv[1] ?? '') === SCRIPT_PATH) {
     process.exit(1);
   }
   console.log(
-    `Privacy site check passed: ${String(REQUIRED_PAGES.length)} pages (${REQUIRED_PAGES.join(', ')}), every internal link resolves, only approved scripts and media, no other external references.`,
+    `Privacy site check passed: ${String(REQUIRED_PAGES.length)} pages (${REQUIRED_PAGES.join(', ')}), every internal link resolves, only approved scripts and static images, no other external references.`,
   );
 }

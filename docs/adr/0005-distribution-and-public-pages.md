@@ -114,7 +114,7 @@ stay static and has to keep the privacy properties of the pages it replaces.
 
 - `npm run check:site` builds the site and checks `.output/site/`, not the sources. It stays offline. It
   gains these rules: `lang` may be `es`, `en` or `ca`; every language has the same set of pages; same-origin
-  `.png`, `.webp`, `.svg` and `.ico` files are allowed alongside the scoped scripts and demo media in the
+  `.png`, `.webp`, `.svg` and `.ico` files are allowed alongside the scoped scripts in the
   amendment below; an SVG may not carry a script, an event attribute, `<foreignObject>` or a reference that
   is not a `#fragment`; outbound links follow the list above. It does not see the Cloudflare Web Analytics
   beacon, which is injected at the edge.
@@ -130,14 +130,13 @@ stay static and has to keep the privacy properties of the pages it replaces.
 - Any new outbound link, remote resource or script is a new amendment to this ADR, and the gate fails until
   it is made.
 
-### Amendment 2026-11-24: landing-page theme preference and walkthrough media
+### Amendment 2026-11-24: site theme preference and static product images
 
 #### Context
 
-The three-language site gains a local theme selector and a play-on-demand product walkthrough. The
-selector needs a small same-origin bootstrap before first paint; the walkthrough uses local media
-files and native video controls. Neither feature needs a third-party resource or a request from the
-browser to another origin.
+The three-language site gains a local theme selector. It uses a small same-origin bootstrap
+to apply a saved choice before first paint. The landing page uses static screenshots to show the
+extension.
 
 #### Decision
 
@@ -147,17 +146,9 @@ browser to another origin.
   not use network APIs, dynamic code or telemetry. The existing feedback pages retain their exact
   feedback and Turnstile script elements; the theme script is an additional optional same-origin
   script.
-- The only permitted video files are `/img/demo/es/walkthrough.webm` and
-  `/img/demo/en/walkthrough.webm`. The only permitted poster files are the matching
-  `/img/demo/{es,en}/poster.webp`. Spanish and Catalan landings use the Spanish pair; English uses
-  the English pair. WebM files must have an EBML/WebM header. These assets are optional until the
-  landing walkthrough is added.
-- A video may appear only on the three landing pages, using that page's exact local clip and poster,
-  with native controls, inline playback and `preload="none"`. Autoplay and looping are forbidden.
 
 #### Consequences
 
-- The offline site gate permits only this exact optional script and these exact optional media
-  assets. It continues to reject unrelated scripts, media formats, external resources and inline
-  handlers. The script is checked for dynamic code and network APIs.
-- The walkthrough remains same-origin and starts only after a person uses the native controls.
+- The offline site gate enforces the optional script exception and the existing static-image policy.
+  It rejects video elements and video files, unrelated scripts, external resources and inline
+  handlers. The theme script is checked for dynamic code and network APIs.
