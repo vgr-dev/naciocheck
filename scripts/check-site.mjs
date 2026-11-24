@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
  * without linking it is written as plain text (`sede.mjusticia.gob.es`).
  *
  * Exceptions, each matched exactly:
- * - pages may carry one exact optional `theme.js` script in the head; feedback pages additionally carry the
+ * - every page carries one exact `theme.js` script in the head; feedback pages additionally carry the
  *   site's own `feedback.js` and Cloudflare's Turnstile, and those pages plus the privacy pages
  *   (`TURNSTILE_LINK_PAGES`) may link Turnstile's privacy addendum;
  * - any page may carry an outbound `<a href>` that starts with one of `OUTBOUND_LINKS`, and the site's own
@@ -48,7 +48,7 @@ export const LANGUAGES = ['es', 'en', 'ca'];
 /** The path prefix of a language's pages: none for Spanish, `en/` and `ca/` for the others. */
 const languagePrefix = (language) => (language === 'es' ? '' : `${language}/`);
 
-/** The pages that post a report: the only ones that may carry scripts. */
+/** The pages that post a report and carry the feedback scripts. */
 const FEEDBACK_PAGES = LANGUAGES.map(
   (language) => `${languagePrefix(language)}feedback/index.html`,
 );
@@ -78,7 +78,7 @@ const TURNSTILE_LINK_PAGES = [
   ...LANGUAGES.map((language) => `${languagePrefix(language)}privacy/index.html`),
 ];
 
-/** The one script file served. */
+/** The two same-origin scripts served. */
 const FEEDBACK_SCRIPT = 'feedback/feedback.js';
 const THEME_SCRIPT = 'theme.js';
 /** The image types served besides pages. */
@@ -122,7 +122,7 @@ const TURNSTILE_LINK_TAG =
   /<a\s+href="https:\/\/www\.cloudflare\.com\/turnstile-privacy-policy\/"\s*>/gi;
 
 const FORBIDDEN = [
-  { pattern: /<script\b/i, why: 'has a <script> element: the site carries no JavaScript' },
+  { pattern: /<script\b/i, why: 'has an unapproved <script> element' },
   { pattern: /<link\b[^>]*rel=["']?stylesheet/i, why: 'links a stylesheet: the CSS is inline' },
   { pattern: /@import/i, why: 'imports a stylesheet from CSS (@import)' },
   { pattern: /url\(\s*['"]?\s*(?:https?:)?\/\//i, why: 'loads a remote url() from CSS' },
@@ -385,18 +385,16 @@ export function pageProblems(name, text) {
   let checked = text;
 
   const themeMatches = text.match(/<script src="\/theme\.js"><\/script>/g) ?? [];
-  const head = /<head\b[^>]*>([\s\S]*?)<\/head\s*>/i.exec(text)?.[1] ?? '';
+  const markup = text.replace(/<!--[\s\S]*?-->/g, '');
+  const head = /<head\b[^>]*>([\s\S]*?)<\/head\s*>/i.exec(markup)?.[1] ?? '';
   const themeInHead = head.match(/<script src="\/theme\.js"><\/script>/g) ?? [];
-  if (themeMatches.length > 1 || themeMatches.length !== themeInHead.length) {
-    problems.push(
-      `site/${name}: allows at most one exact <script src="/theme.js"></script> in <head>`,
-    );
+  if (themeMatches.length !== 1 || themeInHead.length !== 1) {
+    problems.push(`site/${name}: needs exactly one <script src="/theme.js"></script> in <head>`);
   }
   checked = checked.replaceAll(THEME_SCRIPT_TAG, '');
 
   if (FEEDBACK_PAGES.includes(name)) {
-    // Exactly the two scripts and nothing else with a <script> tag: an inline script, a third script or a
-    // variant of either URL leaves a tag behind and is caught below.
+    // Alongside the theme bootstrap, only the two exact feedback tags are allowed.
     const own = text.match(OWN_SCRIPT_TAG)?.length ?? 0;
     const turnstile = text.match(TURNSTILE_SCRIPT_TAG)?.length ?? 0;
     const tags = text.match(/<script\b/gi)?.length ?? 0;
@@ -406,7 +404,7 @@ export function pageProblems(name, text) {
       problems.push(`site/${name}: needs exactly one Turnstile <script ... async defer>`);
     }
     if (tags !== 2 + themeMatches.length) {
-      problems.push(`site/${name}: has ${String(tags)} <script> elements, exactly 2 are allowed`);
+      problems.push(`site/${name}: has ${String(tags)} <script> elements, exactly 3 are allowed`);
     }
     checked = checked.replace(OWN_SCRIPT_TAG, '').replace(TURNSTILE_SCRIPT_TAG, '');
 
@@ -422,7 +420,7 @@ export function pageProblems(name, text) {
       problems.push(`site/${name}: data-sitekey is not shaped like a production key (0x...)`);
     }
   } else if ((text.match(/<script\b/gi)?.length ?? 0) !== themeMatches.length) {
-    problems.push(`site/${name}: only the optional exact theme script is allowed`);
+    problems.push(`site/${name}: only the exact theme script is allowed`);
   }
 
   if (TURNSTILE_LINK_PAGES.includes(name)) {

@@ -4,9 +4,9 @@
     "installChrome": "Instalar en Chrome",
     "installFirefox": "Instalar en Firefox",
     "homeLabel": "NacioCheck, inicio",
-    "logoAlt": "NacioCheck",
     "languageLabel": "Idioma",
     "languageNames": { "es": "Español", "en": "English", "ca": "Català" },
+    "theme": { "label": "Tema", "auto": "Automático", "light": "Claro", "dark": "Oscuro" },
     "changelog": {
       "noReleases": "Todavía no hay versiones publicadas.",
       "githubRelease": "Ver esta versión en GitHub",
@@ -18,9 +18,9 @@
     "installChrome": "Install on Chrome",
     "installFirefox": "Install on Firefox",
     "homeLabel": "NacioCheck, home",
-    "logoAlt": "NacioCheck",
     "languageLabel": "Language",
     "languageNames": { "es": "Español", "en": "English", "ca": "Català" },
+    "theme": { "label": "Theme", "auto": "Auto", "light": "Light", "dark": "Dark" },
     "changelog": {
       "noReleases": "No releases have been published yet.",
       "githubRelease": "View this release on GitHub",
@@ -32,9 +32,9 @@
     "installChrome": "Instal·la a Chrome",
     "installFirefox": "Instal·la a Firefox",
     "homeLabel": "NacioCheck, inici",
-    "logoAlt": "NacioCheck",
     "languageLabel": "Idioma",
     "languageNames": { "es": "Español", "en": "English", "ca": "Català" },
+    "theme": { "label": "Tema", "auto": "Automàtic", "light": "Clar", "dark": "Fosc" },
     "changelog": {
       "noReleases": "Encara no s'ha publicat cap versió.",
       "githubRelease": "Veure aquesta versió a GitHub",

@@ -14,12 +14,12 @@ import { writeSiteAssets } from './site-assets.mjs';
  *
  * Markers are HTML comments in a source page, each replaced by the build; an unknown one fails the build:
  *
- * - `<!-- @head -->`: favicon links, canonical, `hreflang` alternates, Open Graph and Twitter tags, `og:locale`,
+ * - `<!-- @head -->`: theme metadata and bootstrap, favicon links, canonical, `hreflang` alternates, Open Graph and Twitter tags, `og:locale`,
  *   author and `rel="me"`. The title and description come from the page's own `<title>` and
- *   `<meta name="description">`. A `404.html` gets the icons, author and `rel="me"` only: it has no address.
+ *   `<meta name="description">`. A `404.html` gets only the shared theme, icons, author and `rel="me"`: it has no address.
  * - `<!-- @style -->` / `<!-- @style landing -->`: an inline `<style>` with `partials/base.css`, plus
  *   `partials/landing.css` for the second form.
- * - `<!-- @header -->`: the logo (light and dark) linking to the language's home, and the language switcher.
+ * - `<!-- @header -->`: the logo (light and dark) linking to the language's home, language switcher and theme selector.
  * - `<!-- @footer -->`: `partials/footer.<lang>.html`.
  * - `<!-- @install -->`: the Chrome and Firefox buttons, or a "coming soon" label where the URL is null.
  * - `<!-- @changelog -->`: the releases of `CHANGELOG.md`, rendered in the page's language.
@@ -38,6 +38,7 @@ const REL_ME_URL = 'https://vgr.cat/';
 const AUTHOR = 'Victor Gonzalez';
 const SOCIAL_CARD = `${SITE_ORIGIN}/social-card.png`;
 const LOGO_SIZE = { width: 260, height: 64 };
+const THEME_MODES = ['auto', 'light', 'dark'];
 
 const STORE_PREFIXES = {
   chromeStoreUrl: 'https://chromewebstore.google.com/',
@@ -95,7 +96,6 @@ async function loadStrings(sourceDir) {
       'installChrome',
       'installFirefox',
       'homeLabel',
-      'logoAlt',
       'languageLabel',
     ].filter((key) => typeof own?.[key] !== 'string');
     for (const key of ['noReleases', 'githubRelease', 'englishNote']) {
@@ -103,6 +103,9 @@ async function loadStrings(sourceDir) {
     }
     for (const target of LANGUAGES) {
       if (typeof own?.languageNames?.[target] !== 'string') missing.push(`languageNames.${target}`);
+    }
+    for (const key of ['label', ...THEME_MODES]) {
+      if (typeof own?.theme?.[key] !== 'string') missing.push(`theme.${key}`);
     }
     if (missing.length > 0) throw new Error(`${file}: ${language} lacks ${missing.join(', ')}`);
   }
@@ -127,9 +130,12 @@ function urlPath(language, subpath) {
   return `${prefix}${subpath}`;
 }
 
-function head(page, text) {
+function head(page, text, colors) {
   const { language, subpath } = splitPage(page);
   const lines = [
+    `<meta name="theme-color" content="${colors.light}" media="(prefers-color-scheme: light)" />`,
+    `<meta name="theme-color" content="${colors.dark}" media="(prefers-color-scheme: dark)" />`,
+    '<script src="/theme.js"></script>',
     '<link rel="icon" href="/favicon.ico" sizes="32x32" />',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml" />',
     '<link rel="apple-touch-icon" href="/apple-touch-icon.png" />',
@@ -188,14 +194,22 @@ function header(page, strings) {
   return [
     '<header class="site-header">',
     `  <a class="site-logo" href="${home}" aria-label="${escapeHtml(own.homeLabel)}">`,
-    '    <picture>',
-    '      <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />',
-    `      <img src="/img/logo-light.svg" alt="${escapeHtml(own.logoAlt)}" ${size} />`,
-    '    </picture>',
+    `    <img class="logo-for-light" src="/img/logo-light.svg" alt="" ${size} />`,
+    `    <img class="logo-for-dark" src="/img/logo-dark.svg" alt="" ${size} />`,
     '  </a>',
-    `  <nav class="lang-switch" aria-label="${escapeHtml(own.languageLabel)}">`,
-    ...links.map((link) => `    ${link}`),
-    '  </nav>',
+    '  <div class="site-header-controls">',
+    `    <nav class="lang-switch" aria-label="${escapeHtml(own.languageLabel)}">`,
+    ...links.map((link) => `      ${link}`),
+    '    </nav>',
+    '    <label class="theme-picker" for="site-theme">',
+    `      ${escapeHtml(own.theme.label)}`,
+    '      <select id="site-theme" autocomplete="off">',
+    ...THEME_MODES.map(
+      (mode) => `        <option value="${mode}">${escapeHtml(own.theme[mode])}</option>`,
+    ),
+    '      </select>',
+    '    </label>',
+    '  </div>',
     '</header>',
   ].join('\n    ');
 }
@@ -278,8 +292,14 @@ export async function buildSite(options) {
         value = `<style>\n${css.join('\n')}\n    </style>`;
       } else if (args.length > 0) {
         throw new Error(`site/${page}: <!-- @${name} --> takes no argument`);
-      } else if (name === 'head') value = head(page, text);
-      else if (name === 'header') value = header(page, strings);
+      } else if (name === 'head') {
+        const base = await partial('base.css');
+        const [, light, dark] =
+          /--bg:\s*light-dark\(\s*(#[\da-f]{6})\s*,\s*(#[\da-f]{6})\s*\)\s*;/i.exec(base) ?? [];
+        if (!light || !dark)
+          throw new Error('site/_build/partials/base.css: missing theme background pair');
+        value = head(page, text, { light, dark });
+      } else if (name === 'header') value = header(page, strings);
       else if (name === 'footer') value = await partial(`footer.${language}.html`);
       else if (name === 'install') value = install(language, strings, config);
       else {

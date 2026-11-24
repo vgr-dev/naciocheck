@@ -1,7 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { runInThisContext } from 'node:vm';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { runInNewContext, runInThisContext } from 'node:vm';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { buildSite } from '../scripts/build-site.mjs';
 import { MAX_BODY_BYTES } from '../worker/checks';
 
 /**
@@ -132,6 +134,137 @@ afterEach(() => {
   vi.unstubAllGlobals();
   Reflect.deleteProperty(navigator, 'clipboard');
   document.body.innerHTML = '';
+});
+
+describe('the built feedback theme selector', () => {
+  const key = 'naciocheck-theme';
+  const source = readFileSync(resolve(SITE, 'theme.js'), 'utf8');
+  let built = '';
+
+  beforeAll(async () => {
+    built = mkdtempSync(resolve(tmpdir(), 'naciocheck-feedback-theme-'));
+    await buildSite({ sourceDir: SITE, outDir: built, writeAssets: false });
+  });
+
+  afterAll(() => {
+    if (built) rmSync(built, { recursive: true, force: true });
+  });
+
+  function loadTheme(page: (typeof PAGES)[number], initial: string | null, supportsColors = true) {
+    const html = readFileSync(resolve(built, page.file), 'utf8');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const select = doc.querySelector<HTMLSelectElement>('#site-theme');
+    if (!select) throw new Error(`Theme selector missing from ${page.file}`);
+    let saved = initial;
+    const localStorage = {
+      getItem: vi.fn((requestedKey: string) => (requestedKey === key ? saved : null)),
+      setItem: vi.fn((requestedKey: string, choice: string) => {
+        if (requestedKey === key) saved = choice;
+      }),
+    };
+    const events = new EventTarget();
+    const window = Object.assign(events, { localStorage, CSS: { supports: () => supportsColors } });
+
+    return {
+      doc,
+      html,
+      select,
+      localStorage,
+      start() {
+        // The parsed scripts and resource URLs are inert. Run only the local theme bootstrap.
+        runInNewContext(source, { document: doc, window });
+      },
+      ready() {
+        doc.dispatchEvent(new Event('DOMContentLoaded'));
+      },
+      choose(mode: string) {
+        select.value = mode;
+        select.dispatchEvent(new Event('change'));
+      },
+      restorePage() {
+        events.dispatchEvent(new Event('pageshow'));
+      },
+      externalChoice(choice: string | null, changedKey: string | null = key) {
+        saved = choice;
+        events.dispatchEvent(new StorageEvent('storage', { key: changedKey }));
+      },
+      metaMedia() {
+        return [...doc.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map(
+          (meta) => meta.media,
+        );
+      },
+    };
+  }
+
+  it.each(PAGES)('persists a localized selection on the $name feedback page', (page) => {
+    const h = loadTheme(page, 'dark');
+    expect(h.doc.documentElement.dataset.themeReady).toBeUndefined();
+    expect(h.html).toMatch(
+      /:root:not\(\[data-theme-ready\]\) \.theme-picker\s*\{\s*visibility: hidden/,
+    );
+    expect(h.select.labels).toHaveLength(1);
+    for (const selector of ['#report', '#copy', '#send']) {
+      expect(h.doc.querySelector(selector)).not.toBeNull();
+    }
+    h.start();
+    expect(h.doc.documentElement.dataset.theme).toBe('dark');
+    expect(h.metaMedia()).toEqual(['not all', 'all']);
+    expect(h.doc.documentElement.dataset.themeReady).toBeUndefined();
+    h.ready();
+    expect(h.doc.documentElement.dataset.themeReady).toBe('');
+    expect(h.select.value).toBe('dark');
+
+    h.choose('light');
+    expect(h.localStorage.setItem).toHaveBeenCalledWith(key, 'light');
+    expect(h.doc.documentElement.dataset.theme).toBe('light');
+    expect(h.metaMedia()).toEqual(['all', 'not all']);
+    h.externalChoice('dark', 'unrelated');
+    expect(h.select.value).toBe('light');
+    h.restorePage();
+    expect(h.select.value).toBe('dark');
+    h.externalChoice(null, null);
+    expect(h.select.value).toBe('auto');
+    expect(h.doc.documentElement.dataset.theme).toBeUndefined();
+    expect(h.metaMedia()).toEqual([
+      '(prefers-color-scheme: light)',
+      '(prefers-color-scheme: dark)',
+    ]);
+  });
+
+  it('defaults to Auto for an invalid stored value', () => {
+    const h = loadTheme(PAGES[0], 'sepia');
+    h.start();
+    h.ready();
+    expect(h.select.value).toBe('auto');
+    expect(h.doc.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it.each([true, false])('keeps an unsaved selection when reads fail: %s', (readDenied) => {
+    const h = loadTheme(PAGES[0], null);
+    const denied = () => {
+      throw new Error('Storage unavailable');
+    };
+    h.localStorage.setItem.mockImplementation(denied);
+    if (readDenied) h.localStorage.getItem.mockImplementation(denied);
+    h.start();
+    h.ready();
+    expect(h.select.value).toBe('auto');
+    h.choose('dark');
+    h.restorePage();
+    expect(h.select.value).toBe('dark');
+    expect(h.doc.documentElement.dataset.theme).toBe('dark');
+    expect(h.metaMedia()).toEqual(['not all', 'all']);
+  });
+
+  it('uses light metadata when the browser needs the light fallback palette', () => {
+    const h = loadTheme(PAGES[0], 'dark', false);
+    h.start();
+    h.ready();
+    expect(h.select.value).toBe('dark');
+    expect(h.metaMedia()).toEqual(['all', 'not all']);
+    h.choose('auto');
+    expect(h.metaMedia()).toEqual(['all', 'not all']);
+  });
 });
 
 describe.each(PAGES)('feedback page ($name)', (page) => {

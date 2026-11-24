@@ -38,11 +38,14 @@ function pageProblems(name: string, html: string): string[] {
   return checkPage(name, inLanguageOf(name, html));
 }
 
+const THEME = '<script src="/theme.js"></script>';
+
 const VALID = `<!doctype html>
 <html lang="es">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>NacioCheck</title>
+    ${THEME}
     <style>body { color: #0f172a; }</style>
   </head>
   <body><a href="/privacy/">Privacidad</a></body>
@@ -98,30 +101,34 @@ describe('site page gate', () => {
   });
 });
 
-describe('site gate: optional theme bootstrap', () => {
-  const THEME = '<script src="/theme.js"></script>';
-
-  it('accepts one exact theme script in the document head', () => {
-    const page = VALID.replace('<head>', `<head>${THEME}`);
-    expect(pageProblems('index.html', page)).toEqual([]);
+describe('site gate: required theme bootstrap', () => {
+  it.each(REQUIRED_PAGES)('requires one exact theme script in the head of %s', (name) => {
+    const base = baseFor(name);
+    expect(pageProblems(name, base)).toEqual([]);
+    expect(pageProblems(name, base.replace(THEME, '')).join('\n')).toMatch(
+      /needs exactly one.*theme/,
+    );
   });
 
   it('rejects duplicate or modified theme script tags and a missing theme asset', () => {
-    const duplicate = VALID.replace('<head>', `<head>${THEME}${THEME}`);
-    expect(pageProblems('index.html', duplicate).join('\n')).toMatch(/at most one exact/);
+    const duplicate = VALID.replace(THEME, `${THEME}${THEME}`);
+    expect(pageProblems('index.html', duplicate).join('\n')).toMatch(/needs exactly one.*theme/);
+    expect(
+      pageProblems('index.html', VALID.replace(THEME, '<script defer src="/theme.js"></script>')),
+    ).not.toEqual([]);
     expect(
       pageProblems(
         'index.html',
-        VALID.replace('<head>', '<head><script src="/other.js"></script>'),
-      ),
-    ).not.toEqual([]);
+        VALID.replace(THEME, '').replace('</body>', `${THEME}</body>`),
+      ).join('\n'),
+    ).toMatch(/in <head>/);
     expect(
-      pageProblems('index.html', VALID.replace('</body>', `${THEME}</body>`)).join('\n'),
+      pageProblems('index.html', VALID.replace(THEME, `<!-- ${THEME} -->`)).join('\n'),
     ).toMatch(/in <head>/);
     const dir = mkdtempSync(join(tmpdir(), 'site-gate-theme-missing-'));
     try {
       writeSite(dir);
-      writeFileSync(join(dir, 'index.html'), VALID.replace('<head>', `<head>${THEME}`));
+      rmSync(join(dir, 'theme.js'));
       expect(siteProblems(dir)).toContain(
         'site/index.html: references /theme.js, but the asset is missing',
       );
@@ -994,6 +1001,7 @@ describe('site gate: language parity', () => {
 
 /** Writes every required page, valid, with its lang, into `dir`. */
 function writeSite(dir: string, skip: readonly string[] = []): void {
+  writeFileSync(join(dir, 'theme.js'), '/* local theme bootstrap */');
   for (const name of REQUIRED_PAGES) {
     if (skip.includes(name)) continue;
     const path = join(dir, name);

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildSite, loadConfig, type SiteConfig } from '../scripts/build-site.mjs';
-import { pageProblems } from '../scripts/check-site.mjs';
+import { REQUIRED_PAGES, pageProblems } from '../scripts/check-site.mjs';
 
 /**
  * The site build, run on fixture source directories in a temporary directory: each marker, the repository
@@ -17,9 +17,9 @@ const STRINGS = {
     installChrome: 'Instalar en Chrome',
     installFirefox: 'Instalar en Firefox',
     homeLabel: 'Inicio',
-    logoAlt: 'NacioCheck',
     languageLabel: 'Idioma',
     languageNames: { es: 'Español', en: 'English', ca: 'Català' },
+    theme: { label: 'Tema', auto: 'Automático', light: 'Claro', dark: 'Oscuro' },
     changelog: { noReleases: 'Sin versiones.', githubRelease: 'GitHub', englishNote: 'En inglés.' },
   },
   en: {
@@ -27,9 +27,9 @@ const STRINGS = {
     installChrome: 'Install on Chrome',
     installFirefox: 'Install on Firefox',
     homeLabel: 'Home',
-    logoAlt: 'NacioCheck',
     languageLabel: 'Language',
     languageNames: { es: 'Español', en: 'English', ca: 'Català' },
+    theme: { label: 'Theme', auto: 'Auto', light: 'Light', dark: 'Dark' },
     changelog: {
       noReleases: 'No releases yet.',
       githubRelease: 'View on GitHub',
@@ -41,9 +41,9 @@ const STRINGS = {
     installChrome: 'Instal·la a Chrome',
     installFirefox: 'Instal·la a Firefox',
     homeLabel: 'Inici',
-    logoAlt: 'NacioCheck',
     languageLabel: 'Idioma',
     languageNames: { es: 'Español', en: 'English', ca: 'Català' },
+    theme: { label: 'Tema', auto: 'Automàtic', light: 'Clar', dark: 'Fosc' },
     changelog: { noReleases: 'Cap versió.', githubRelease: 'GitHub', englishNote: 'En anglès.' },
   },
 };
@@ -51,6 +51,8 @@ const STRINGS = {
 const CHROME = 'https://chromewebstore.google.com/detail/naciocheck/abc';
 const FIREFOX = 'https://addons.mozilla.org/firefox/addon/naciocheck/';
 const CONFIG: SiteConfig = { chromeStoreUrl: null, firefoxStoreUrl: null, repositoryPublic: false };
+const BASE_CSS = ':root { --bg: light-dark(#ffffff, #111827); }';
+const THEME_SCRIPT = '<script src="/theme.js"></script>';
 const CHANGELOG =
   '## [Unreleased]\n\n### Added\n\n- Pending.\n\n## [1.2.3] - 2026-01-02\n\n### Fixed\n\n- A **bug**.\n';
 
@@ -86,7 +88,7 @@ beforeEach(() => {
   out = join(root, 'out');
   write(source, '_build/strings.json', JSON.stringify(STRINGS));
   write(source, '_build/config.json', JSON.stringify(CONFIG));
-  write(source, '_build/partials/base.css', 'body { color: #111; }');
+  write(source, '_build/partials/base.css', BASE_CSS);
   write(source, '_build/partials/landing.css', '.hero { margin: 0; }');
   for (const lang of ['es', 'en', 'ca']) {
     write(
@@ -193,7 +195,7 @@ describe('site build', () => {
       expect(html).toContain('<meta property="og:locale:alternate" content="ca_ES" />');
     });
 
-    it('handles a Catalan page and gives a 404 only the icons, author and rel=me', async () => {
+    it('gives a Catalan 404 the shared head metadata', async () => {
       write(source, 'ca/index.html', PAGE('', 'ca'));
       write(source, 'ca/404.html', PAGE('', 'ca'));
       await build();
@@ -201,9 +203,23 @@ describe('site build', () => {
       const notFound = read('ca/404.html');
       expect(notFound).toContain('<link rel="apple-touch-icon"');
       expect(notFound).toContain('<link rel="me"');
+      expect(notFound).toContain(THEME_SCRIPT);
       expect(notFound).not.toContain('canonical');
       expect(notFound).not.toContain('hreflang');
       expect(notFound).not.toContain('og:');
+    });
+
+    it('derives the theme colors from the site palette', async () => {
+      write(source, 'index.html', PAGE(''));
+      write(source, '_build/partials/base.css', ':root { --bg: light-dark(#fafafa, #262626); }');
+      await build();
+      const html = read('index.html');
+      expect(html).toContain(
+        '<meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />',
+      );
+      expect(html).toContain(
+        '<meta name="theme-color" content="#262626" media="(prefers-color-scheme: dark)" />',
+      );
     });
 
     it('fails when the page has no title or description', async () => {
@@ -229,9 +245,9 @@ describe('site build', () => {
         PAGE('', 'en').replace('<!-- @style -->', '<!-- @style landing -->'),
       );
       await build();
-      expect(read('index.html')).toContain('<style>\nbody { color: #111; }\n    </style>');
+      expect(read('index.html')).toContain(`<style>\n${BASE_CSS}\n    </style>`);
       expect(read('index.html')).not.toContain('.hero');
-      expect(read('en/index.html')).toContain('body { color: #111; }\n.hero { margin: 0; }');
+      expect(read('en/index.html')).toContain(`${BASE_CSS}\n.hero { margin: 0; }`);
     });
 
     it('fails on an unknown form', async () => {
@@ -247,8 +263,8 @@ describe('site build', () => {
       await build();
       const es = read('privacy/index.html');
       expect(es).toContain('<a class="site-logo" href="/" aria-label="Inicio">');
-      expect(es).toContain('srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)"');
-      expect(es).toContain('src="/img/logo-light.svg" alt="NacioCheck"');
+      expect(es).toContain('class="logo-for-dark" src="/img/logo-dark.svg" alt=""');
+      expect(es).toContain('class="logo-for-light" src="/img/logo-light.svg" alt=""');
       expect(es).toContain('<nav class="lang-switch" aria-label="Idioma">');
       expect(es).toContain(
         '<a href="/privacy/" hreflang="es" lang="es" aria-current="page">Español</a>',
@@ -261,6 +277,21 @@ describe('site build', () => {
         '<a href="/en/privacy/" hreflang="en" lang="en" aria-current="page">English</a>',
       );
       expect(en).not.toContain('aria-current="page">Español');
+    });
+
+    it.each([
+      ['es', 'Tema', 'Automático', 'Claro', 'Oscuro'],
+      ['en', 'Theme', 'Auto', 'Light', 'Dark'],
+      ['ca', 'Tema', 'Automàtic', 'Clar', 'Fosc'],
+    ])('localizes the theme selector in %s', async (lang, label, auto, light, dark) => {
+      write(source, `${lang}/index.html`, PAGE('<!-- @header -->', lang));
+      await build();
+      const html = read(`${lang}/index.html`);
+      expect(html).toMatch(new RegExp(`<label class="theme-picker" for="site-theme">\\s*${label}`));
+      expect(html).toContain('<select id="site-theme" autocomplete="off">');
+      expect(html).toContain(`<option value="auto">${auto}</option>`);
+      expect(html).toContain(`<option value="light">${light}</option>`);
+      expect(html).toContain(`<option value="dark">${dark}</option>`);
     });
 
     it('links the home of the landing page itself', async () => {
@@ -491,6 +522,13 @@ describe('the real build inputs', () => {
         expect.arrayContaining(['index.html', 'en/index.html', 'privacy/index.html']),
       );
       expect(existsSync(join(outDir, '_build'))).toBe(false);
+      expect(existsSync(join(outDir, 'theme.js'))).toBe(true);
+      for (const page of REQUIRED_PAGES) {
+        const html = readFileSync(join(outDir, page), 'utf8');
+        expect(html.split(THEME_SCRIPT).length, page).toBe(2);
+        expect(html.indexOf(THEME_SCRIPT), page).toBeLessThan(html.indexOf('<style>'));
+        expect(html, page).toContain('<select id="site-theme" autocomplete="off">');
+      }
     } finally {
       rmSync(outDir, { recursive: true, force: true });
     }
