@@ -15,34 +15,36 @@ numbers are global across phases. -->
 
 **Phase 1: Decision, gate rules and build parts**
 
-- [ ] 1. Amend ADR 0005 for the landing site
-- [ ] 2. Teach the site gate the new rules
-- [ ] 3. Add CHANGELOG.md and its parser
-- [ ] 4. Render the site images from the brand assets
+- [x] 1. Amend ADR 0005 for the landing site d704021
+- [x] 2. Teach the site gate the new rules 4399324
+- [x] 3. Add CHANGELOG.md and its parser 1404dcf
+- [x] 4. Render the site images from the brand assets 9a2c409
 
 **Phase 2: Build step**
 
-- [ ] 5. Build the site into .output/site
+- [x] 5. Build the site into .output/site 180d1f3
 
 **Phase 3: Shared layout**
 
-- [ ] 6. Give every page the shared layout and both themes
+- [x] 6. Give every page the shared layout and both themes 29e9db2
 
 **Phase 4: Pages**
 
-- [ ] 7. Write the landing page in three languages
-- [ ] 8. Add the Catalan privacy and feedback pages
-- [ ] 9. Add the changelog and 404 pages
+- [x] 7. Write the landing page in three languages 4780e1c
+- [x] 8. Add the Catalan privacy and feedback pages 04242fa
+- [x] 9. Add the changelog and 404 pages 9172a97
 
 **Phase 5: Full gate and E2E harness**
 
-- [ ] 10. Require every page in every language
-- [ ] 11. Serve the built site to the E2E browser
+- [x] 10. Require every page in every language uncommitted
+- [x] 11. Serve the built site to the E2E browser uncommitted
 
 **Phase 6: Baselines and docs**
 
-- [ ] 12. Photograph the site and rewrite the baselines
-- [ ] 13. Document the site build
+- [x] 12. Photograph the site and rewrite the baselines uncommitted
+- [x] 13. Document the site build uncommitted
+- [x] 14. Polish the findings of the UI review uncommitted
+- [x] 15. Close the review's gate gaps and small findings uncommitted
 
 ## Before building (gates)
 
@@ -381,6 +383,51 @@ scripts/build-site.mjs`) wipes and writes `.output/site/`, which is already git-
 - **Files:** `README.md`, `docs/manual-firefox-checklist.md`, `AGENTS.md`
 - **Verify:** `npm run format:check && npx vitest run tests/licence.test.ts`; both pass.
 - **Out of scope:** the deploy itself; the store listings; the pre-release audit file.
+
+### 14. Polish the findings of the UI review
+
+Added 2026-11-24 by Claude on the owner's delegation, after step 12's `/review-ui`: the spec's quality bar is
+`vgr.cat`, and these findings are cheap to fix.
+
+- **Goal:**
+  - Agency band on phones: the art no longer sits behind the text or shows a cut check mark.
+  - Hero on desktop: the badge does not show twice above the fold, and the empty gap before "how it works" is
+    tightened.
+  - Technical tokens (`GPL-3.0`, `PBKDF2-HMAC-SHA-256`, the repository path) do not break at their hyphens.
+  - Inline `<code>` has no visible gaps inside surrounding brackets.
+  - The changelog's empty state links back to the landing page in each language.
+  - `README.md`'s visual baseline count matches the suite (extension and site images).
+  - Then `npm run test:e2e:update-baselines`, the site baselines re-reviewed with `/review-ui`, and the extension
+    baselines unchanged.
+- **Files:** `site/_build/partials/landing.css`, `site/_build/partials/base.css`, `site/index.html`,
+  `site/en/index.html`, `site/ca/index.html`, `site/privacy/index.html`, `site/en/privacy/index.html`,
+  `site/ca/privacy/index.html`, `site/changelog/index.html`, `site/en/changelog/index.html`,
+  `site/ca/changelog/index.html`, `README.md`, `e2e/baselines/chrome/site-*`
+- **Verify:** `npx vitest run tests/site-landing.test.ts tests/site-contrast.test.ts tests/feedback-page.test.ts`;
+  `npm run check:site`; `npm run test:e2e:update-baselines`, then `npm run test:e2e` with the guard at 0 and
+  `git diff --stat e2e/baselines` showing only `site-*` images.
+- **Out of scope:** the red alert in the step 3 screenshot (accurate) and recording the site's teal tints in
+  `brand/README.md` (the owner's call).
+
+### 15. Close the review's gate gaps and small findings
+
+Added 2026-11-24 by Claude on the owner's delegation, after the final review (`review.md`, Medium 1 and three
+Lows). The spec requires the gate to fail on any remote resource.
+
+- **Goal:**
+  - The gate refuses every bypass the review found: a remote URL in any `srcset` candidate, a scheme without
+    slashes (`https:evil.example`), backslashes (`\\host`, `/\host`), leading whitespace before a URL,
+    character references (`&#47;` and similar) and CSS escapes that spell a remote URL, and any
+    `<meta http-equiv="refresh">`. Each case has a failing test, and the real site still passes.
+  - `deploy:site` runs the gate before deploying (`check:site` already builds).
+  - The English changelog page does not show the "entries are in English" note; es and ca keep it.
+  - The build ships only the screenshots a page uses; unused ones are not generated or copied.
+- **Files:** `scripts/check-site.mjs`, `tests/site-gate.test.ts`, `package.json`, `scripts/build-site.mjs`,
+  `tests/build-site.test.ts`, `scripts/site-assets.mjs`, `tests/site-assets.test.ts`
+- **Verify:** `npx vitest run tests/site-gate.test.ts tests/build-site.test.ts tests/site-assets.test.ts`;
+  `npm run check:site`; `npm run test:e2e` with the guard at 0 and no baseline change.
+- **Out of scope:** the privacy wording about the repository and store listings that do not exist yet (review
+  Medium 2, the owner's call); the ADR 0005 status line (the owner's); axe incomplete results; the teal tints.
 
 ## Risks / open questions
 
