@@ -19,10 +19,13 @@
         <div class="wrap hero-grid">
           <div class="hero-copy">
             <h1 id="hero-title" class="hero-title">
-              <picture>
-                <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
-                <img src="/img/logo-light.svg" alt="NacioCheck" width="520" height="128" />
-              </picture>
+              <img class="hero-mark" src="/img/icon-animated.svg" alt="" width="128" height="128" />
+              <span class="hero-wordmark">
+                <picture>
+                  <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
+                  <img src="/img/logo-light.svg" alt="NacioCheck" width="520" height="128" />
+                </picture>
+              </span>
             </h1>
             <p class="hero-tagline">Your nationality application, up to date.</p>
             <p class="hero-value">
@@ -38,11 +41,20 @@
               <li>Independent, not official</li>
             </ul>
           </div>
-          <div class="hero-art">
-            <div class="hero-badge">
-              <img src="/img/icon-animated.svg" alt="" width="128" height="128" />
-            </div>
-          </div>
+          <figure class="hero-art shot">
+            <img
+              src="/img/screens/en/result-changed-1280.webp"
+              srcset="
+                /img/screens/en/result-changed-640.webp   640w,
+                /img/screens/en/result-changed-1280.webp 1280w
+              "
+              sizes="(min-width: 52rem) 30rem, 1px"
+              width="1280"
+              height="800"
+              decoding="async"
+              alt="How NacioCheck tells you that the status of your application has changed."
+            />
+          </figure>
         </div>
       </section>
 
@@ -240,7 +252,8 @@
             <li class="promise">
               <h3>Open source</h3>
               <p>
-                NacioCheck is free software under the GPL-3.0: anyone can read what it does and how.
+                NacioCheck is free software under the <span class="nowrap">GPL-3.0</span>: anyone
+                can read what it does and how.
               </p>
               <!-- @if repository -->
               <p><a href="https://github.com/vgr-dev/naciocheck">Read the code on GitHub</a></p>

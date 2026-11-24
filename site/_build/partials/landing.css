@@ -21,6 +21,11 @@
   padding-block: clamp(3rem, 7vw, 5.5rem);
 }
 
+/* The hero's facts lead straight into "how it works": no full section gap between them. */
+.hero + .section {
+  padding-block-start: clamp(2rem, 4vw, 3rem);
+}
+
 .section + .section {
   border-block-start: 1px solid var(--border);
 }
@@ -50,10 +55,10 @@
   color: var(--accent);
 }
 
-/* 1. Hero: the copy beside the animated icon, the icon above the copy on a phone. */
+/* 1. Hero: the logo, whose badge is the animated icon, and the copy beside the "status changed" screenshot. */
 
 .hero {
-  padding-block: clamp(2.5rem, 6vw, 5rem) clamp(3rem, 7vw, 5.5rem);
+  padding-block: clamp(2.5rem, 6vw, 5rem) clamp(1rem, 2vw, 1.5rem);
   background: linear-gradient(180deg, var(--band), var(--bg));
 }
 
@@ -68,15 +73,39 @@
   max-inline-size: 38rem;
 }
 
+/* The logo as one lockup with the animated icon as its badge, so the badge shows once and moves. The outlined
+   logo keeps its own geometry (520 × 128 units, badge in the first 128): the wordmark box shows the logo from
+   x = 128 on, and the animated icon fills the first 128 units in its place. Percentages keep it exact at any
+   width. The lockup is artwork, so it stays left to right in any page direction. */
 .hero-title {
+  display: flex;
+  direction: ltr;
+  inline-size: min(100%, 22rem);
+  aspect-ratio: 520 / 128;
   margin: 0 0 1rem;
   line-height: 0;
 }
 
-.hero-title img {
+.hero-mark {
   display: block;
-  inline-size: min(100%, 22rem);
+  flex: none;
+  inline-size: 24.6154%;
   block-size: auto;
+}
+
+.hero-wordmark {
+  display: block;
+  flex: none;
+  inline-size: 75.3846%;
+  overflow: hidden;
+}
+
+.hero-wordmark img {
+  display: block;
+  inline-size: 132.6531%;
+  max-inline-size: none;
+  block-size: auto;
+  margin-inline-start: -32.6531%;
 }
 
 .hero-tagline {
@@ -129,30 +158,8 @@
   content: '';
 }
 
-.hero-art {
-  display: grid;
-  place-items: center;
-  order: -1;
-}
-
-.hero-badge {
-  display: grid;
-  place-items: center;
-  inline-size: clamp(7rem, 30vw, 18rem);
-  aspect-ratio: 1;
-  background: var(--accent-soft);
-  border-radius: 50%;
-  box-shadow: 0 0 0 clamp(0.6rem, 2vw, 1.25rem) var(--band);
-}
-
-.hero-badge img {
-  display: block;
-  inline-size: 68%;
-  block-size: auto;
-}
-
-/* On a phone the header logo and the hero logo already show the badge: a third one would only push the copy
-   down, so the animated icon is a wide-screen moment. */
+/* The moment the extension exists for. On a phone it would push the copy and the install buttons down, and
+   the same screenshot follows in "how it works", so the hero shows it on wide screens only. */
 @media (max-width: 51.99rem) {
   .hero-art {
     display: none;
@@ -163,10 +170,6 @@
   .hero-grid {
     grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
     gap: 3rem;
-  }
-
-  .hero-art {
-    order: 0;
   }
 }
 
@@ -543,12 +546,21 @@
   transform: translateY(-12%) rotate(45deg);
 }
 
+/* On a phone the text takes the full width, so the rings leave the background and sit, whole, under the
+   button: nothing behind the text and no cut-off check. */
 @media (max-width: 52rem) {
+  .agency {
+    display: flex;
+    flex-direction: column;
+  }
+
   .agency-art {
-    inset-block-start: auto;
-    inset-block-end: -10rem;
-    inset-inline-end: -8rem;
-    inline-size: 20rem;
+    position: relative;
+    inset: auto;
+    order: 1;
+    align-self: center;
+    inline-size: 11rem;
+    margin-block-start: 2.5rem;
     translate: none;
   }
 }

@@ -19,10 +19,13 @@
         <div class="wrap hero-grid">
           <div class="hero-copy">
             <h1 id="hero-title" class="hero-title">
-              <picture>
-                <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
-                <img src="/img/logo-light.svg" alt="NacioCheck" width="520" height="128" />
-              </picture>
+              <img class="hero-mark" src="/img/icon-animated.svg" alt="" width="128" height="128" />
+              <span class="hero-wordmark">
+                <picture>
+                  <source srcset="/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
+                  <img src="/img/logo-light.svg" alt="NacioCheck" width="520" height="128" />
+                </picture>
+              </span>
             </h1>
             <p class="hero-tagline">El teu expedient de nacionalitat, al dia.</p>
             <p class="hero-value">
@@ -38,11 +41,20 @@
               <li>Projecte independent, no oficial</li>
             </ul>
           </div>
-          <div class="hero-art">
-            <div class="hero-badge">
-              <img src="/img/icon-animated.svg" alt="" width="128" height="128" />
-            </div>
-          </div>
+          <figure class="hero-art shot">
+            <img
+              src="/img/screens/es/result-changed-1280.webp"
+              srcset="
+                /img/screens/es/result-changed-640.webp   640w,
+                /img/screens/es/result-changed-1280.webp 1280w
+              "
+              sizes="(min-width: 52rem) 30rem, 1px"
+              width="1280"
+              height="800"
+              decoding="async"
+              alt="Així t'avisa NacioCheck quan l'estat de la teva sol·licitud canvia (pantalla en castellà)."
+            />
+          </figure>
         </div>
       </section>
 
@@ -243,8 +255,8 @@
             <li class="promise">
               <h3>Codi obert</h3>
               <p>
-                NacioCheck és programari lliure amb llicència GPL-3.0: tothom pot llegir què fa i
-                com ho fa.
+                NacioCheck és programari lliure amb llicència <span class="nowrap">GPL-3.0</span>:
+                tothom pot llegir què fa i com ho fa.
               </p>
               <!-- @if repository -->
               <p><a href="https://github.com/vgr-dev/naciocheck">Veure el codi a GitHub</a></p>
