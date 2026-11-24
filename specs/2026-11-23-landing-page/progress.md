@@ -379,3 +379,16 @@ fix(site): normalise URLs in the gate and ship only used screenshots
 - **axe incomplete:** 108 elements in 24 of 24 audits, all `color-contrast`: `.hero-facts > li`, `.hero-tagline`, `.hero-value` (text over the hero's teal gradient) and the language switcher links (the pill). Their token pairs pass the contrast unit test in both themes; axe cannot compute contrast over a gradient. Left as a manual AA check for the owner.
 - **Commit:** uncommitted, proposed per part (see the end of the turn)
 - **Open issues:** confirm the 404 exemption in the ADR and the privacy pages' promise that the store listing will take questions once published.
+
+## 2026-11-24 - Spec closed
+
+- **Status:** done, at the owner's request
+- **Step 16:** committed as `4356fae` (gate and licence), `68fed33` (privacy contact), `70b4349` (axe report) and
+  `c5bfc3f` (404 exemption and review notes).
+- **Acceptance:** nine of ten criteria met and verified in this spec. The tenth, rendering in Chrome and Firefox
+  after the deploy, needs the owner's deploy and is carried to the release gates in
+  `docs/pre-release-audit-2026-11-18.md`, together with the Catalan wording review, the store URLs and repository
+  visibility, the final `vgr.cat` links and the manual AA look at the axe incomplete elements.
+- **For the owner:** restate the ADR 0005 amendment's acceptance line in your own name, and confirm the 404
+  `hreflang` exemption and the privacy pages' promise that the store listing will take questions once published.
+- **Commit:** uncommitted

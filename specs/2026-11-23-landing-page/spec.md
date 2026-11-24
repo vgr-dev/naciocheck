@@ -1,7 +1,7 @@
 ---
-status: active # draft | active | done | abandoned
+status: done # draft | active | done | abandoned
 created: 2026-11-23
-status-date: 2026-11-23
+status-date: 2026-11-24
 ---
 
 # A product landing page for naciocheck.vgr.cat, in Spanish, English and Catalan
@@ -93,26 +93,27 @@ widget on the feedback page, it loads nothing from elsewhere.
 
 ## Acceptance criteria
 
-- [ ] Every landing, privacy, feedback, changelog and 404 page exists in es, en and ca, with a working
+- [x] Every landing, privacy, feedback, changelog and 404 page exists in es, en and ca, with a working
       language switcher; every page except the 404 pages has `hreflang` alternates (a 404 has no address of
       its own and is `noindex`; its switcher links each language's home); the gate fails if a language lacks a
       page.
-- [ ] The landing page has the seven sections above in each language; the install buttons show the
+- [x] The landing page has the seven sections above in each language; the install buttons show the
       "coming soon" state until store URLs are set in one place.
-- [ ] `npm run check:site` passes and fails on any remote resource, any outbound link outside the allowed
+- [x] `npm run check:site` passes and fails on any remote resource, any outbound link outside the allowed
       list, any script outside the feedback pages, and any unknown file type.
-- [ ] `npm run build:site` turns `CHANGELOG.md` into `/changelog/` pages without network access; a test
+- [x] `npm run build:site` turns `CHANGELOG.md` into `/changelog/` pages without network access; a test
       covers the parser on a sample changelog.
-- [ ] Dark and light themes both meet WCAG AA contrast; the accessibility check reports no violations.
-- [ ] Chrome E2E visual baselines exist for the site pages (3 languages × 2 widths × 2 themes), reviewed
+- [x] Dark and light themes both meet WCAG AA contrast; the accessibility check reports no violations.
+- [x] Chrome E2E visual baselines exist for the site pages (3 languages × 2 widths × 2 themes), reviewed
       with `/review-ui`; the network guard reports 0 unexpected requests.
-- [ ] Open Graph tags and the social card render; the favicon and the 404 page are served by
+- [x] Open Graph tags and the social card render; the favicon and the 404 page are served by
       `wrangler dev`.
-- [ ] `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run check:site && npm run check:privacy`
+- [x] `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run check:site && npm run check:privacy`
       pass.
-- [ ] The Catalan privacy page discloses Cloudflare Web Analytics like the es and en pages: website only,
+- [x] The Catalan privacy page discloses Cloudflare Web Analytics like the es and en pages: website only,
       not the extension.
-- [ ] After the user deploys: the pages render correctly in Chrome and Firefox.
+- [ ] After the user deploys: the pages render correctly in Chrome and Firefox. (Carried to the release
+      gates in `docs/pre-release-audit-2026-11-18.md`, with the Catalan wording review.)
 
 ## Open questions
 

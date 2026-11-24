@@ -567,6 +567,13 @@ also exited 0. No local font cache, private plans, existing node_modules or gene
   No Firefox browser was driven in this audit; viewport-width emulation is not an Android device test.
 - **Official-site behavior:** No live-sede check, real applicant-data flow, or human CAPTCHA session was run.
   Current DOM, CSP and official-site behavior must be owner-checked, without automatic real-site traffic.
+- **Landing site (added 2026-11-24):** from `specs/2026-11-23-landing-page/`, still open at release: the owner
+  reviews the Catalan wording on every Catalan page (phrases listed in that spec's `progress.md`); after
+  `npm run deploy:site`, the pages render correctly in Chrome and Firefox (`docs/manual-firefox-checklist.md`
+  row 17); the store URLs and repository visibility are set in `site/_build/config.json` once they exist; the
+  `vgr.cat` links are finalised with `vgr-dev/vgr.cat` `specs/2026-11-23-naciocheck-tie-in/`; 108 axe
+  colour-contrast elements over the hero gradient and the language pill get a manual AA look
+  (`e2e/.artifacts/axe-incomplete.json`).
 - **Site analytics (added 2026-11-23, resolved the same day):** Cloudflare Web Analytics is injected at the
   edge into every page of `naciocheck.vgr.cat`. The owner keeps it on; the privacy pages (es, en) and README
   now disclose it and state that it applies to the website only, not the extension (ADR 0005).

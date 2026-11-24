@@ -45,7 +45,7 @@ numbers are global across phases. -->
 - [x] 13. Document the site build 52fc2ed
 - [x] 14. Polish the findings of the UI review fba1ea9
 - [x] 15. Close the review's gate gaps and small findings 5072da1
-- [x] 16. Fix the independent review's findings uncommitted
+- [x] 16. Fix the independent review's findings 4356fae
 
 ## Before building (gates)
 
