@@ -162,15 +162,23 @@
       <h2 id="changes">Changes to this policy</h2>
       <p>
         If what the extension stores or sends changes, this page changes before that version is
-        published, and the review date above will say so. The project's history is in the
-        repository.
+        published, and the review date above will say so.
+        <!-- @if repository -->
+        The project's history is in the repository.
+        <!-- @endif -->
       </p>
 
       <h2 id="contact">Contact</h2>
       <p>
-        For privacy questions, write on the extension's listing in the Chrome Web Store or
-        addons.mozilla.org, or open an issue in the project's repository
+        For privacy questions, use the <a href="/en/feedback/">feedback page</a>. It shows you the
+        text first, sends it only when you press Send, and it reaches naciocheck@vgr.cat by email
+        through Cloudflare, without being stored anywhere else. Once the extension's listing is
+        published on the Chrome Web Store and addons.mozilla.org, you will also be able to write
+        there.
+        <!-- @if repository -->
+        You can also open an issue in the project's repository
         <span class="nowrap">(github.com/vgr-dev/naciocheck)</span>.
+        <!-- @endif -->
       </p>
 
       <h2 id="affiliation">Not affiliated</h2>

@@ -168,15 +168,23 @@
       <h2 id="cambios">Cambios en esta política</h2>
       <p>
         Si cambia lo que guarda o lo que envía la extensión, esta página cambia antes de publicar
-        esa versión, y la fecha de revisión de arriba lo dirá. El historial del proyecto está en el
-        repositorio.
+        esa versión, y la fecha de revisión de arriba lo dirá.
+        <!-- @if repository -->
+        El historial del proyecto está en el repositorio.
+        <!-- @endif -->
       </p>
 
       <h2 id="contacto">Contacto</h2>
       <p>
-        Para preguntas sobre privacidad, escribe en la ficha de la extensión en la Chrome Web Store
-        o en addons.mozilla.org, o abre una incidencia en el repositorio del proyecto
+        Para preguntas sobre privacidad, usa la <a href="/feedback/">página de comentarios</a>. Te
+        muestra primero el texto, solo lo envía cuando pulsas «Enviar», y llega por correo a
+        naciocheck@vgr.cat a través de Cloudflare, sin guardarse en ningún otro sitio. Cuando la
+        ficha de la extensión esté publicada en la Chrome Web Store y en addons.mozilla.org, también
+        podrás escribir allí.
+        <!-- @if repository -->
+        También puedes abrir una incidencia en el repositorio del proyecto
         <span class="nowrap">(github.com/vgr-dev/naciocheck)</span>.
+        <!-- @endif -->
       </p>
 
       <h2 id="afiliacion">Aviso de no afiliación</h2>

@@ -548,6 +548,30 @@ describe('privacy pages: disclosures', () => {
     expect(html).toContain('<code>storage.local</code>');
   });
 
+  it.each([
+    { name: 'es', file: 'privacy/index.html', route: '/feedback/' },
+    { name: 'en', file: 'en/privacy/index.html', route: '/en/feedback/' },
+    { name: 'ca', file: 'ca/privacy/index.html', route: '/ca/feedback/' },
+  ] as const)('$name policy names its feedback page as the contact route', ({ file, route }) => {
+    const html = readFileSync(resolve(SITE, file), 'utf8');
+    const contact = html.slice(html.search(/<h2 id="(?:contact|contacto|contacte)">/));
+    expect(contact).toContain(`href="${route}"`);
+    expect(contact).toContain('naciocheck@vgr.cat');
+    expect(contact).toMatch(/Cloudflare/);
+  });
+
+  it.each(PRIVACY)(
+    '$name policy mentions the repository only inside @if repository',
+    ({ file }) => {
+      const html = readFileSync(resolve(SITE, file), 'utf8');
+      const outside = html.replace(/<!-- @if repository -->[\s\S]*?<!-- @endif -->/g, '');
+      expect(outside).not.toMatch(/github\.com/i);
+      expect(outside).not.toMatch(/repositor(?:y|io|i)\b/i);
+      expect(html).toMatch(/<!-- @if repository -->[\s\S]*?github\.com[\s\S]*?<!-- @endif -->/);
+      expect(html.match(/@if repository/g)).toHaveLength(html.match(/@endif/g)?.length ?? -1);
+    },
+  );
+
   it.each(PRIVACY)(
     '$name policy is in its own language and carries the markers',
     ({ name, file }) => {
