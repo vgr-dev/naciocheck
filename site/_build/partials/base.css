@@ -284,7 +284,7 @@ svg {
   transform: none;
 }
 
-/* Header: logo, language switcher and theme picker, full width with a centred row. */
+/* Header: logo and language switcher, full width with a centred row. */
 
 .site-header {
   position: relative;
@@ -362,29 +362,6 @@ svg {
   text-decoration-thickness: 2px;
   text-underline-offset: 0.3em;
   background: var(--accent-soft);
-}
-
-.theme-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: var(--font-size-small);
-}
-
-:root:not([data-theme-ready]) .theme-picker {
-  visibility: hidden;
-}
-
-.theme-picker select {
-  min-block-size: 2.75rem;
-  padding-inline: 0.5rem;
-  font: inherit;
-  color: var(--fg);
-  background-color: var(--surface);
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-small);
-  touch-action: manipulation;
 }
 
 @media (max-width: 26rem) {
@@ -659,6 +636,96 @@ a.install:hover {
   border-block-start: 1px solid var(--border);
 }
 
+/* Theme switcher (footer): three native radios in one group, each segment an icon. The input is the segment
+   (an invisible-by-appearance overlay), so a click or a tap lands on the real control. Selection shows as a
+   filled surface and an accent edge, not as colour alone. It stays hidden until the script is ready, and the
+   space stays reserved. */
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip-path: inset(50%);
+}
+
+.theme-switch {
+  display: flex;
+  gap: 2px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-small);
+}
+
+:root:not([data-theme-ready]) .theme-switch {
+  visibility: hidden;
+}
+
+.theme-option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  margin: 0;
+  color: var(--muted);
+  border-radius: 6px;
+  touch-action: manipulation;
+}
+
+.theme-option:hover {
+  color: var(--fg);
+}
+
+.theme-option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+  border-radius: inherit;
+}
+
+.theme-option input:not(:checked):hover {
+  background: var(--surface);
+}
+
+.theme-option input:checked {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.theme-option svg {
+  position: relative;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  pointer-events: none;
+}
+
+.theme-option input:checked + svg {
+  color: var(--accent-soft-fg);
+}
+
+/* The focus ring goes round the whole segment. Without :has() the input's own ring (the global one) stays. */
+@supports selector(:has(*)) {
+  .theme-option input:focus-visible {
+    outline: none;
+  }
+
+  .theme-option:has(input:focus-visible) {
+    z-index: 1;
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
 /* Motion: only for people who have not asked for less. */
 
 @media (prefers-reduced-motion: no-preference) {
@@ -693,6 +760,24 @@ a.install:hover {
     outline: 2px solid CanvasText;
   }
 
+  .theme-switch {
+    border-color: CanvasText;
+  }
+
+  .theme-option {
+    color: CanvasText;
+  }
+
+  .theme-option input:checked {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+
+  .theme-option input:checked + svg {
+    color: CanvasText;
+  }
+
   .install,
   .page-links,
   .card {
@@ -703,6 +788,7 @@ a.install:hover {
 @media print {
   .site-header::before,
   .site-header-controls,
+  .theme-switch,
   .skip-link {
     display: none;
   }

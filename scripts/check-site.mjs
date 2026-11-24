@@ -24,6 +24,9 @@ import { fileURLToPath } from 'node:url';
  *   `.ico`) and one text file, `img/OFL.txt` (the Nunito licence, which must sit
  *   next to the outlined logos whenever `img/logo-light.svg` or `img/logo-dark.svg` ships); an SVG may not
  *   script, embed or reach anything outside itself.
+ * - a page may carry inline `<svg>` (the theme switcher's icons), which is held to the rules of a served SVG
+ *   and more: no `<script>`, no `<foreignObject>`, no event-handler attribute and no `href` or `xlink:href`
+ *   at all, not even to a `#fragment` (`inlineSvgProblems`);
  * - no element carries an event-handler attribute (`on<name>`, any case, quoted, unquoted or empty), on any
  *   page, including the feedback pages: only the approved script tags are allowed.
  *
@@ -390,6 +393,60 @@ function themeSource() {
 }
 
 /**
+ * Every inline `<svg>` of a page, outermost first, each from its start tag to its matching end tag (or to the
+ * end of the page when it is never closed).
+ * @param {string} text
+ * @returns {string[]}
+ */
+function inlineSvgs(text) {
+  const found = [];
+  let depth = 0;
+  let start = 0;
+  for (const match of text.matchAll(/<(\/?)svg(?=[\s/>])/gi)) {
+    if (match[1] === '') {
+      if (depth === 0) start = match.index;
+      depth += 1;
+    } else if (depth > 0) {
+      depth -= 1;
+      if (depth === 0) {
+        const end = text.indexOf('>', match.index);
+        found.push(text.slice(start, end === -1 ? text.length : end + 1));
+      }
+    }
+  }
+  if (depth > 0) found.push(text.slice(start));
+  return found;
+}
+
+/**
+ * The problems of the inline `<svg>` in a page: it may not script, embed, link or animate a link, so an icon
+ * cannot open a path the site rules close. Unlike a served SVG it may not even point at its own `#fragment`.
+ * @param {string} name
+ * @param {string} text
+ * @returns {string[]}
+ */
+function inlineSvgProblems(name, text) {
+  const rules = [
+    [/<(?:[\w.-]+:)?script\b/i, 'a <script> element'],
+    [/<(?:[\w.-]+:)?foreignObject\b/i, 'a <foreignObject>'],
+    [/[\s"'/]on[a-z]+(?=[\s=/>])/i, 'an on*= event attribute'],
+    [/[\s"'/](?:xlink:)?href(?=[\s=/>])/i, 'an href or xlink:href'],
+    [/attributeName\s*=\s*["']?(?:xlink:)?href/i, 'an animated href'],
+  ];
+  const problems = new Set();
+  for (const svg of inlineSvgs(text)) {
+    for (const [pattern, what] of rules) {
+      if (pattern.test(svg)) {
+        problems.add(
+          `site/${name}: an inline <svg> has ${what}: an inline SVG may not script, embed or link`,
+        );
+      }
+    }
+  }
+  return [...problems];
+}
+
+/**
  * Checks one page's text. The only file it reads is `site/theme.js`, the source of the inline theme script.
  * @param {string} name
  * @param {string} text
@@ -458,6 +515,7 @@ export function pageProblems(name, text) {
     if (pattern.test(checked)) problems.push(`site/${name}: ${why}`);
   }
   for (const why of normalisedProblems(checked)) problems.push(`site/${name}: ${why}`);
+  problems.push(...inlineSvgProblems(name, text));
 
   // The other half of "plain HTML with inline CSS": a page declares its language, scales on a phone, has a
   // title and carries its own styles.

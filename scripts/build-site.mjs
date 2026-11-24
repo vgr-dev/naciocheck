@@ -20,8 +20,10 @@ import { writeSiteAssets } from './site-assets.mjs';
  *   `<meta name="description">`. A `404.html` gets only the shared theme, icons, author and `rel="me"`: it has no address.
  * - `<!-- @style -->` / `<!-- @style landing -->`: an inline `<style>` with `partials/base.css`, plus
  *   `partials/landing.css` for the second form.
- * - `<!-- @header -->`: the logo (light and dark) linking to the language's home, language switcher and theme selector.
- * - `<!-- @footer -->`: `partials/footer.<lang>.html`.
+ * - `<!-- @header -->`: the logo (light and dark) linking to the language's home and the language switcher.
+ * - `<!-- @footer -->`: `partials/footer.<lang>.html`, whose own `<!-- @theme -->` marker is filled as below.
+ * - `<!-- @theme -->`: the theme switcher, one `<fieldset>` of three radios (Auto, Light, Dark) with inline icons.
+ *   It is written once here, so every page and language carries the same markup; the footer partials hold the marker.
  * - `<!-- @install -->`: the Chrome and Firefox buttons, or a "coming soon" label where the URL is null.
  * - `<!-- @changelog -->`: the releases of `CHANGELOG.md`, rendered in the page's language.
  * - `<!-- @if repository -->` ... `<!-- @endif -->`: kept only when `repositoryPublic` is true. Blocks do not
@@ -40,6 +42,17 @@ const AUTHOR = 'Victor Gonzalez';
 const SOCIAL_CARD = `${SITE_ORIGIN}/social-card.png`;
 const LOGO_SIZE = { width: 260, height: 64 };
 const THEME_MODES = ['auto', 'light', 'dark'];
+/**
+ * The icons of the theme switcher, drawn for this site on a 24 x 24 grid with round 1.75 strokes. They are
+ * inline `<svg>` with no reference to anything else (no `href`, `<use>` or `url()`), so the gate can reject
+ * every one that has.
+ */
+const THEME_ICONS = {
+  auto: '<rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" />',
+  light:
+    '<circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />',
+  dark: '<path d="M20 14.2A8.5 8.5 0 0 1 9.8 4a8.5 8.5 0 1 0 10.2 10.2z" />',
+};
 /** The theme bootstrap's source, relative to the source directory: inlined into every page, not served. */
 const THEME_SOURCE = 'theme.js';
 
@@ -51,7 +64,17 @@ const STORE_PREFIXES = {
 const OG_LOCALES = { es: 'es_ES', en: 'en_GB', ca: 'ca_ES' };
 
 /** The markers a page may carry. `@if` and `@endif` are handled apart from the insertions. */
-export const MARKERS = ['head', 'style', 'header', 'footer', 'install', 'changelog', 'if', 'endif'];
+export const MARKERS = [
+  'head',
+  'style',
+  'header',
+  'footer',
+  'theme',
+  'install',
+  'changelog',
+  'if',
+  'endif',
+];
 const INSERTIONS = MARKERS.filter((name) => name !== 'if' && name !== 'endif');
 const MARKER = /<!--\s*@([\s\S]*?)-->/g;
 
@@ -204,17 +227,28 @@ function header(page, strings) {
     `    <nav class="lang-switch" aria-label="${escapeHtml(own.languageLabel)}">`,
     ...links.map((link) => `      ${link}`),
     '    </nav>',
-    '    <label class="theme-picker" for="site-theme">',
-    `      ${escapeHtml(own.theme.label)}`,
-    '      <select id="site-theme" autocomplete="off">',
-    ...THEME_MODES.map(
-      (mode) => `        <option value="${mode}">${escapeHtml(own.theme[mode])}</option>`,
-    ),
-    '      </select>',
-    '    </label>',
     '  </div>',
     '</header>',
   ].join('\n    ');
+}
+
+/** The theme switcher: a fieldset of three native radios, each wrapping its own label and icon. */
+function themeSwitch(language, strings) {
+  const own = strings[language].theme;
+  const icon = (mode) =>
+    `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${THEME_ICONS[mode]}</svg>`;
+  return [
+    '<fieldset class="theme-switch">',
+    `  <legend class="visually-hidden">${escapeHtml(own.label)}</legend>`,
+    ...THEME_MODES.flatMap((mode) => [
+      `  <label class="theme-option" title="${escapeHtml(own[mode])}">`,
+      `    <input type="radio" name="site-theme" value="${mode}" autocomplete="off" />`,
+      `    ${icon(mode)}`,
+      `    <span class="visually-hidden">${escapeHtml(own[mode])}</span>`,
+      '  </label>',
+    ]),
+    '</fieldset>',
+  ].join('\n');
 }
 
 function install(language, strings, config) {
@@ -314,7 +348,11 @@ export async function buildSite(options) {
           throw new Error('site/_build/partials/base.css: missing theme background pair');
         value = head(page, text, { light, dark }, themeScript);
       } else if (name === 'header') value = header(page, strings);
-      else if (name === 'footer') value = await partial(`footer.${language}.html`);
+      else if (name === 'footer') {
+        value = (await partial(`footer.${language}.html`)).replace(/<!--\s*@theme\s*-->/g, () =>
+          themeSwitch(language, strings),
+        );
+      } else if (name === 'theme') value = themeSwitch(language, strings);
       else if (name === 'install') value = install(language, strings, config);
       else {
         const own = strings[language].changelog;

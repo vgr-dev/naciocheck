@@ -238,6 +238,63 @@ const inBody = (extra: string): string => VALID.replace('</body>', `${extra}</bo
 /** A page whose inline CSS is `css`. */
 const withCss = (css: string): string => VALID.replace('body { color: #0f172a; }', css);
 
+describe('site gate: inline SVG', () => {
+  const ICON =
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /></svg>';
+  const NAMES = ['index.html', 'en/privacy/index.html', 'ca/404.html'];
+
+  it.each(NAMES)('accepts a plain decorative icon on %s', (name) => {
+    expect(pageProblems(name, inBody(ICON))).toEqual([]);
+  });
+
+  const BAD: [string, string][] = [
+    ['a <script>', '<svg><script>x()</script></svg>'],
+    ['a prefixed <svg:script>', '<svg><svg:script>x()</svg:script></svg>'],
+    ['a <foreignObject>', '<svg><foreignObject><p>x</p></foreignObject></svg>'],
+    ['a lower-case foreignobject', '<svg><foreignobject><p>x</p></foreignobject></svg>'],
+    ['an onload', '<svg onload="x()"><path d="M0 0" /></svg>'],
+    ['an onclick on a path', '<svg><path onclick="x()" d="M0 0" /></svg>'],
+    ['an on* attribute with no value', '<svg><path onfocus d="M0 0" /></svg>'],
+    ['a <use href> to a fragment', '<svg><use href="#a" /></svg>'],
+    ['an xlink:href to a fragment', '<svg><use xlink:href="#a" /></svg>'],
+    ['an upper-case HREF', '<svg><use HREF="#a" /></svg>'],
+    ['an unquoted href', '<svg><use href=#a /></svg>'],
+    ['an <a> with a local href', '<svg><a href="/privacy/"><path d="M0 0" /></a></svg>'],
+    ['an external href', '<svg><a href="https://evil.example/"><path d="M0 0" /></a></svg>'],
+    ['an animated href', '<svg><a><animate attributeName="href" values="#a" /></a></svg>'],
+    ['an upper-case <SVG>', '<SVG><USE HREF="#a" /></SVG>'],
+    ['an svg that is never closed', '<svg><use href="#a" />'],
+    ['an href in a nested svg', '<svg><svg><use href="#a" /></svg></svg>'],
+    ['an href after a nested svg closes', '<svg><svg></svg><use href="#a" /></svg>'],
+  ];
+
+  it.each(NAMES)('rejects each unsafe inline SVG on %s', (name) => {
+    for (const [what, svg] of BAD) {
+      expect(pageProblems(name, inBody(svg)), what).toEqual(
+        expect.arrayContaining([expect.stringMatching(/an inline <svg> has /)]),
+      );
+    }
+  });
+
+  it('names what is wrong', () => {
+    const problems = pageProblems('index.html', inBody('<svg><use href="#a" /></svg>')).join('\n');
+    expect(problems).toMatch(/inline <svg> has an href or xlink:href/);
+    expect(pageProblems('index.html', inBody('<svg><foreignObject /></svg>')).join('\n')).toMatch(
+      /inline <svg> has a <foreignObject>/,
+    );
+    expect(pageProblems('index.html', inBody('<svg onload="x()"></svg>')).join('\n')).toMatch(
+      /inline <svg> has an on\*= event attribute/,
+    );
+  });
+
+  it('does not judge markup outside the svg', () => {
+    expect(pageProblems('index.html', inBody(`${ICON}<a href="/privacy/">x</a>`))).toEqual([]);
+    expect(pageProblems('index.html', inBody(`${ICON}${ICON}<img src="/a.png" alt="" />`))).toEqual(
+      [],
+    );
+  });
+});
+
 describe('site page gate: URLs are read the way a browser reads them', () => {
   const BYPASSES: [string, string][] = [
     ['a second srcset candidate', '<img srcset="/a.png 1x, //evil.example/b.png 2x" alt="" />'],

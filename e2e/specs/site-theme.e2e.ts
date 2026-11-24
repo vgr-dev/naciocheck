@@ -12,17 +12,36 @@ const COLORS = {
   dark: { background: 'rgb(17, 24, 39)', chrome: '#111827' },
 };
 
+/** The footer switcher's three radios, in their fixed order. */
+const MODES: Mode[] = ['auto', 'light', 'dark'];
+
+/** One radio of the switcher: the real native input, which is what a pointer or a key reaches. */
+const radio = (mode: Mode) => browser.$(`.site-footer input[name="site-theme"][value="${mode}"]`);
+
 async function open(path: string): Promise<void> {
   await browser.url(siteUrl(path));
-  await browser.$('#site-theme').waitForDisplayed();
+  // The switcher stays hidden until the script is ready, so this also waits for the bootstrap.
+  await browser.$('.site-footer .theme-switch').waitForDisplayed();
 }
 
 async function clearPreference(): Promise<void> {
   await browser.execute((key: string) => localStorage.removeItem(key), STORAGE_KEY);
 }
 
+/** Picks a mode the way a person does: a pointer click on its segment. */
 async function choose(mode: Mode): Promise<void> {
-  await browser.$('#site-theme').selectByAttribute('value', mode);
+  const input = await radio(mode);
+  await input.scrollIntoView({ block: 'center' });
+  await input.click();
+}
+
+/** The values of every checked radio of the switcher. */
+function checkedModes(): Promise<string[]> {
+  return browser.execute(() =>
+    [...document.querySelectorAll<HTMLInputElement>('input[name="site-theme"]')]
+      .filter((input) => input.checked)
+      .map((input) => input.value),
+  );
 }
 
 function readTheme() {
@@ -52,7 +71,8 @@ function readTheme() {
 }
 
 async function expectTheme(mode: Mode, scheme: Scheme): Promise<void> {
-  await expect(browser.$('#site-theme')).toHaveValue(mode);
+  await expect(radio(mode)).toBeChecked();
+  expect(await checkedModes()).toEqual([mode]);
   // Drive a headless Chromium frame before sampling scheme-dependent computed colors.
   await browser.takeScreenshot();
   const expected = {
@@ -88,8 +108,8 @@ async function expectTheme(mode: Mode, scheme: Scheme): Promise<void> {
 }
 
 describe('site theme selection', () => {
-  // Feedback is tested offline in tests/feedback-page.test.ts because its script resources
-  // are intentionally unreachable here.
+  // The feedback pages (and their footer switcher) are tested offline in tests/feedback-page.test.ts
+  // because their script resources are intentionally unreachable here.
   beforeEach(async () => {
     await open('/');
     await clearPreference();
@@ -140,6 +160,193 @@ describe('site theme selection', () => {
       await expectTheme('auto', 'light');
     } finally {
       await restore();
+    }
+  });
+});
+
+const NAMES: Record<string, { group: string; modes: [string, string, string] }> = {
+  '/': { group: 'Tema', modes: ['Automático', 'Claro', 'Oscuro'] },
+  '/en/': { group: 'Theme', modes: ['Auto', 'Light', 'Dark'] },
+  '/ca/': { group: 'Tema', modes: ['Automàtic', 'Clar', 'Fosc'] },
+};
+
+/** The footer switcher is a real control: native radios, named, in the footer, never in the header. */
+describe('site theme switcher', () => {
+  beforeEach(async () => {
+    await open('/');
+    await clearPreference();
+  });
+
+  afterEach(async () => {
+    await clearPreference();
+  });
+
+  for (const [path, names] of Object.entries(NAMES)) {
+    it(`names the group and each option in ${path}`, async () => {
+      await open(path);
+      const group = await browser.$('.site-footer fieldset.theme-switch');
+      expect(await group.getComputedRole()).toBe('group');
+      expect(await group.getComputedLabel()).toBe(names.group);
+      for (const [index, mode] of MODES.entries()) {
+        const input = await radio(mode);
+        expect(await input.getComputedRole()).toBe('radio');
+        expect(await input.getComputedLabel()).toBe(names.modes[index]);
+      }
+      // The icons add nothing to the names: they are hidden from assistive technology.
+      const icons = await browser.execute(() =>
+        [...document.querySelectorAll('.theme-switch svg')].map((svg) => ({
+          hidden: svg.getAttribute('aria-hidden'),
+          focusable: svg.getAttribute('focusable'),
+          stroke: svg.getAttribute('stroke'),
+        })),
+      );
+      expect(icons).toEqual(
+        MODES.map(() => ({ hidden: 'true', focusable: 'false', stroke: 'currentColor' })),
+      );
+    });
+  }
+
+  for (const path of ['/', '/en/privacy/', '/ca/changelog/', '/ca/level/nonexistent']) {
+    it(`keeps the control in the footer, not the header, with one radio checked on ${path}`, async () => {
+      await open(path);
+      const where = await browser.execute(() => ({
+        inHeader: document.querySelectorAll(
+          'header select, header input, header fieldset, header .theme-switch, #site-theme',
+        ).length,
+        inFooter: document.querySelectorAll('.site-footer .theme-switch input[type="radio"]')
+          .length,
+        groups: document.querySelectorAll('.theme-switch').length,
+        names: [
+          ...new Set(
+            [...document.querySelectorAll<HTMLInputElement>('.theme-switch input')].map(
+              (i) => i.name,
+            ),
+          ),
+        ],
+      }));
+      expect(where).toEqual({ inHeader: 0, inFooter: 3, groups: 1, names: ['site-theme'] });
+      expect(await checkedModes()).toEqual(['auto']);
+    });
+  }
+
+  it('sizes the segments for a finger and lays them out in one row, after the footer links', async () => {
+    await open('/en/');
+    const layout = await browser.execute(() => {
+      const options = [...document.querySelectorAll<HTMLElement>('.theme-option')];
+      const boxes = options.map((option) => option.getBoundingClientRect());
+      const inputs = options.map((option) =>
+        option.querySelector('input')?.getBoundingClientRect(),
+      );
+      const group = document.querySelector('.theme-switch')?.getBoundingClientRect();
+      return {
+        sizes: boxes.map((box) => [box.width, box.height]),
+        inputSizes: inputs.map((box) => [box?.width, box?.height]),
+        sameRow: new Set(boxes.map((box) => Math.round(box.top))).size,
+        touch: options.map((option) => getComputedStyle(option).touchAction),
+        groupBorder: group
+          ? getComputedStyle(document.querySelector('.theme-switch')!).borderTopWidth
+          : '',
+        iconBox: [...document.querySelectorAll('.theme-option svg')].map(
+          (svg) => svg.getBoundingClientRect().width,
+        ),
+      };
+    });
+    for (const [width, height] of [...layout.sizes, ...layout.inputSizes]) {
+      expect(width).toBeGreaterThanOrEqual(32);
+      expect(height).toBeGreaterThanOrEqual(32);
+    }
+    expect(layout.sameRow).toBe(1);
+    expect(layout.touch).toEqual(['manipulation', 'manipulation', 'manipulation']);
+    expect(layout.groupBorder).toBe('1px');
+    expect(layout.iconBox).toEqual([20, 20, 20]);
+  });
+
+  it('moves and selects with the arrow keys, and rings only the keyboard-focused segment', async () => {
+    const restore = await browser.emulate('colorScheme', 'light');
+    try {
+      await open('/en/');
+      await choose('auto');
+      await expectTheme('auto', 'light');
+      // A pointer focus is not a keyboard focus: no ring after the click.
+      const ring = () =>
+        browser.execute(() => {
+          const active = document.activeElement as HTMLInputElement | null;
+          const label = active?.closest('.theme-option');
+          return {
+            value: active?.value ?? null,
+            labelOutline: label ? getComputedStyle(label).outlineWidth : null,
+            labelOutlineStyle: label ? getComputedStyle(label).outlineStyle : null,
+            inputOutlineStyle: active ? getComputedStyle(active).outlineStyle : null,
+          };
+        });
+      expect(await ring()).toMatchObject({ value: 'auto', labelOutlineStyle: 'none' });
+
+      await browser.keys(['ArrowRight']);
+      await expectTheme('light', 'light');
+      expect(await ring()).toEqual({
+        value: 'light',
+        labelOutline: '3px',
+        labelOutlineStyle: 'solid',
+        inputOutlineStyle: 'none',
+      });
+      await browser.keys(['ArrowRight']);
+      await expectTheme('dark', 'dark');
+      // The group does not wrap focus out of it by accident: the last radio goes round to the first.
+      await browser.keys(['ArrowRight']);
+      await expectTheme('auto', 'light');
+      await browser.keys(['ArrowLeft']);
+      await expectTheme('dark', 'dark');
+      await browser.keys(['ArrowUp']);
+      await expectTheme('light', 'light');
+      await browser.keys(['ArrowDown']);
+      await expectTheme('dark', 'dark');
+      // The choice from the keyboard is the one saved.
+      expect(await browser.execute((key: string) => localStorage.getItem(key), STORAGE_KEY)).toBe(
+        'dark',
+      );
+      await browser.refresh();
+      await browser.$('.site-footer .theme-switch').waitForDisplayed();
+      await expectTheme('dark', 'dark');
+    } finally {
+      await restore();
+    }
+  });
+
+  it('shows the checked segment by a fill and an edge, not by colour alone', async () => {
+    await open('/en/');
+    await choose('light');
+    // Drive a frame so headless Chrome does not report a stale computed style.
+    await browser.takeScreenshot();
+    const [checked, unchecked] = await browser.execute(() =>
+      ['light', 'dark'].map((mode) => {
+        const input = document.querySelector<HTMLInputElement>(
+          `input[name="site-theme"][value="${mode}"]`,
+        )!;
+        const style = getComputedStyle(input);
+        return { background: style.backgroundColor, shadow: style.boxShadow };
+      }),
+    );
+    expect(checked?.shadow).not.toBe('none');
+    expect(unchecked?.shadow).toBe('none');
+    expect(checked?.background).not.toBe(unchecked?.background);
+  });
+
+  it('keeps the footer switcher visible and operable at a phone width', async () => {
+    await browser.setWindowSize(390, 800);
+    try {
+      await open('/ca/');
+      await choose('dark');
+      await expectTheme('dark', 'dark');
+      const fits = await browser.execute(() => {
+        const box = document.querySelector('.theme-switch')!.getBoundingClientRect();
+        return {
+          right: box.right <= window.innerWidth,
+          scroll: document.documentElement.scrollWidth <= window.innerWidth,
+        };
+      });
+      expect(fits).toEqual({ right: true, scroll: true });
+    } finally {
+      await browser.setWindowSize(1280, 900);
     }
   });
 });
@@ -202,7 +409,7 @@ describe('site theme under forced colours', () => {
           for (const path of ['/en/', '/en/privacy/']) {
             await open(path);
             await choose(stored);
-            await expect(browser.$('#site-theme')).toHaveValue(stored);
+            await expect(radio(stored)).toBeChecked();
             // Drive a frame so the emulated palette is applied before sampling computed styles.
             await browser.takeScreenshot();
             let last: Awaited<ReturnType<typeof readForcedLogos>> | undefined;
@@ -237,6 +444,68 @@ describe('site theme under forced colours', () => {
         }
       });
     }
+  }
+
+  for (const scheme of ['light', 'dark'] as const) {
+    it(`outlines only the checked segment with Highlight in the ${scheme} forced palette`, async () => {
+      const restore = await emulateForced(scheme);
+      try {
+        await open('/en/');
+        await choose('light');
+        // Drive a frame so the emulated palette is applied before sampling computed styles.
+        await browser.takeScreenshot();
+        const read = () =>
+          browser.execute(() => {
+            const probe = document.createElement('span');
+            probe.style.color = 'Highlight';
+            document.body.append(probe);
+            const highlight = getComputedStyle(probe).color;
+            probe.remove();
+            return {
+              forced: matchMedia('(forced-colors: active)').matches,
+              highlight,
+              segments: [
+                ...document.querySelectorAll<HTMLInputElement>('input[name="site-theme"]'),
+              ].map((input) => {
+                const style = getComputedStyle(input);
+                return {
+                  value: input.value,
+                  checked: input.checked,
+                  outline: `${style.outlineStyle} ${style.outlineWidth}`,
+                  outlineColor: style.outlineColor,
+                  offset: style.outlineOffset,
+                };
+              }),
+            };
+          });
+        let last: Awaited<ReturnType<typeof read>> | undefined;
+        try {
+          await browser.waitUntil(
+            async () => {
+              last = await read();
+              return last.forced;
+            },
+            { timeout: 2_000, interval: 50 },
+          );
+        } catch (cause) {
+          throw new Error(`Forced colours did not apply: ${JSON.stringify(last)}`, { cause });
+        }
+        const result = await read();
+        for (const segment of result.segments) {
+          if (segment.checked) {
+            expect(segment.value).toBe('light');
+            expect(segment.outline).toBe('solid 2px');
+            expect(segment.outlineColor).toBe(result.highlight);
+            expect(segment.offset).toBe('-2px');
+          } else {
+            expect(segment.outline).not.toMatch(/^solid/);
+          }
+        }
+        expect(result.segments.filter((segment) => segment.checked)).toHaveLength(1);
+      } finally {
+        await restore();
+      }
+    });
   }
 
   function readLanguageCue() {

@@ -336,19 +336,15 @@ describe('site build', () => {
       expect(en).not.toContain('aria-current="page">Español');
     });
 
-    it.each([
-      ['es', 'Tema', 'Automático', 'Claro', 'Oscuro'],
-      ['en', 'Theme', 'Auto', 'Light', 'Dark'],
-      ['ca', 'Tema', 'Automàtic', 'Clar', 'Fosc'],
-    ])('localizes the theme selector in %s', async (lang, label, auto, light, dark) => {
+    it.each(['es', 'en', 'ca'])('has no theme control in the header in %s', async (lang) => {
       write(source, `${lang}/index.html`, PAGE('<!-- @header -->', lang));
       await build();
-      const html = read(`${lang}/index.html`);
-      expect(html).toMatch(new RegExp(`<label class="theme-picker" for="site-theme">\\s*${label}`));
-      expect(html).toContain('<select id="site-theme" autocomplete="off">');
-      expect(html).toContain(`<option value="auto">${auto}</option>`);
-      expect(html).toContain(`<option value="light">${light}</option>`);
-      expect(html).toContain(`<option value="dark">${dark}</option>`);
+      const header = /<header[\s\S]*?<\/header>/.exec(read(`${lang}/index.html`))?.[0] ?? '';
+      expect(header).toContain('<header class="site-header">');
+      expect(header).toContain('<nav class="lang-switch"');
+      for (const gone of ['<select', 'site-theme', 'theme', '<fieldset', '<input', '<svg']) {
+        expect(header, gone).not.toContain(gone);
+      }
     });
 
     it('links the home of the landing page itself', async () => {
@@ -363,6 +359,63 @@ describe('site build', () => {
   });
 
   describe('@footer', () => {
+    it.each([
+      ['es', 'Tema', 'Automático', 'Claro', 'Oscuro'],
+      ['en', 'Theme', 'Auto', 'Light', 'Dark'],
+      ['ca', 'Tema', 'Automàtic', 'Clar', 'Fosc'],
+    ])(
+      'fills the theme marker of the %s footer with the switcher',
+      async (lang, label, ...modes) => {
+        write(
+          source,
+          `_build/partials/footer.${lang}.html`,
+          '<footer><div class="row"><!-- @theme --></div></footer>',
+        );
+        write(source, `${lang}/index.html`, PAGE('<!-- @footer -->', lang));
+        await build();
+        const html = read(`${lang}/index.html`);
+        expect(html).not.toContain('@theme');
+        expect(html.match(/<fieldset class="theme-switch">/g)).toHaveLength(1);
+        expect(html).toContain(`<legend class="visually-hidden">${label}</legend>`);
+        const inputs = [...html.matchAll(/<input type="radio" name="site-theme" value="(\w+)"/g)];
+        expect(inputs.map((match) => match[1])).toEqual(['auto', 'light', 'dark']);
+        expect(html.match(/ checked/g)).toBeNull();
+        for (const name of modes) {
+          expect(html).toContain(`<span class="visually-hidden">${name}</span>`);
+          expect(html).toContain(`title="${name}"`);
+        }
+        // One label wraps each radio, so no id is needed and the name comes from its own text.
+        expect(html.match(/<label class="theme-option"/g)).toHaveLength(3);
+        expect(html).not.toMatch(/<input[^>]*\sid=/);
+        expect(html).toContain('autocomplete="off"');
+        // The icons are decorative inline SVG: hidden from the accessibility tree, in the text colour, closed.
+        const icons = [...html.matchAll(/<svg\b[^>]*>[\s\S]*?<\/svg>/g)].map((match) => match[0]);
+        expect(icons).toHaveLength(3);
+        for (const icon of icons) {
+          expect(icon).toContain('aria-hidden="true"');
+          expect(icon).toContain('focusable="false"');
+          expect(icon).toContain('stroke="currentColor"');
+          expect(icon).not.toMatch(/href|<use|<script|foreignObject|\son[a-z]+=|url\(|https?:/i);
+        }
+        expect(html).not.toContain('<select');
+      },
+    );
+
+    it('also expands the marker in a page, and the switcher is the same in every page of a language', async () => {
+      write(source, 'en/index.html', PAGE('<!-- @theme -->', 'en'));
+      write(source, 'en/privacy/index.html', PAGE('<!-- @theme -->', 'en'));
+      await build();
+      const switcher = (html: string) => /<fieldset[\s\S]*<\/fieldset>/.exec(html)?.[0];
+      expect(switcher(read('en/index.html'))).toBeDefined();
+      expect(switcher(read('en/index.html'))).toBe(switcher(read('en/privacy/index.html')));
+    });
+
+    it('leaves a footer without the marker without a switcher', async () => {
+      write(source, 'index.html', PAGE('<!-- @footer -->'));
+      await build();
+      expect(read('index.html')).not.toContain('<fieldset');
+    });
+
     it('inserts the footer of the page language', async () => {
       write(source, 'index.html', PAGE('<!-- @footer -->'));
       write(source, 'ca/index.html', PAGE('<!-- @footer -->', 'ca'));
@@ -588,7 +641,13 @@ describe('the real build inputs', () => {
         expect(html.indexOf(realScript), page).toBeLessThan(html.indexOf('<style>'));
         expect(html, page).not.toContain('/theme.js');
         expect(pageProblems(page, html), page).toEqual([]);
-        expect(html, page).toContain('<select id="site-theme" autocomplete="off">');
+        expect(html.match(/<fieldset class="theme-switch">/g), page).toHaveLength(1);
+        expect(html.match(/<input type="radio" name="site-theme"/g), page).toHaveLength(3);
+        expect(html, page).not.toContain('<select');
+        // The switcher lives in the footer, after the header and not in it.
+        const header = /<header[\s\S]*?<\/header>/.exec(html)?.[0] ?? '';
+        expect(header, page).not.toContain('theme');
+        expect(html.indexOf('<fieldset'), page).toBeGreaterThan(html.indexOf('<footer'));
       }
     } finally {
       rmSync(outDir, { recursive: true, force: true });

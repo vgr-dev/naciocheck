@@ -35,24 +35,27 @@
 
   sync();
   document.addEventListener('DOMContentLoaded', () => {
-    const select = document.querySelector('#site-theme');
-    if (!select) return;
+    const radios = [...document.querySelectorAll('input[type="radio"][name="site-theme"]')];
+    if (radios.length === 0) return;
 
     function syncControl() {
       sync();
-      select.value = mode;
+      for (const radio of radios) radio.checked = radio.value === mode;
     }
 
-    select.addEventListener('change', () => {
-      apply(select.value);
-      try {
-        window.localStorage.setItem(key, mode);
-        unsaved = false;
-      } catch {
-        // The current page still honors the choice when persistence is unavailable.
-        unsaved = true;
-      }
-    });
+    for (const radio of radios) {
+      radio.addEventListener('change', () => {
+        if (!radio.checked) return;
+        apply(radio.value);
+        try {
+          window.localStorage.setItem(key, mode);
+          unsaved = false;
+        } catch {
+          // The current page still honors the choice when persistence is unavailable.
+          unsaved = true;
+        }
+      });
+    }
     window.addEventListener('pageshow', syncControl);
     window.addEventListener('storage', (event) => {
       if (event.key === key || event.key === null) syncControl();

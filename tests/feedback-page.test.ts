@@ -136,7 +136,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-describe('the built feedback theme selector', () => {
+describe('the built feedback theme switcher', () => {
   const key = 'naciocheck-theme';
   const source = readFileSync(resolve(SITE, 'theme.js'), 'utf8');
   let built = '';
@@ -153,8 +153,12 @@ describe('the built feedback theme selector', () => {
   function loadTheme(page: (typeof PAGES)[number], initial: string | null, supportsColors = true) {
     const html = readFileSync(resolve(built, page.file), 'utf8');
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const select = doc.querySelector<HTMLSelectElement>('#site-theme');
-    if (!select) throw new Error(`Theme selector missing from ${page.file}`);
+    const radios = [
+      ...doc.querySelectorAll<HTMLInputElement>(
+        '.site-footer input[type="radio"][name="site-theme"]',
+      ),
+    ];
+    if (radios.length !== 3) throw new Error(`Theme switcher missing from ${page.file}`);
     let saved = initial;
     const localStorage = {
       getItem: vi.fn((requestedKey: string) => (requestedKey === key ? saved : null)),
@@ -168,7 +172,9 @@ describe('the built feedback theme selector', () => {
     return {
       doc,
       html,
-      select,
+      radios,
+      /** The value of the checked radio, or null when none is checked. */
+      checkedValue: () => radios.filter((radio) => radio.checked).map((radio) => radio.value),
       localStorage,
       start() {
         // The parsed scripts and resource URLs are inert. Run only the local theme bootstrap.
@@ -178,8 +184,10 @@ describe('the built feedback theme selector', () => {
         doc.dispatchEvent(new Event('DOMContentLoaded'));
       },
       choose(mode: string) {
-        select.value = mode;
-        select.dispatchEvent(new Event('change'));
+        const radio = radios.find((candidate) => candidate.value === mode);
+        if (!radio) throw new Error(`No ${mode} radio`);
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
       },
       restorePage() {
         events.dispatchEvent(new Event('pageshow'));
@@ -200,9 +208,12 @@ describe('the built feedback theme selector', () => {
     const h = loadTheme(page, 'dark');
     expect(h.doc.documentElement.dataset.themeReady).toBeUndefined();
     expect(h.html).toMatch(
-      /:root:not\(\[data-theme-ready\]\) \.theme-picker\s*\{\s*visibility: hidden/,
+      /:root:not\(\[data-theme-ready\]\) \.theme-switch\s*\{\s*visibility: hidden/,
     );
-    expect(h.select.labels).toHaveLength(1);
+    expect(h.radios.map((radio) => radio.value)).toEqual(['auto', 'light', 'dark']);
+    for (const radio of h.radios) expect(radio.labels).toHaveLength(1);
+    expect(h.doc.querySelectorAll('header select, #site-theme')).toHaveLength(0);
+    expect(h.checkedValue()).toEqual([]);
     for (const selector of ['#report', '#copy', '#send']) {
       expect(h.doc.querySelector(selector)).not.toBeNull();
     }
@@ -212,18 +223,18 @@ describe('the built feedback theme selector', () => {
     expect(h.doc.documentElement.dataset.themeReady).toBeUndefined();
     h.ready();
     expect(h.doc.documentElement.dataset.themeReady).toBe('');
-    expect(h.select.value).toBe('dark');
+    expect(h.checkedValue()).toEqual(['dark']);
 
     h.choose('light');
     expect(h.localStorage.setItem).toHaveBeenCalledWith(key, 'light');
     expect(h.doc.documentElement.dataset.theme).toBe('light');
     expect(h.metaMedia()).toEqual(['all', 'not all']);
     h.externalChoice('dark', 'unrelated');
-    expect(h.select.value).toBe('light');
+    expect(h.checkedValue()).toEqual(['light']);
     h.restorePage();
-    expect(h.select.value).toBe('dark');
+    expect(h.checkedValue()).toEqual(['dark']);
     h.externalChoice(null, null);
-    expect(h.select.value).toBe('auto');
+    expect(h.checkedValue()).toEqual(['auto']);
     expect(h.doc.documentElement.dataset.theme).toBeUndefined();
     expect(h.metaMedia()).toEqual([
       '(prefers-color-scheme: light)',
@@ -235,8 +246,24 @@ describe('the built feedback theme selector', () => {
     const h = loadTheme(PAGES[0], 'sepia');
     h.start();
     h.ready();
-    expect(h.select.value).toBe('auto');
+    expect(h.checkedValue()).toEqual(['auto']);
     expect(h.doc.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it('saves only a radio that is checked and keeps exactly one checked', () => {
+    const h = loadTheme(PAGES[0], 'light');
+    h.start();
+    h.ready();
+    expect(h.checkedValue()).toEqual(['light']);
+    const dark = h.radios.find((radio) => radio.value === 'dark');
+    dark?.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(h.localStorage.setItem).not.toHaveBeenCalled();
+    expect(h.doc.documentElement.dataset.theme).toBe('light');
+    for (const mode of ['dark', 'auto', 'light']) {
+      h.choose(mode);
+      expect(h.checkedValue()).toEqual([mode]);
+    }
+    expect(h.localStorage.setItem).toHaveBeenLastCalledWith(key, 'light');
   });
 
   it.each([true, false])('keeps an unsaved selection when reads fail: %s', (readDenied) => {
@@ -248,10 +275,10 @@ describe('the built feedback theme selector', () => {
     if (readDenied) h.localStorage.getItem.mockImplementation(denied);
     h.start();
     h.ready();
-    expect(h.select.value).toBe('auto');
+    expect(h.checkedValue()).toEqual(['auto']);
     h.choose('dark');
     h.restorePage();
-    expect(h.select.value).toBe('dark');
+    expect(h.checkedValue()).toEqual(['dark']);
     expect(h.doc.documentElement.dataset.theme).toBe('dark');
     expect(h.metaMedia()).toEqual(['not all', 'all']);
   });
@@ -260,7 +287,7 @@ describe('the built feedback theme selector', () => {
     const h = loadTheme(PAGES[0], 'dark', false);
     h.start();
     h.ready();
-    expect(h.select.value).toBe('dark');
+    expect(h.checkedValue()).toEqual(['dark']);
     expect(h.metaMedia()).toEqual(['all', 'not all']);
     h.choose('auto');
     expect(h.metaMedia()).toEqual(['all', 'not all']);

@@ -70,6 +70,13 @@ const PAIRS: [string, string, number, string][] = [
   ['control-border', 'surface', NON_TEXT, 'the textarea boundary'],
   ['button-bg', 'bg', NON_TEXT, 'a button against the page'],
   ['button-bg', 'band', NON_TEXT, 'a button against a band'],
+  // The theme switcher in the footer (a band): its boundary and its icons, at rest, hovered and checked.
+  ['control-border', 'band', NON_TEXT, 'the theme switcher boundary'],
+  ['muted', 'band', NON_TEXT, 'a theme icon at rest'],
+  ['muted', 'surface', NON_TEXT, 'a theme icon on its hover surface'],
+  ['fg', 'surface', NON_TEXT, 'a hovered theme icon on its hover surface'],
+  ['accent-soft-fg', 'accent-soft', NON_TEXT, 'the checked theme icon'],
+  ['accent', 'accent-soft', NON_TEXT, 'the checked theme segment edge'],
 ];
 
 describe('site colour tokens', () => {
@@ -180,6 +187,63 @@ describe('site stylesheet rules', () => {
     expect(rule('.lang-switch a')).toMatch(/touch-action:\s*manipulation\s*;/);
   });
 
+  describe('the theme switcher', () => {
+    const rule = (selector: string) =>
+      new RegExp(`${selector.replaceAll(/[[\]().'*:+^]/g, String.raw`\$&`)}\\s*\\{([^}]*)\\}`).exec(
+        SOURCE,
+      )?.[1] ?? '';
+
+    it('has even segments of at least 32 by 32 px and a 1px control boundary', () => {
+      const option = rule('.theme-option');
+      for (const side of ['inline-size', 'block-size']) {
+        const size = new RegExp(`${side}:\\s*([\\d.]+)rem`).exec(option)?.[1];
+        expect(Number(size) * 16, side).toBeGreaterThanOrEqual(32);
+      }
+      expect(rule('.theme-switch')).toMatch(/border:\s*1px solid var\(--control-border\)/);
+      expect(option).toMatch(/touch-action:\s*manipulation\s*;/);
+    });
+
+    it('marks the checked segment by a fill and an edge, not by colour alone', () => {
+      const checked = rule('.theme-option input:checked');
+      expect(checked).toMatch(/background:\s*var\(--accent-soft\)/);
+      expect(checked).toMatch(/box-shadow:\s*inset 0 0 0 2px var\(--accent\)/);
+      expect(rule('.theme-option input:checked + svg')).toMatch(/color:\s*var\(--accent-soft-fg\)/);
+    });
+
+    it('keeps hover quieter than checked', () => {
+      const hover = rule('.theme-option input:not(:checked):hover');
+      expect(hover).toMatch(/background:\s*var\(--surface\)/);
+      expect(hover).not.toMatch(/box-shadow|accent/);
+    });
+
+    it('draws the focus ring round the segment on :focus-visible', () => {
+      expect(SOURCE).toMatch(
+        /@supports selector\(:has\(\*\)\)\s*\{[^@]*\.theme-option:has\(input:focus-visible\)\s*\{[^}]*outline:\s*3px solid var\(--focus\)/,
+      );
+    });
+
+    it('stays hidden, with its space kept, until the script marks the root ready', () => {
+      expect(rule(':root:not([data-theme-ready]) .theme-switch')).toMatch(
+        /visibility:\s*hidden\s*;/,
+      );
+    });
+
+    it('outlines the checked segment with Highlight under forced colours', () => {
+      const forced = SOURCE.slice(SOURCE.lastIndexOf('@media (forced-colors: active)'));
+      expect(forced).toMatch(
+        /\.theme-option input:checked\s*\{[^}]*outline:\s*2px solid Highlight\s*;[^}]*outline-offset:\s*-2px/,
+      );
+    });
+
+    it('hides the labels and legend from sight only, and the control from print', () => {
+      const hidden = rule('.visually-hidden');
+      expect(hidden).toMatch(/position:\s*absolute/);
+      expect(hidden).toMatch(/clip-path:\s*inset\(50%\)/);
+      expect(hidden).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+      expect(SOURCE).toMatch(/@media print\s*\{[^@]*\.theme-switch/);
+    });
+  });
+
   it('loads nothing: no url(), @import or @font-face', () => {
     expect(SOURCE).not.toMatch(/url\(/i);
     expect(SOURCE).not.toMatch(/@import/i);
@@ -222,6 +286,9 @@ describe('site stylesheet rules', () => {
       '.install',
       '.install.is-soon',
       '.site-footer',
+      '.theme-switch',
+      '.theme-option',
+      '.visually-hidden',
     ]) {
       expect(SOURCE, selector).toContain(selector);
     }
