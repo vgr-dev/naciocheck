@@ -19,6 +19,7 @@ import {
   stopFakeSede,
 } from './support/fake-sede';
 import { networkGuard } from './support/network-guard';
+import { SITE_HOST, siteServerPort, startSiteServer, stopSiteServer } from './support/site-server';
 import { createVisualFolders, visualServiceOptions } from './support/visual';
 
 /**
@@ -60,6 +61,8 @@ const FIREFOX_SPECS = [resolve(import.meta.dirname, 'specs/smoke.e2e.ts')];
  */
 const HOST_RULES = [
   ...FAKE_HOSTS.map((host) => `MAP ${host} 127.0.0.1:${fakeSedePort()}`),
+  // The built site is a fourth mapped host, served over http by `support/site-server.ts`.
+  `MAP ${SITE_HOST} 127.0.0.1:${siteServerPort()}`,
   'MAP * ~NOTFOUND',
   'EXCLUDE 127.0.0.1',
 ].join(', ');
@@ -124,6 +127,11 @@ function buildExtension(): void {
   assertGeckoIdMatchesBuild();
 }
 
+/** The site specs serve `.output/site/`, so it is rebuilt with the extension. */
+function buildSite(): void {
+  execFileSync('npm', ['run', 'build:site'], { stdio: 'inherit' });
+}
+
 /**
  * Writes the certificate the fake site uses, once per run.
  *
@@ -178,6 +186,7 @@ export const config: WebdriverIO.Config = {
   /** Tests always run the real build: both browsers are rebuilt, and the Firefox zip is refreshed. */
   onPrepare() {
     buildExtension();
+    buildSite();
     writeCertificate();
     createVisualFolders();
   },
@@ -186,7 +195,8 @@ export const config: WebdriverIO.Config = {
     // The fake site first: the browser is told where to find it, and the guard is what proves nothing else is
     // reachable. Firefox gets neither the mapping nor the certificate, so it only runs the smoke spec (D1).
     await startFakeSede();
-    await networkGuard().attach(FAKE_HOSTS);
+    await startSiteServer();
+    await networkGuard().attach([...FAKE_HOSTS, SITE_HOST]);
 
     if (browser.capabilities.browserName === 'firefox') {
       // Temporary install: unsigned is fine, and nothing survives the session.
@@ -204,5 +214,6 @@ export const config: WebdriverIO.Config = {
   async after() {
     console.log(networkGuard().summary());
     await stopFakeSede();
+    await stopSiteServer();
   },
 };
