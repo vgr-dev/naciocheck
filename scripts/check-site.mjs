@@ -17,8 +17,12 @@ import { fileURLToPath } from 'node:url';
  *   origin in `<link rel="canonical|alternate">` and `og:`/`twitter:` `<meta content>`, and `https://vgr.cat/`
  *   in `<link rel="me">`. Nothing absolute is ever allowed in `src`, `srcset`, `poster`, `data`, `action`,
  *   CSS `url()` or `@import`;
- * - the files served besides pages are `feedback/feedback.js` and images (`.png`, `.webp`, `.svg`, `.ico`);
- *   an SVG may not script, embed or reach anything outside itself.
+ * - the files served besides pages are `feedback/feedback.js`, images (`.png`, `.webp`, `.svg`, `.ico`) and one
+ *   text file, `img/OFL.txt` (the Nunito licence, which must sit next to the outlined logos whenever
+ *   `img/logo-light.svg` or `img/logo-dark.svg` ships); an SVG may not script, embed or reach anything
+ *   outside itself.
+ * - no element carries an event-handler attribute (`on<name>`, any case, quoted, unquoted or empty), on any
+ *   page, including the feedback pages: their two approved `<script>` tags are the only scripting.
  *
  * Normalisation: a browser reads a URL attribute more generously than a regex does, so the gate reads it the
  * same way before it judges it: character references are decoded, tabs and newlines are removed, the
@@ -78,6 +82,12 @@ const FEEDBACK_SCRIPT = 'feedback/feedback.js';
 
 /** The image types served besides pages. */
 const IMAGE_TYPES = ['.png', '.webp', '.svg', '.ico'];
+
+/** The one text file served: the Nunito licence that travels with the outlined logos (a copy of `brand/OFL.txt`). */
+const LICENCE_FILE = 'img/OFL.txt';
+
+/** The outlined wordmarks: whenever one is served, `LICENCE_FILE` has to be served too. */
+const OUTLINED_LOGOS = ['img/logo-light.svg', 'img/logo-dark.svg'];
 
 /** The site's own origin: metadata only, never a link or a resource. */
 const OWN_ORIGIN = 'https://naciocheck.vgr.cat/';
@@ -276,7 +286,8 @@ function cssProblems(raw) {
 
 /**
  * The problems found after normalising: a URL attribute (every `srcset` candidate included) that reaches
- * another origin, a `style` attribute or `<style>` block whose CSS does, and `http-equiv="refresh"`. The
+ * another origin, a `style` attribute or `<style>` block whose CSS does, `http-equiv="refresh"`, and any
+ * event-handler attribute (`on<name>`). The
  * addresses the gate allows must already be neutralised.
  * @param {string} text
  * @returns {string[]}
@@ -287,6 +298,11 @@ function normalisedProblems(text) {
     for (const [, rawName = '', double, single, bare] of attributes.matchAll(ATTRIBUTE)) {
       const name = rawName.toLowerCase().replace(/^xlink:/, '');
       const value = double ?? single ?? bare;
+      // An event handler, with a value or without one: the site carries no inline script of any kind.
+      if (/^on[a-z]/.test(name)) {
+        found.add(`has an on*= event attribute (${name}): the site carries no inline script`);
+        continue;
+      }
       if (value === undefined) continue;
       if (URL_ATTRIBUTES.has(name)) {
         if (urlsIn(name, value).some(reachesAnotherOrigin)) {
@@ -548,14 +564,15 @@ function extensionOf(name) {
 
 /**
  * Checks a file that is not a page. Allowed: an SVG (see `svgProblems`); a `.png`, `.webp` or `.ico`, which
- * `binaryProblems` checks from its bytes; and `feedback/feedback.js`, which may reach nothing but the
- * relative `/api/feedback`: no address, no dynamic code, no test key but the always-pass sitekey.
- * Any other type is refused.
+ * `binaryProblems` checks from its bytes; `img/OFL.txt`, the licence text (that exact name only); and
+ * `feedback/feedback.js`, which may reach nothing but the relative `/api/feedback`: no address, no dynamic
+ * code, no test key but the always-pass sitekey. Any other type is refused.
  * @param {string} name
  * @param {string} text
  * @returns {string[]}
  */
 export function assetProblems(name, text) {
+  if (name === LICENCE_FILE) return [];
   if (name !== FEEDBACK_SCRIPT) {
     if (IMAGE_TYPES.includes(extensionOf(name))) {
       return extensionOf(name) === '.svg' ? svgProblems(name, text) : [];
@@ -643,6 +660,10 @@ export function siteProblems(siteDir = SITE_DIR) {
     } else {
       problems.push(...assetProblems(name, readFileSync(file, 'utf8')));
     }
+  }
+  // The Nunito licence travels with the outlined wordmarks (brand/README.md).
+  if (OUTLINED_LOGOS.some((logo) => names.has(logo)) && !names.has(LICENCE_FILE)) {
+    problems.push(`site/${LICENCE_FILE}: missing, the outlined logos ship with the Nunito licence`);
   }
   const present = LANGUAGES.filter(
     (language) => language !== 'es' && existsSync(join(siteDir, language)),

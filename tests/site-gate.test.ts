@@ -278,6 +278,107 @@ const WIDGET = `<div id="feedback-widget" data-sitekey="${SITEKEY}"></div>`;
 
 const FEEDBACK = withBody(`${WIDGET}${TURNSTILE_SCRIPT}${OWN_SCRIPT}`);
 
+describe('site gate: event-handler attributes', () => {
+  const ALL_PAGES = [
+    ...PLAIN_PAGES,
+    ...ADDENDUM_PAGES,
+    '404.html',
+    'en/404.html',
+    'ca/changelog/index.html',
+  ];
+
+  const HANDLERS: [string, (html: string) => string][] = [
+    ['an empty onload on the body', (html) => html.replace('<body>', '<body onload="">')],
+    ['an onload on the body', (html) => html.replace('<body>', '<body onload="init()">')],
+    [
+      'an onclick on a link',
+      (html) => html.replace('<a href="/privacy/">', '<a href="/privacy/" onclick="x()">'),
+    ],
+    [
+      'an uppercase ONERROR',
+      (html) => withBodyOf(html, '<img src="/a.png" alt="" ONERROR="x()" />'),
+    ],
+    ['a mixed-case OnClick', (html) => withBodyOf(html, '<p OnClick="x()">y</p>')],
+    ['an unquoted handler', (html) => withBodyOf(html, '<img src=/a.png alt="" onerror=alert(1)>')],
+    ['a single-quoted handler', (html) => withBodyOf(html, "<p onmouseover='x()'>y</p>")],
+    ['a handler with no value', (html) => withBodyOf(html, '<p onclick>y</p>')],
+    ['an empty unquoted handler', (html) => withBodyOf(html, '<p onclick= >y</p>')],
+    [
+      'a value full of character references',
+      (html) => withBodyOf(html, '<p onclick="&#97;&#108;ert&#40;1&#41;">y</p>'),
+    ],
+    ['a handler after a slash', (html) => withBodyOf(html, '<svg/onload=alert(1)></svg>')],
+    [
+      'a handler after a quoted attribute with no space',
+      (html) => withBodyOf(html, '<img alt="x"onerror="y()" src="/a.png" />'),
+    ],
+    [
+      'a handler on a line of its own',
+      (html) => withBodyOf(html, '<p\n  class="a"\n  onfocus="x()"\n>y</p>'),
+    ],
+    [
+      'a handler after a value that holds a > sign',
+      (html) => withBodyOf(html, '<p title="a > b" onclick="x()">y</p>'),
+    ],
+    [
+      'a handler on an element in the head',
+      (html) =>
+        html.replace('<title>', '<link rel="icon" href="/favicon.ico" onload="x()" /><title>'),
+    ],
+  ];
+
+  /** `html` with `extra` before the end of its body (whatever else the page carries). */
+  function withBodyOf(html: string, extra: string): string {
+    return html.replace('</body>', `${extra}</body>`);
+  }
+
+  describe.each(ALL_PAGES)('on %s', (name) => {
+    const base = FEEDBACK_PAGES.includes(name) ? FEEDBACK : VALID;
+
+    it.each(HANDLERS)('rejects %s', (_label, apply) => {
+      expect(pageProblems(name, apply(base)).join('\n')).toContain('event attribute');
+    });
+  });
+
+  it.each(FEEDBACK_PAGES)('still accepts the two approved script tags on %s', (name) => {
+    expect(pageProblems(name, FEEDBACK)).toEqual([]);
+  });
+
+  it.each(FEEDBACK_PAGES)('rejects a handler on a script tag or the widget on %s', (name) => {
+    expect(
+      pageProblems(
+        name,
+        FEEDBACK.replace('<div id="feedback-widget"', '<div onclick="x()" id="feedback-widget"'),
+      ),
+    ).not.toEqual([]);
+    expect(
+      pageProblems(
+        name,
+        FEEDBACK.replace(
+          OWN_SCRIPT,
+          '<script src="/feedback/feedback.js" defer onload="x()"></script>',
+        ),
+      ),
+    ).not.toEqual([]);
+  });
+
+  it.each(['index.html', 'privacy/index.html', 'ca/feedback/index.html'])(
+    'does not flag text or attributes that only look like a handler on %s',
+    (name) => {
+      const harmless = [
+        '<p>onboarding, on the way, one onclick= in prose is text only: online</p>',
+        '<div data-on="x" data-onload="y" aria-label="on" class="on one">z</div>',
+        '<meta name="robots" content="on" />',
+        '<input type="checkbox" checked name="option" value="on" />',
+        '<a href="/privacy/" title="onclick=x" rel="noopener">y</a>',
+        '<details open><summary>Open</summary>z</details>',
+      ].join('\n');
+      const base = FEEDBACK_PAGES.includes(name) ? FEEDBACK : VALID;
+      expect(pageProblems(name, base.replace('</body>', `${harmless}</body>`))).toEqual([]);
+    },
+  );
+});
+
 describe('site gate: feedback pages', () => {
   it.each(FEEDBACK_PAGES)('accepts both scripts on %s', (name) => {
     expect(pageProblems(name, FEEDBACK)).toEqual([]);
@@ -1052,6 +1153,78 @@ describe('site gate: a directory with images', () => {
           'site/font.woff2: only HTML is served, this file is not a page',
         ].sort(),
       );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('site gate: the Nunito licence text', () => {
+  it('allows img/OFL.txt and no other text file', () => {
+    expect(assetProblems('img/OFL.txt', readFileSync('brand/OFL.txt', 'utf8'))).toEqual([]);
+    for (const name of [
+      'OFL.txt',
+      'img/ofl.txt',
+      'img/OFL.TXT',
+      'img/OFL.txt/other',
+      'img/LICENSE.txt',
+      'img/OFL.md',
+      'img/screens/OFL.txt',
+      'en/img/OFL.txt',
+      'robots.txt',
+      'notes.txt',
+      'LICENSE',
+      'README.md',
+      'data.csv',
+      'sitemap.xml',
+    ]) {
+      expect(assetProblems(name, 'x'), name).toEqual([
+        `site/${name}: only HTML is served, this file is not a page`,
+      ]);
+    }
+  });
+
+  const writeFiles = (dir: string, files: Record<string, string | Buffer>) => {
+    for (const [name, data] of Object.entries(files)) {
+      const path = join(dir, name);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, data);
+    }
+  };
+  const licenceProblems = (dir: string) =>
+    siteProblems(dir).filter(
+      (problem) => !problem.endsWith(': missing') && problem !== 'site/: no files',
+    );
+
+  it.each(['img/logo-light.svg', 'img/logo-dark.svg'])(
+    'requires img/OFL.txt when %s ships',
+    (logo) => {
+      const dir = mkdtempSync(join(tmpdir(), 'site-gate-licence-'));
+      try {
+        writeFiles(dir, { [logo]: GOOD_SVG });
+        expect(licenceProblems(dir)).toEqual([
+          'site/img/OFL.txt: missing, the outlined logos ship with the Nunito licence',
+        ]);
+        writeFiles(dir, { 'img/OFL.txt': readFileSync('brand/OFL.txt') });
+        expect(licenceProblems(dir)).toEqual([]);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it('does not require the licence when no outlined logo ships, and still refuses other text', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-gate-licence-'));
+    try {
+      writeFiles(dir, { 'favicon.svg': GOOD_SVG, 'img/OFL.txt': 'licence' });
+      expect(licenceProblems(dir)).toEqual([]);
+      rmSync(join(dir, 'img/OFL.txt'));
+      expect(licenceProblems(dir)).toEqual([]);
+      writeFiles(dir, { 'notes.txt': 'x', 'img/other.txt': 'x' });
+      expect(licenceProblems(dir).sort()).toEqual([
+        'site/img/other.txt: only HTML is served, this file is not a page',
+        'site/notes.txt: only HTML is served, this file is not a page',
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -12,6 +12,8 @@ import sharp from 'sharp';
  * - `favicon.ico` (a 32 px PNG in an ICO container), `favicon.svg` (the icon) and `apple-touch-icon.png` (180).
  * - `img/icon-animated.svg`, `img/logo-light.svg` and `img/logo-dark.svg`: copies of the brand sources. The
  *   logos are the outlined ones, so the logotype is paths and no font is ever loaded.
+ * - `img/OFL.txt`: a byte copy of `brand/OFL.txt`, the Nunito licence the brand rules require next to every
+ *   outlined copy of the logotype, so it sits in the same directory as the logos.
  * - `img/screens/<es|en>/<name>-<640|1280>.webp`: the store screenshots the pages use (`SITE_SCREENS`), resized.
  *   The list is explicit and lives here only; `tests/site-assets.test.ts` checks it against what the pages
  *   reference, so a screenshot is never shipped unused and never referenced unshipped.
@@ -27,6 +29,7 @@ const ICON = join(BRAND, 'icon.svg');
 const ICON_ANIMATED = join(BRAND, 'icon-animated.svg');
 const LOGO_LIGHT = join(BRAND, 'logo-horizontal-outlined-light.svg');
 const LOGO_DARK = join(BRAND, 'logo-horizontal-outlined-dark.svg');
+const OFL = join(BRAND, 'OFL.txt');
 
 /** The social card's background: `teal-50`, the same shelf colour the store tiles use. */
 const CARD_BACKGROUND = '#F0FDFA';
@@ -104,6 +107,7 @@ async function copyBrandSvgs(outDir) {
     [ICON_ANIMATED, 'img/icon-animated.svg'],
     [LOGO_LIGHT, 'img/logo-light.svg'],
     [LOGO_DARK, 'img/logo-dark.svg'],
+    [OFL, 'img/OFL.txt'],
   ];
   await mkdir(join(outDir, 'img'), { recursive: true });
   for (const [source, target] of copies) {

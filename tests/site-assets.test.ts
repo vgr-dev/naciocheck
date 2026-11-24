@@ -1,6 +1,6 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { writeSiteAssets } from '../scripts/site-assets.mjs';
@@ -38,6 +38,7 @@ describe('site assets', () => {
       'img/icon-animated.svg',
       'img/logo-light.svg',
       'img/logo-dark.svg',
+      'img/OFL.txt',
     ]) {
       expect(written).toContain(file);
     }
@@ -83,6 +84,14 @@ describe('site assets', () => {
     ];
     for (const [copy, source] of pairs) {
       expect(readFileSync(join(dir, copy)).equals(readFileSync(source)), copy).toBe(true);
+    }
+  });
+
+  it('ships the Nunito licence next to the outlined logos, byte for byte', () => {
+    expect(written).toContain('img/OFL.txt');
+    expect(readFileSync(join(dir, 'img/OFL.txt')).equals(readFileSync('brand/OFL.txt'))).toBe(true);
+    for (const logo of ['img/logo-light.svg', 'img/logo-dark.svg']) {
+      expect(dirname(join(dir, 'img/OFL.txt'))).toBe(dirname(join(dir, logo)));
     }
   });
 
