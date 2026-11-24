@@ -104,8 +104,9 @@ stay static and has to keep the privacy properties of the pages it replaces.
   elements and in Open Graph and Twitter card `<meta>` content. `https://vgr.cat/` may also appear in
   `<link rel="me">`. Nothing absolute is ever allowed in `src`, `srcset`, `poster`, `data`, `action`, CSS
   `url()` or `@import`: no remote resource is loaded, no remote font, no cookie.
-- The landing, privacy, changelog and 404 pages carry no JavaScript. The feedback pages keep their one
-  same-origin script and Turnstile's script, as decided in the feedback amendment above.
+- The landing, privacy, changelog and 404 pages carry no JavaScript except the optional theme bootstrap
+  approved in the 2026-11-24 amendment below. Feedback pages keep their one same-origin script and
+  Turnstile's script, and may also carry that theme bootstrap.
 - `npm run deploy:site` builds first, then deploys. It stays the user's action, as do store uploads and
   changing repository visibility. Cloudflare Web Analytics stays as disclosed above, for the website only.
 
@@ -113,9 +114,10 @@ stay static and has to keep the privacy properties of the pages it replaces.
 
 - `npm run check:site` builds the site and checks `.output/site/`, not the sources. It stays offline. It
   gains these rules: `lang` may be `es`, `en` or `ca`; every language has the same set of pages; same-origin
-  `.png`, `.webp`, `.svg` and `.ico` files are allowed, and any other file type is not; an SVG may not carry
-  a script, an event attribute, `<foreignObject>` or a reference that is not a `#fragment`; outbound links
-  follow the list above. It does not see the Cloudflare Web Analytics beacon, which is injected at the edge.
+  `.png`, `.webp`, `.svg` and `.ico` files are allowed alongside the scoped scripts and demo media in the
+  amendment below; an SVG may not carry a script, an event attribute, `<foreignObject>` or a reference that
+  is not a `#fragment`; outbound links follow the list above. It does not see the Cloudflare Web Analytics
+  beacon, which is injected at the edge.
 - The sources of the feedback and privacy pages now contain markers where their CSS and navigation were.
   Tests that read those sources keep working, and the gate sees the expanded pages.
 - The privacy pages keep stating what the site loads and sends, in all three languages, including the
@@ -127,3 +129,35 @@ stay static and has to keep the privacy properties of the pages it replaces.
   part of this site.
 - Any new outbound link, remote resource or script is a new amendment to this ADR, and the gate fails until
   it is made.
+
+### Amendment 2026-11-24: landing-page theme preference and walkthrough media
+
+#### Context
+
+The three-language site gains a local theme selector and a play-on-demand product walkthrough. The
+selector needs a small same-origin bootstrap before first paint; the walkthrough uses local media
+files and native video controls. Neither feature needs a third-party resource or a request from the
+browser to another origin.
+
+#### Decision
+
+- Pages may include at most one exact classic `<script src="/theme.js"></script>` element in the
+  document head. It reads and writes only the `naciocheck-theme` local-storage key, whose accepted
+  values are `auto`, `light` and `dark`, and applies the selected theme before first paint. It must
+  not use network APIs, dynamic code or telemetry. The existing feedback pages retain their exact
+  feedback and Turnstile script elements; the theme script is an additional optional same-origin
+  script.
+- The only permitted video files are `/img/demo/es/walkthrough.webm` and
+  `/img/demo/en/walkthrough.webm`. The only permitted poster files are the matching
+  `/img/demo/{es,en}/poster.webp`. Spanish and Catalan landings use the Spanish pair; English uses
+  the English pair. WebM files must have an EBML/WebM header. These assets are optional until the
+  landing walkthrough is added.
+- A video may appear only on the three landing pages, using that page's exact local clip and poster,
+  with native controls, inline playback and `preload="none"`. Autoplay and looping are forbidden.
+
+#### Consequences
+
+- The offline site gate permits only this exact optional script and these exact optional media
+  assets. It continues to reject unrelated scripts, media formats, external resources and inline
+  handlers. The script is checked for dynamic code and network APIs.
+- The walkthrough remains same-origin and starts only after a person uses the native controls.
