@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
 import { browser, expect } from '@wdio/globals';
 import { failOnLeakedRequest } from '../support/guard-hooks';
 import { siteUrl } from '../support/site-server';
@@ -45,6 +46,33 @@ interface AxeViolation {
   readonly targets: readonly string[];
 }
 
+/** A check axe could not decide (text over a gradient or an image, say): a person has to judge it. */
+interface AxeIncomplete {
+  readonly id: string;
+  readonly impact: string | null;
+  readonly targets: readonly string[];
+}
+
+interface AxeReport {
+  readonly violations: AxeViolation[];
+  readonly incomplete: AxeIncomplete[];
+  readonly passes: number;
+}
+
+/** The `incomplete` results of one audited page, kept for the manual AA check. */
+interface IncompleteRecord {
+  readonly lang: string;
+  readonly page: string;
+  readonly path: string;
+  readonly scheme: string;
+  readonly incomplete: readonly AxeIncomplete[];
+}
+
+/** Where the `incomplete` results are written. Git-ignored with the rest of `e2e/.artifacts/`. */
+const INCOMPLETE_REPORT = resolve(import.meta.dirname, '../.artifacts/axe-incomplete.json');
+
+const incompleteRecords: IncompleteRecord[] = [];
+
 /** The axe-core build in `node_modules`: the one source injected into every page. */
 const AXE_SOURCE = readFileSync(
   createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
@@ -62,7 +90,7 @@ async function openSitePage(path: string): Promise<void> {
 }
 
 /** Injects axe and returns what it reports, reduced to what a person needs to find the element. */
-async function runAxe(): Promise<{ violations: AxeViolation[]; passes: number }> {
+async function runAxe(): Promise<AxeReport> {
   await browser.execute(AXE_SOURCE);
   return browser.execute(async () => {
     const axe = (window as unknown as { axe: { run: () => Promise<AxeRun> } }).axe;
@@ -74,6 +102,11 @@ async function runAxe(): Promise<{ violations: AxeViolation[]; passes: number }>
         help: string;
         nodes: { target: unknown[] }[];
       }[];
+      incomplete: {
+        id: string;
+        impact?: string | null;
+        nodes: { target: unknown[]; impact?: string | null }[];
+      }[];
     }
     const result = await axe.run();
     return {
@@ -83,6 +116,11 @@ async function runAxe(): Promise<{ violations: AxeViolation[]; passes: number }>
         impact: violation.impact ?? null,
         help: violation.help,
         targets: violation.nodes.map((node) => node.target.flat().join(' ')),
+      })),
+      incomplete: result.incomplete.map((item) => ({
+        id: item.id,
+        impact: item.impact ?? item.nodes.find((node) => node.impact)?.impact ?? null,
+        targets: item.nodes.map((node) => node.target.flat().join(' ')),
       })),
     };
   });
@@ -97,6 +135,36 @@ function describeViolations(violations: readonly AxeViolation[]): string {
     )
     .join('\n');
 }
+
+/** Prints one line per rule axe could not decide, with how many elements it left to a person. */
+function summariseIncomplete(records: readonly IncompleteRecord[]): string {
+  const lines = records
+    .filter((record) => record.incomplete.length > 0)
+    .map(
+      (record) =>
+        `  ${record.lang} ${record.page} ${record.scheme}: ` +
+        record.incomplete
+          .map((item) => `${item.id} (${item.impact ?? 'n/a'}) x${item.targets.length}`)
+          .join(', '),
+    );
+  const total = records.reduce(
+    (sum, record) => sum + record.incomplete.reduce((n, item) => n + item.targets.length, 0),
+    0,
+  );
+  return [
+    `axe incomplete (needs a manual AA check): ${total} element(s) in ${lines.length} of ${records.length} audit(s)`,
+    ...lines,
+    `  full report: ${INCOMPLETE_REPORT}`,
+  ].join('\n');
+}
+
+// Not a failure: axe could not decide these, so they are recorded for a person to judge.
+after(() => {
+  if (incompleteRecords.length === 0) return;
+  mkdirSync(resolve(INCOMPLETE_REPORT, '..'), { recursive: true });
+  writeFileSync(INCOMPLETE_REPORT, `${JSON.stringify(incompleteRecords, null, 2)}\n`);
+  console.log(summariseIncomplete(incompleteRecords));
+});
 
 for (const { lang, prefix } of LANGUAGES) {
   describe(`site (${lang})`, () => {
@@ -152,7 +220,8 @@ for (const { lang, prefix } of LANGUAGES) {
                 ),
               ).toBe(true);
 
-              const { violations, passes } = await runAxe();
+              const { violations, incomplete, passes } = await runAxe();
+              incompleteRecords.push({ lang, page: name, path: url, scheme, incomplete });
               // An audit that checked nothing would pass too: it has to have run its rules.
               expect(passes).toBeGreaterThan(10);
               expect(describeViolations(violations)).toBe('');
