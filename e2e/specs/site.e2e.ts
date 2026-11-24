@@ -234,6 +234,71 @@ for (const { lang, prefix } of LANGUAGES) {
     }
 
     describe('landing page images', () => {
+      it('shows the localized hero screenshot at phone and desktop widths with a reserved footprint', async () => {
+        await openSitePage(`${prefix}/`);
+        const screenshotLocale = lang === 'ca' ? 'es' : lang;
+        const observations: {
+          src: string;
+          viewportWidth: number;
+          width: number;
+          height: number;
+        }[] = [];
+        for (const viewport of [
+          { width: 390, height: 844, minImageWidth: 330 },
+          { width: 1280, height: 900, minImageWidth: 400 },
+        ]) {
+          await browser.setViewport({ width: viewport.width, height: viewport.height });
+          await browser.takeScreenshot();
+          const observation = await browser.execute(() => {
+            const image = document.querySelector<HTMLImageElement>('#hero .hero-art img');
+            if (!image) return null;
+            const rect = image.getBoundingClientRect();
+            return {
+              src: image.currentSrc,
+              complete: image.complete,
+              naturalWidth: image.naturalWidth,
+              naturalHeight: image.naturalHeight,
+              width: rect.width,
+              height: rect.height,
+              viewportWidth: window.innerWidth,
+              alt: image.alt,
+              caption: image.closest('figure')?.querySelector('figcaption')?.textContent?.trim(),
+            };
+          });
+          if (observation === null) throw new Error('Hero screenshot image was not found');
+          expect(observation.src).toContain(
+            `/img/screens/${screenshotLocale}/options-several-hero-`,
+          );
+          expect(observation.complete).toBe(true);
+          expect(observation.naturalWidth).toBeGreaterThan(0);
+          expect(observation.naturalHeight).toBeGreaterThan(0);
+          expect(observation.width).toBeGreaterThan(viewport.minImageWidth);
+          expect(observation.width).toBeLessThanOrEqual(observation.viewportWidth);
+          expect(Math.abs(observation.height - observation.width / 1.6)).toBeLessThan(1);
+          expect(observation.alt).toBeTruthy();
+          expect(observation.caption).toBeTruthy();
+          observations.push({
+            src: observation.src,
+            viewportWidth: observation.viewportWidth,
+            width: observation.width,
+            height: observation.height,
+          });
+        }
+        expect(observations).toHaveLength(2);
+
+        const absentImageFootprint = await browser.execute(() => {
+          const image = document.querySelector<HTMLImageElement>('#hero .hero-art img');
+          if (!image) return null;
+          const before = image.getBoundingClientRect();
+          image.removeAttribute('srcset');
+          image.removeAttribute('src');
+          const after = image.getBoundingClientRect();
+          return { before: [before.width, before.height], after: [after.width, after.height] };
+        });
+        expect(absentImageFootprint?.after).toEqual(absentImageFootprint?.before);
+        expect(observations).toHaveLength(2);
+      });
+
       it('loads eager images and decodes deferred screenshots on scroll', async () => {
         await openSitePage(`${prefix}/`);
 

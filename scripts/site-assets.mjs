@@ -15,8 +15,9 @@ import sharp from 'sharp';
  * - `img/OFL.txt`: a byte copy of `brand/OFL.txt`, the Nunito licence the brand rules require next to every
  *   outlined copy of the logotype, so it sits in the same directory as the logos.
  * - `img/screens/<es|en>/<name>-<640|1280>.webp`: the store screenshots the pages use (`SITE_SCREENS`), resized.
- *   The list is explicit and lives here only; `tests/site-assets.test.ts` checks it against what the pages
- *   reference, so a screenshot is never shipped unused and never referenced unshipped.
+ * - `img/screens/<es|en>/options-several-hero-<640|832>.webp`: a focused crop of the saved applications
+ *   list, composed from the same authentic screenshot for the narrow hero.
+ *   `tests/site-assets.test.ts` checks these against page references, so a screenshot is never shipped unused.
  *
  * `writeSiteAssets(outDir)` is called by the site build; the module never runs on import.
  */
@@ -40,6 +41,8 @@ const FAVICON = 32;
 /** The screenshot languages the site has images for (Catalan uses `es`) and the two widths of each image. */
 const SCREEN_LANGUAGES = ['es', 'en'];
 const SCREEN_WIDTHS = [640, 1280];
+const HERO_WIDTHS = [640, 832];
+const HERO_CROP = { left: 224, top: 20, width: 832, height: 520 };
 
 /**
  * The store screenshots the pages show (`<name>-<lang>-1280x800.png` in `store/screenshots/<lang>/`). The
@@ -127,6 +130,17 @@ async function writeScreens(outDir) {
         const file = `img/screens/${lang}/${name}-${String(width)}.webp`;
         await sharp(source).resize({ width }).webp({ quality: 82 }).toFile(join(outDir, file));
         written.push(file);
+      }
+      if (name === 'options-several') {
+        for (const width of HERO_WIDTHS) {
+          const file = `img/screens/${lang}/options-several-hero-${String(width)}.webp`;
+          await sharp(source)
+            .extract(HERO_CROP)
+            .resize({ width })
+            .webp({ quality: 82 })
+            .toFile(join(outDir, file));
+          written.push(file);
+        }
       }
     }
   }

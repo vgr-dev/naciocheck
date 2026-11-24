@@ -117,6 +117,20 @@ describe('site assets', () => {
     }
   });
 
+  it('renders a 1.6:1 focused hero crop at 640 and 832 in es and en', async () => {
+    for (const lang of ['es', 'en']) {
+      for (const width of [640, 832]) {
+        const file = `img/screens/${lang}/options-several-hero-${String(width)}.webp`;
+        expect(written).toContain(file);
+        expect(await size(file)).toMatchObject({
+          width,
+          height: width / 1.6,
+          format: 'webp',
+        });
+      }
+    }
+  });
+
   describe('which screenshots ship', () => {
     const SITE = join(import.meta.dirname, '..', 'site');
 

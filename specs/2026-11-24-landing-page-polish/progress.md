@@ -193,3 +193,43 @@ feat(site): refresh localized landing sections and faq
   landing refresh, its tests, and the workflow records together.
 - **Open issues:** The static hero screenshot is next. Formal visual review and the lazy-loading
   adjustment to the screenshot harness are planned for Phase 5.
+
+## 2026-11-24 - Step 8: Show a static product screenshot in the hero
+
+- **Status:** done
+- **Changed:** `site/{index.html,en/index.html,ca/index.html}`,
+  `site/_build/partials/landing.css`, `scripts/site-assets.mjs`,
+  `tests/{site-assets,site-landing}.test.ts`, `e2e/specs/site.e2e.ts`
+- **Verified:** The hero uses a crop of the actual saved-applications screen above the supporting
+  sections, with localized alt text and captions. Catalan uses the Spanish image. Sharp produces
+  640 × 400 and 832 × 520 WebP assets from the unchanged store screenshots. Viewed the English
+  crop after adjusting its bounds and confirmed both application cards are intact.
+- **Verified:** `npx vitest run tests/{site-assets,site-landing}.test.ts` passed 86 tests.
+  `npm run check:site` passed. `E2E_SPEC=site npm run test:e2e` passed 67 checks with zero
+  unexpected requests. Chrome chose the 640w image in all three locales at both tested widths,
+  rendering approximately 343 × 215 CSS px at 390px and 470 × 294 CSS px at 1280px. The tests
+  verified the image footprint when its source is removed. All four variants are under 16 KB.
+- **Commit:** uncommitted, proposed "feat(site): show localized product screenshot in hero"
+- **Run by:** implement-phase (builder subagent, model GPT-6 Luna)
+- **Proposed commit (builder):**
+
+```
+feat(site): show localized product screenshot in hero
+```
+
+- **Open issues:** Full visual review is scheduled for Phase 5.
+
+## 2026-11-24 - Phase 4: Show static product screenshots
+
+- **Status:** done
+- **Steps:** 8 done.
+- **File check:** pass. Builder changes matched the Files list. The orchestrator reconciled
+  Phase 3 to `31d869f` and `fc26c26` and updated the plan and progress.
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`
+  passed after correcting the typed E2E observations. 1,446 application tests and 31 Worker
+  tests passed. The offline gate passed for all 15 generated pages.
+- **Phase verify:** `E2E_SPEC=site npm run test:e2e` and `E2E_SPEC=site-theme npm run test:e2e`
+  passed 67 and 2 checks respectively with zero unexpected requests.
+- **Commit proposal:** Commit the localized hero, crop build, tests and workflow records together.
+- **Open issues:** Phase 5 will adapt the visual helper for lazy-loaded images, regenerate the
+  site baseline matrix, and audit the changed interface.

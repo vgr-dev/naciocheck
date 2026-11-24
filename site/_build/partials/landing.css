@@ -45,7 +45,7 @@
   color: var(--muted);
 }
 
-/* 1. Hero: the logo, whose badge is the animated icon, and the copy beside the "status changed" screenshot. */
+/* 1. Hero: the logo, whose badge is the animated icon, and the saved-applications screenshot. */
 
 .hero {
   padding-block: clamp(2.5rem, 6vw, 5rem) clamp(1rem, 2vw, 1.5rem);
@@ -146,14 +146,6 @@
   border-inline-end: 2px solid var(--accent);
   transform: rotate(45deg);
   content: '';
-}
-
-/* The moment the extension exists for. On a phone it would push the copy and the install buttons down, and
-   the same screenshot follows in "how it works", so the hero shows it on wide screens only. */
-@media (max-width: 51.99rem) {
-  .hero-art {
-    display: none;
-  }
 }
 
 @media (min-width: 52rem) {

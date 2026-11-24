@@ -93,6 +93,23 @@ describe.each(PAGES)('the $lang landing page', (page) => {
     expect(doc.querySelector('#hero .hero-tagline')?.textContent?.trim()).toBe(page.tagline);
   });
 
+  it('shows a localized saved-applications capture in the hero at every width', () => {
+    const image = doc.querySelector<HTMLImageElement>('#hero .hero-art img');
+    expect(image?.getAttribute('src')).toBe(
+      `/img/screens/${page.screens}/options-several-hero-832.webp`,
+    );
+    expect((image?.getAttribute('srcset') ?? '').replace(/\s+/g, ' ')).toContain(
+      `/img/screens/${page.screens}/options-several-hero-640.webp 640w`,
+    );
+    expect((image?.getAttribute('srcset') ?? '').replace(/\s+/g, ' ')).toContain(
+      `/img/screens/${page.screens}/options-several-hero-832.webp 832w`,
+    );
+    expect(image?.getAttribute('sizes')).toBe('(min-width: 52rem) 29.5rem, calc(100vw - 3rem)');
+    expect(image?.getAttribute('alt')).toMatch(/solicitud|sol·licitud|application/i);
+    expect(image?.getAttribute('loading')).not.toBe('lazy');
+    expect(doc.querySelector('#hero .hero-art figcaption')?.textContent?.trim()).toBeTruthy();
+  });
+
   it('lists the main path states in the order of MAIN_PATH_STATES', () => {
     const states = [...doc.querySelectorAll('#statuses [data-state]')].map((node) => ({
       id: node.getAttribute('data-state'),
@@ -159,13 +176,20 @@ describe.each(PAGES)('the $lang landing page', (page) => {
     const shots = [...doc.querySelectorAll('img[srcset]')];
     expect(shots.length).toBeGreaterThanOrEqual(3);
     for (const shot of shots) {
-      const name = /\/img\/screens\/(es|en)\/([a-z-]+)-1280\.webp$/.exec(
+      const name = /\/img\/screens\/(es|en)\/([a-z-]+)-(1280|832)\.webp$/.exec(
         shot.getAttribute('src') ?? '',
       );
       expect(name?.[1]).toBe(page.screens);
       const srcset = (shot.getAttribute('srcset') ?? '').replace(/\s+/g, ' ');
-      expect(srcset).toContain(`/img/screens/${page.screens}/${name?.[2] ?? ''}-640.webp 640w`);
-      expect(srcset).toContain(`/img/screens/${page.screens}/${name?.[2] ?? ''}-1280.webp 1280w`);
+      const suffix = name?.[2]?.endsWith('-hero') ? '-hero' : '';
+      const imageName = suffix ? name?.[2]?.slice(0, -suffix.length) : name?.[2];
+      expect(srcset).toContain(
+        `/img/screens/${page.screens}/${imageName ?? ''}${suffix}-640.webp 640w`,
+      );
+      const largeWidth = suffix ? 832 : 1280;
+      expect(srcset).toContain(
+        `/img/screens/${page.screens}/${imageName ?? ''}${suffix}-${String(largeWidth)}.webp ${String(largeWidth)}w`,
+      );
       expect(shot.getAttribute('sizes')).toBeTruthy();
       if (shot.closest('#hero')) {
         expect(shot.getAttribute('loading')).not.toBe('lazy');

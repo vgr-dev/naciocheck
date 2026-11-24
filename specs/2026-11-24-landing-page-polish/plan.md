@@ -22,12 +22,12 @@ Scope revised on 2026-11-24 at the owner’s request to use static product scree
 
 **Phase 3: Theme selection and landing sections**
 
-- [x] 6. Apply and persist the theme on every page (uncommitted)
-- [x] 7. Refresh the landing sections and centre the FAQ icons (uncommitted)
+- [x] 6. Apply and persist the theme on every page (31d869f)
+- [x] 7. Refresh the landing sections and centre the FAQ icons (fc26c26)
 
 **Phase 4: Show static product screenshots**
 
-- [ ] 8. Show a static product screenshot in the hero
+- [x] 8. Show a static product screenshot in the hero (uncommitted)
 
 **Phase 5: Baselines and code audit**
 
