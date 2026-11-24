@@ -49,7 +49,7 @@ This is enforced by the standalone `npm run check:privacy` gate: it scans the bu
 CSS and SVG for network APIs, extra hosts, remote assets and unlisted URLs, and fails on any of them. Run it
 after both browser builds, and treat it as a release requirement. The reasons for each permission are in
 [`store/permissions.md`](store/permissions.md), and the privacy policy is in [`site/`](site/)
-([English](site/en/privacy/index.html), [Spanish](site/privacy/index.html)).
+([English](site/en/privacy/index.html), [Spanish](site/privacy/index.html), [Catalan](site/ca/privacy/index.html)).
 
 **Reporting a problem.** The extension sends nothing by itself. "Report a problem" shows you the text first and
 only opens the website with that text in the address fragment (after the `#`), which browsers do not send to the
@@ -133,7 +133,7 @@ src/core/          storage, validation, parsing the result page, status catalogu
 src/entrypoints/   background, content script, and the popup, options, onboarding, result, statuses, unlock pages
 tests/             unit tests (tests/fixtures: copies of the official pages, never reformatted)
 e2e/               Chrome end-to-end specs, the fake official site, visual baselines
-store/ site/       store listing texts and images; the static privacy-policy site
+store/ site/       store listing texts and images; the sources of the static website (es, en, ca)
 brand/             name, icon, logo and colours: the single source of truth (brand/README.md)
 ```
 
@@ -148,14 +148,41 @@ npm run typecheck
 npm test                # unit tests (Vitest)
 npm run format:check    # `npm run format` fixes
 npm run check:privacy   # needs a build first
-npm run check:site      # the site has scripts only on the feedback pages, and no other third-party URLs
+npm run check:site      # builds the site first; scripts only on the feedback pages, no other third-party URLs
 ```
+
+### The website
+
+`naciocheck.vgr.cat` is a static site in three languages: Spanish at `/`, English at `/en/` and Catalan at `/ca/`.
+Each has a landing page, the privacy policy, the feedback page, the changelog and a 404 page, and every page links
+to the others in the other languages. The pages and their shared parts are the **sources** in [`site/`](site/);
+the deployable site is **generated** into `.output/site/` (git-ignored) by:
+
+```sh
+npm run build:site      # site/ and CHANGELOG.md -> .output/site/, no network access
+```
+
+What the build does:
+
+- Fills the shared head (title, description, canonical, `hreflang` alternates, Open Graph and Twitter tags), the
+  header with the language switcher, the footer and the install buttons into every page from markers in the
+  sources. The shared strings and styles are in `site/_build/` (`strings.json`, `partials/`).
+- Turns [`CHANGELOG.md`](CHANGELOG.md), the single source of release notes (in English), into the `/changelog/`
+  pages. Until a release is dated, they say there are no releases yet.
+- Renders the social card, the favicons and the optimised screenshots from `brand/` and `store/screenshots/`.
+- Takes the store URLs and whether the repository is public from `site/_build/config.json`. While the store URLs
+  are `null` the install buttons read "Próximamente" / "Coming soon" / "Properament" and link nowhere; the source
+  code link appears once `repositoryPublic` is `true`.
+
+`check:site`, `dev:site` and `deploy:site` build first, and `wrangler.jsonc` serves `.output/site/`. The site loads
+nothing from other origins except Cloudflare Web Analytics (which counts website visits only, never the extension)
+and, on the feedback pages only, Turnstile; `npm run check:site` fails on anything else.
 
 ### Test the feedback page locally
 
 The feedback page posts to the site's Worker. To try it by hand, copy `.dev.vars.example` to `.dev.vars` (it is
 git-ignored and holds only Cloudflare's published Turnstile test values), run `npm run dev:site` and open
-`http://localhost:8787/feedback/`. Turnstile's test keys still contact Cloudflare, so this is a hands-on check
+`http://localhost:8787/feedback/` (or `/en/feedback/`, `/ca/feedback/`). Turnstile's test keys still contact Cloudflare, so this is a hands-on check
 and never part of `npm test`.
 
 ### End-to-end tests (Chrome)
@@ -163,7 +190,7 @@ and never part of `npm test`.
 ```sh
 npm run test:e2e              # headless, the whole suite
 npm run test:e2e:headed       # real browser windows, to watch or debug
-E2E_SPEC=pages npm run test:e2e   # one spec: check-flow, pages, visual or smoke
+E2E_SPEC=pages npm run test:e2e   # one spec: check-flow, pages, visual, site or smoke
 ```
 
 What a run does:
@@ -178,7 +205,8 @@ What a run does:
    line must read `outside it 0`.
 4. Runs the specs in Chrome for Testing, driven by WebdriverIO: `check-flow` (the check run against the fake site),
    `pages` (onboarding, popup, options, encryption, backup, result, status guide, language), `visual` (the
-   screenshots below) and `smoke`.
+   screenshots below), `site` (the built website, served from a local server under a made-up host name, in
+   Spanish, English and Catalan, light and dark, with an accessibility audit by axe-core) and `smoke`.
 
 A full run takes a few minutes. The captcha on the fake site is a stub that exists **only** on those fake pages.
 
@@ -203,7 +231,9 @@ certificate (`tls/`) and the files the backup spec exports (`backup/`).
 
 The `visual` spec photographs every extension page in its main states, in Spanish and English, at desktop
 (1280×800), phone (412×915) and popup (380×600) sizes, and three long pages, onboarding, options and the changed-status alert, whole at
-both widths: 100 images. The approved ones are **tracked** in [`e2e/baselines/`](e2e/baselines), because an image
+both widths: 104 images. It photographs the website too, served locally: the landing and privacy pages whole at
+both widths, and the changelog and 404 pages at 1280×800 and 412×915, each in Spanish, English and Catalan and in the
+light and dark themes: 48 images, 152 in all. The approved ones are **tracked** in [`e2e/baselines/`](e2e/baselines), because an image
 that changes is a change to review. A run fails when more than 0.01 % of an image's pixels differ. Chrome runs with
 reduced motion forced, so the animated logo is at rest and two runs on one machine agree to the pixel.
 
@@ -234,7 +264,7 @@ package that goes to the store.
 ```sh
 npm run logo:outline    # outlines brand/ text; needs the pinned Nunito and system UI font (see brand/README.md)
 npm run store:images    # renders the store icons and promotional tiles into store/
-npm run deploy:site     # publishes site/ to Cloudflare Workers (needs a Cloudflare login)
+npm run deploy:site     # builds the site, then publishes .output/site/ to Cloudflare Workers (needs a Cloudflare login)
 ```
 
 ## Security

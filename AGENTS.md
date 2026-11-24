@@ -22,7 +22,7 @@ locally and alerts loudly when the status changes. Not affiliated with the Minis
 - Dev: `npm run dev` (Chrome) / `npm run dev:firefox`
 - E2E (Chrome only): `npm run test:e2e` (headless, builds both browsers); `npm run test:e2e:headed`
 - E2E baselines: `npm run test:e2e:update-baselines` (rewrites `e2e/baselines/`)
-- Site check: `npm run check:site` (offline)
+- Site: `npm run build:site` (`site/` + `CHANGELOG.md` -> `.output/site/`); `npm run check:site` builds first, offline
 - Packages: `npm run zip`, `npm run zip:sources`
 
 ## Standards
