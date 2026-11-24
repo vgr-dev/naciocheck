@@ -4,10 +4,12 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   LANGUAGES,
+  PAGES,
   REQUIRED_PAGES,
   assetProblems,
   binaryProblems,
-  pageProblems,
+  linkProblems,
+  pageProblems as checkPage,
   parityProblems,
   siteProblems,
 } from '../scripts/check-site.mjs';
@@ -16,6 +18,25 @@ import {
  * Negative fixtures for the static-site gate. The real pages are checked by `npm run check:site`; these
  * cases keep the protocol-relative and CSS holes closed without starting a Worker or a browser.
  */
+
+/** The language a path belongs to: `en/` and `ca/` are their own, anything else is Spanish. */
+function languageOf(name: string): string {
+  return LANGUAGES.find((language) => language !== 'es' && name.startsWith(`${language}/`)) ?? 'es';
+}
+
+/** `html` with its `<html lang>` set to the language of the directory `name` is in. */
+function inLanguageOf(name: string, html: string): string {
+  return html.replace(/(<html\b[^>]*\slang=")[^"]*(")/i, `$1${languageOf(name)}$2`);
+}
+
+/**
+ * The page rules with the `lang` of every case matched to its path, so the cases that are about something
+ * else (scripts, links, metadata) stay valid on `en/` and `ca/` paths. The cases about `lang` itself call
+ * `checkPage` directly.
+ */
+function pageProblems(name: string, html: string): string[] {
+  return checkPage(name, inLanguageOf(name, html));
+}
 
 const VALID = `<!doctype html>
 <html lang="es">
@@ -74,6 +95,161 @@ describe('site page gate', () => {
         'site/index.html: no inline <style>',
       ]),
     );
+  });
+});
+
+/** A page with `extra` before the end of its body, whatever it is. */
+const inBody = (extra: string): string => VALID.replace('</body>', `${extra}</body>`);
+/** A page whose inline CSS is `css`. */
+const withCss = (css: string): string => VALID.replace('body { color: #0f172a; }', css);
+
+describe('site page gate: URLs are read the way a browser reads them', () => {
+  const BYPASSES: [string, string][] = [
+    ['a second srcset candidate', '<img srcset="/a.png 1x, //evil.example/b.png 2x" alt="" />'],
+    [
+      'a second srcset candidate with https',
+      '<img srcset="/a.png 1x, https://evil.example/b.png 2x" alt="" />',
+    ],
+    [
+      'a srcset candidate without a space after the comma',
+      '<img srcset="/a.png 1x,//evil.example/b.png 2x" alt="" />',
+    ],
+    [
+      'a srcset on a source element',
+      '<picture><source srcset="//evil.example/b.webp" /></picture>',
+    ],
+    ['a scheme without slashes', '<img src="https:evil.example/x.png" alt="" />'],
+    ['http without slashes in an href', '<a href="http:evil.example/">x</a>'],
+    ['a leading double backslash', '<img src="\\\\evil.example/x.png" alt="" />'],
+    ['a slash and a backslash', '<img src="/\\evil.example/x.png" alt="" />'],
+    ['a backslash after the scheme', '<img src="https:\\\\evil.example/x.png" alt="" />'],
+    ['leading whitespace', '<img src=" //evil.example/x.png" alt="" />'],
+    ['a leading tab and newline', '<img src="\t\n//evil.example/x.png" alt="" />'],
+    ['a tab inside the scheme', '<img src="ht\ttps://evil.example/x.png" alt="" />'],
+    ['decimal character references', '<img src="&#47;&#47;evil.example/x.png" alt="" />'],
+    ['hexadecimal character references', '<img src="&#x2f;&#x2F;evil.example/x.png" alt="" />'],
+    ['named character references', '<img src="&sol;&sol;evil.example/x.png" alt="" />'],
+    ['a colon written as a reference', '<img src="https&colon;//evil.example/x.png" alt="" />'],
+    ['a scheme written as references', '<img src="&#104;ttps://evil.example/x.png" alt="" />'],
+    ['an unquoted value', '<img src=//evil.example/x.png alt="" />'],
+    ['a poster', '<video poster="//evil.example/x.png"></video>'],
+    ['a form action', '<form action="https:evil.example/post"></form>'],
+    ['an object data', '<object data="//evil.example/x"></object>'],
+    ['a base href', '<base href="https:evil.example/" />'],
+    ['an href that is not a link at all', '<a href="javascript:alert(1)">x</a>'],
+    ['an SVG xlink:href', '<svg><use xlink:href="//evil.example/x.svg#a" /></svg>'],
+    ['a refresh', '<meta http-equiv="refresh" content="0;url=//evil.example/" />'],
+    ['a refresh in capitals', '<meta HTTP-EQUIV="Refresh" content="5" />'],
+    ['a refresh with no address', '<meta http-equiv=refresh content="30">'],
+    ['a refresh written as references', '<meta http-equiv="&#114;efresh" content="0" />'],
+  ];
+
+  it.each(BYPASSES)('rejects %s', (_label, html) => {
+    expect(pageProblems('index.html', inBody(html))).not.toEqual([]);
+  });
+
+  it.each(BYPASSES.filter(([label]) => label.includes('refresh')))(
+    'names the refresh in %s',
+    (_label, html) => {
+      expect(pageProblems('index.html', inBody(html)).join('\n')).toMatch(/refresh/);
+    },
+  );
+
+  it('names the attribute that reaches another origin', () => {
+    expect(
+      pageProblems('index.html', inBody('<img srcset="/a.png 1x, //evil.example/b.png 2x" />')),
+    ).toEqual(expect.arrayContaining([expect.stringContaining('through srcset')]));
+  });
+
+  const CSS_BYPASSES: [string, string][] = [
+    ['a CSS escape for the slashes', 'body{background:url("\\2f\\2f evil.example/x.png")}'],
+    ['a CSS escape for the slashes, unquoted', 'body{background:url(\\2f\\2f evil.example/x.png)}'],
+    ['a CSS escape for the scheme', 'body{background:url(\\68 ttps://evil.example/x.png)}'],
+    ['an escaped letter in url', 'body{background:ur\\6c("//evil.example/x.png")}'],
+    ['a scheme without slashes', 'body{background:url(https:evil.example/x.png)}'],
+    ['escaped backslashes', 'body{background:url(\\5c\\5c evil.example/x.png)}'],
+    ['an escaped @import', '@\\69mport "https://evil.example/x.css";'],
+    ['an image-set string', 'body{background:image-set("//evil.example/x.png" 1x)}'],
+    ['an escaped image-set string', 'body{background:image-set("\\2f\\2f evil.example/x.png" 1x)}'],
+  ];
+
+  it.each(CSS_BYPASSES)('rejects %s in a style block', (_label, css) => {
+    expect(pageProblems('index.html', withCss(css))).not.toEqual([]);
+  });
+
+  it('rejects remote and escaped URLs in a style attribute', () => {
+    for (const style of [
+      'background:url(//evil.example/x.png)',
+      'background:url(&#47;&#47;evil.example/x.png)',
+      'background:url(\\2f\\2f evil.example/x.png)',
+      'background:url(https:evil.example/x.png)',
+    ]) {
+      expect(pageProblems('index.html', inBody(`<p style="${style}">x</p>`))).not.toEqual([]);
+    }
+  });
+
+  it('accepts the plain forms the site uses', () => {
+    for (const html of [
+      '<img src="/img/a.png" srcset="/img/a-640.webp 640w, /img/a-1280.webp 1280w" sizes="100vw" alt="" />',
+      '<img srcset="/img/a.png, /img/b.png 2x" alt="" />',
+      '<a href="#top">Top</a>',
+      '<a href="privacy/?a=1&amp;b=2">Privacy</a>',
+      '<a href="https://vgr.cat/">Author</a>',
+      '<a href=" https://vgr.cat/ ">Author</a>',
+      '<a href="https&colon;//vgr.cat/">Author</a>',
+      '<meta http-equiv="content-language" content="es" />',
+      '<p style="margin:0;background:url(/img/a.png)">x</p>',
+      '<p style="background:url(#gradient)">x</p>',
+    ]) {
+      expect(pageProblems('index.html', inBody(html)), html).toEqual([]);
+    }
+    expect(pageProblems('index.html', withCss('body{background:url("/img/a.png")}'))).toEqual([]);
+    expect(
+      pageProblems('index.html', withCss('body{background:url(/img/a.png);content:"\\2014"}')),
+    ).toEqual([]);
+    expect(
+      pageProblems('index.html', withCss('body{background:image-set("/a.png" 1x, "/b.png" 2x)}')),
+    ).toEqual([]);
+  });
+
+  it('still allows the outbound links, the own-origin metadata and the Turnstile exceptions', () => {
+    const head = [
+      '<link rel="canonical" href="https://naciocheck.vgr.cat/" />',
+      '<link rel="alternate" hreflang="en" href="https://naciocheck.vgr.cat/en/" />',
+      '<link rel="me" href="https://vgr.cat/" />',
+      '<meta property="og:image" content="https://naciocheck.vgr.cat/social-card.png" />',
+      '<meta name="twitter:image" content="https://naciocheck.vgr.cat/social-card.png" />',
+    ].join('');
+    const links = [
+      '<a href="https://chromewebstore.google.com/detail/x">Chrome</a>',
+      '<a href="https://addons.mozilla.org/firefox/addon/x/">Firefox</a>',
+      '<a href="https://www.linkedin.com/in/vagonzal/">LinkedIn</a>',
+      '<a href="https://github.com/vgr-dev/naciocheck/issues">Issues</a>',
+    ].join('');
+    expect(pageProblems('index.html', inBody(`${head}${links}`))).toEqual([]);
+    expect(pageProblems('feedback/index.html', FEEDBACK)).toEqual([]);
+    expect(pageProblems('en/privacy/index.html', inBody(`<p>${ADDENDUM_LINK}</p>`))).toEqual([]);
+  });
+
+  it('still refuses what the exceptions do not cover', () => {
+    expect(pageProblems('index.html', inBody('<a href="https://evil.example/">x</a>'))).not.toEqual(
+      [],
+    );
+    expect(
+      pageProblems('index.html', inBody('<img src="https://naciocheck.vgr.cat/a.png" alt="" />')),
+    ).not.toEqual([]);
+    expect(
+      pageProblems(
+        'index.html',
+        inBody('<a href="https://github.com/vgr-dev/naciocheck-evil">x</a>'),
+      ),
+    ).not.toEqual([]);
+    expect(
+      pageProblems(
+        'index.html',
+        inBody('<a href="https://chromewebstore.google.com.evil.example/">x</a>'),
+      ),
+    ).not.toEqual([]);
   });
 });
 
@@ -313,14 +489,41 @@ describe('site gate: languages', () => {
     expect(LANGUAGES).toEqual(['es', 'en', 'ca']);
   });
 
-  it.each(['es', 'en', 'ca'])('accepts lang="%s"', (lang) => {
-    expect(pageProblems('index.html', VALID.replace('lang="es"', `lang="${lang}"`))).toEqual([]);
+  it.each(['es', 'en', 'ca'])('accepts lang="%s" on a page in that language', (lang) => {
+    const name = lang === 'es' ? 'index.html' : `${lang}/index.html`;
+    expect(checkPage(name, VALID.replace('lang="es"', `lang="${lang}"`))).toEqual([]);
   });
 
   it.each(['fr', 'ca-ES', ''])('rejects lang="%s"', (lang) => {
-    expect(pageProblems('index.html', VALID.replace('lang="es"', `lang="${lang}"`))).not.toEqual(
-      [],
-    );
+    expect(checkPage('index.html', VALID.replace('lang="es"', `lang="${lang}"`))).not.toEqual([]);
+  });
+
+  it.each(['es', 'en', 'ca'])('rejects a page whose lang is not its directory in %s', (home) => {
+    for (const lang of LANGUAGES.filter((language) => language !== home)) {
+      for (const page of PAGES) {
+        const name = home === 'es' ? page : `${home}/${page}`;
+        const html = FEEDBACK_PAGES.includes(name) ? FEEDBACK : VALID;
+        expect(checkPage(name, html.replace('lang="es"', `lang="${lang}"`)), name).toEqual([
+          `site/${name}: <html lang="${lang}"> but the page is in ${home}`,
+        ]);
+      }
+    }
+  });
+
+  it('accepts the matching lang on every required page', () => {
+    for (const name of REQUIRED_PAGES) {
+      const html = FEEDBACK_PAGES.includes(name) ? FEEDBACK : VALID;
+      expect(
+        checkPage(name, html.replace('lang="es"', `lang="${languageOf(name)}"`)),
+        name,
+      ).toEqual([]);
+    }
+  });
+
+  it('matches the lang to the directory, not to a name that only contains it', () => {
+    expect(checkPage('english/index.html', VALID)).toEqual([]);
+    expect(checkPage('catalan.html', VALID)).toEqual([]);
+    expect(checkPage('en.html', VALID)).toEqual([]);
   });
 
   it('accepts both scripts on the Catalan feedback page and nowhere else in ca/', () => {
@@ -619,15 +822,19 @@ describe('site gate: language parity', () => {
         writeFileSync(path, text);
       };
       for (const prefix of ['', 'en/']) {
-        write(`${prefix}index.html`, VALID.replace('lang="es"', 'lang="en"'));
-        write(`${prefix}privacy/index.html`, VALID);
+        write(`${prefix}index.html`, VALID.replace('lang="es"', `lang="${prefix ? 'en' : 'es'}"`));
+        write(
+          `${prefix}privacy/index.html`,
+          VALID.replace('lang="es"', `lang="${prefix ? 'en' : 'es'}"`),
+        );
       }
-      const parity = () => siteProblems(dir).filter((problem) => /ca\//.test(problem));
+      const parity = () =>
+        siteProblems(dir).filter((problem) => /ca\/.*(?:missing, es has|es has no)/.test(problem));
       expect(parity()).toEqual([]);
       write('ca/index.html', VALID.replace('lang="es"', 'lang="ca"'));
       expect(parity()).toEqual(['site/ca/privacy/index.html: missing, es has privacy/index.html']);
-      write('ca/privacy/index.html', VALID);
-      write('ca/extra/index.html', VALID);
+      write('ca/privacy/index.html', VALID.replace('lang="es"', 'lang="ca"'));
+      write('ca/extra/index.html', VALID.replace('lang="es"', 'lang="ca"'));
       expect(parity()).toEqual(['site/ca/extra/index.html: es has no extra/index.html']);
       rmSync(join(dir, 'ca/extra'), { recursive: true });
       expect(parity()).toEqual([]);
@@ -635,9 +842,185 @@ describe('site gate: language parity', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+});
 
-  it('still lists the six required pages until a later step widens them', () => {
-    expect(REQUIRED_PAGES).toHaveLength(6);
+/** Writes every required page, valid, with its lang, into `dir`. */
+function writeSite(dir: string, skip: readonly string[] = []): void {
+  for (const name of REQUIRED_PAGES) {
+    if (skip.includes(name)) continue;
+    const path = join(dir, name);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, inLanguageOf(name, FEEDBACK_PAGES.includes(name) ? FEEDBACK : VALID));
+  }
+}
+
+describe('site gate: every page in every language', () => {
+  it('requires the five pages in es, en and ca', () => {
+    expect(PAGES).toEqual([
+      'index.html',
+      'privacy/index.html',
+      'feedback/index.html',
+      'changelog/index.html',
+      '404.html',
+    ]);
+    expect(REQUIRED_PAGES).toHaveLength(15);
+    expect(new Set(REQUIRED_PAGES).size).toBe(15);
+    for (const language of LANGUAGES) {
+      for (const page of PAGES) {
+        expect(REQUIRED_PAGES).toContain(language === 'es' ? page : `${language}/${page}`);
+      }
+    }
+  });
+
+  it('passes a complete site', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-gate-all-'));
+    try {
+      writeSite(dir);
+      expect(siteProblems(dir)).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('a missing ca/changelog/index.html fails', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-gate-missing-'));
+    try {
+      writeSite(dir, ['ca/changelog/index.html']);
+      expect(siteProblems(dir)).toContain('site/ca/changelog/index.html: missing');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it.each(REQUIRED_PAGES)('a missing %s fails', (name) => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-gate-missing-'));
+    try {
+      writeSite(dir, [name]);
+      expect(siteProblems(dir)).toContain(`site/${name}: missing`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('fails a page whose lang is its sibling language, in a directory run', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-gate-lang-'));
+    try {
+      writeSite(dir);
+      writeFileSync(join(dir, 'ca/404.html'), VALID);
+      expect(siteProblems(dir)).toEqual([
+        'site/ca/404.html: <html lang="es"> but the page is in ca',
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('site gate: internal links', () => {
+  const FILES = new Set([
+    'index.html',
+    '404.html',
+    'privacy/index.html',
+    'en/index.html',
+    'en/privacy/index.html',
+    'ca/changelog/index.html',
+    'favicon.svg',
+    'img/screens/es/a-640.webp',
+    'feedback/feedback.js',
+  ]);
+  const links = (name: string, ...hrefs: string[]) =>
+    linkProblems(name, hrefs.map((href) => `<a href="${href}">x</a>`).join(''), FILES);
+
+  it.each([
+    ['/'],
+    ['/privacy/'],
+    ['/privacy'],
+    ['/privacy/index.html'],
+    ['/en/'],
+    ['/en'],
+    ['/ca/changelog/'],
+    ['/404.html'],
+    ['/favicon.svg'],
+    ['/img/screens/es/a-640.webp'],
+    ['/privacy/#cookies'],
+    ['/privacy/?from=home'],
+    ['/#how-it-works'],
+    ['#faq'],
+    [''],
+    ['/privacy/%69ndex.html'],
+  ])('accepts %s', (href) => {
+    expect(links('index.html', href)).toEqual([]);
+  });
+
+  it.each([
+    ['/nope/', 'a page that does not exist'],
+    ['/ca/', 'a language directory with no index'],
+    ['/ca/privacy/', 'a Catalan page that is missing'],
+    ['/changelog/', 'the Spanish changelog, absent here'],
+    ['/en/privacy.html', 'a file instead of a directory'],
+    ['/privacy/x.html', 'a file in a directory'],
+    ['/img/screens/es/b-640.webp', 'a missing image'],
+  ])('rejects %s (%s)', (href) => {
+    expect(links('index.html', href)).toEqual([
+      `site/index.html: link to ${href} reaches no page or file`,
+    ]);
+  });
+
+  it('resolves relative links against the page directory', () => {
+    expect(
+      links('privacy/index.html', '../', '../en/', '../favicon.svg', 'index.html', './'),
+    ).toEqual([]);
+    expect(links('en/privacy/index.html', '../', '../../privacy/', '../../404.html')).toEqual([]);
+    expect(links('404.html', 'privacy/', 'en/privacy/', './favicon.svg')).toEqual([]);
+    expect(links('privacy/index.html', 'missing/')).toEqual([
+      'site/privacy/index.html: link to missing/ reaches no page or file',
+    ]);
+    expect(links('404.html', '../privacy/')).toEqual([
+      'site/404.html: link to ../privacy/ reaches no page or file',
+    ]);
+    expect(links('privacy/index.html', '../../../privacy/')).toHaveLength(1);
+  });
+
+  it('checks <link href> too, and every tag with an href', () => {
+    const head = '<link rel="icon" href="/favicon.png" /><link rel="icon" href="/favicon.svg" />';
+    expect(linkProblems('index.html', head, FILES)).toEqual([
+      'site/index.html: link to /favicon.png reaches no page or file',
+    ]);
+    expect(linkProblems('index.html', '<area href="/nope/">', FILES)).toHaveLength(1);
+  });
+
+  it('leaves external, scheme and fragment-only links to the other rules', () => {
+    expect(
+      links(
+        'index.html',
+        'https://vgr.cat/',
+        'mailto:a@example.com',
+        '//evil.example/',
+        '#',
+        '#faq',
+      ),
+    ).toEqual([]);
+  });
+
+  it('reports each broken link once per page', () => {
+    expect(links('index.html', '/nope/', '/nope/')).toHaveLength(1);
+  });
+
+  it('fails a built directory with a broken link and passes it when the target appears', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-gate-links-'));
+    try {
+      writeSite(dir);
+      const page = join(dir, 'en/index.html');
+      writeFileSync(page, inLanguageOf('en/index.html', withBody('<a href="/en/about/">x</a>')));
+      expect(siteProblems(dir)).toEqual([
+        'site/en/index.html: link to /en/about/ reaches no page or file',
+      ]);
+      mkdirSync(join(dir, 'en/about'));
+      writeFileSync(join(dir, 'en/about/index.html'), '');
+      expect(siteProblems(dir).filter((problem) => problem.includes('link to'))).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

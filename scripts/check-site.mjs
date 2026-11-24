@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { join, posix, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
@@ -20,8 +20,18 @@ import { fileURLToPath } from 'node:url';
  * - the files served besides pages are `feedback/feedback.js` and images (`.png`, `.webp`, `.svg`, `.ico`);
  *   an SVG may not script, embed or reach anything outside itself.
  *
- * Languages: `LANGUAGES`. Spanish lives at the root, the others in their own directory, and every language
- * that exists must have the same set of pages as Spanish.
+ * Normalisation: a browser reads a URL attribute more generously than a regex does, so the gate reads it the
+ * same way before it judges it: character references are decoded, tabs and newlines are removed, the
+ * whitespace around it is trimmed and `\` counts as `/` (`normaliseUrl`). Every `srcset` candidate is judged,
+ * and a CSS `url()` or `image-set()` is judged after its escapes are resolved (`unescapeCss`). A URL that still
+ * starts with a scheme (`https:evil.example` included) or with `//` reaches another origin. `<meta
+ * http-equiv="refresh">` is refused outright.
+ *
+ * Languages: `LANGUAGES`. Spanish lives at the root, the others in their own directory, every language must
+ * have every page in `PAGES` (`REQUIRED_PAGES`), and every language that exists must have the same set of
+ * pages as Spanish. A page's `<html lang>` is its directory's language.
+ *
+ * Links: every same-origin `href` (starting with `/`, or relative) must reach a page or file in the site.
  */
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -38,17 +48,24 @@ const FEEDBACK_PAGES = LANGUAGES.map(
   (language) => `${languagePrefix(language)}feedback/index.html`,
 );
 
-/**
- * The pages the Worker has to serve: `/`, `/privacy/`, `/feedback/` and their `/en/` twins.
- */
-export const REQUIRED_PAGES = [
+/** The pages every language has, relative to its directory. */
+export const PAGES = [
   'index.html',
   'privacy/index.html',
   'feedback/index.html',
-  'en/index.html',
-  'en/privacy/index.html',
-  'en/feedback/index.html',
+  'changelog/index.html',
+  '404.html',
 ];
+
+/** The pages the Worker has to serve: every page in every language. */
+export const REQUIRED_PAGES = LANGUAGES.flatMap((language) =>
+  PAGES.map((page) => `${languagePrefix(language)}${page}`),
+);
+
+/** The language a page belongs to, from its directory: `en/…` and `ca/…` are theirs, anything else Spanish. */
+function languageOf(name) {
+  return LANGUAGES.find((language) => language !== 'es' && name.startsWith(`${language}/`)) ?? 'es';
+}
 
 /** The pages that may link Cloudflare's Turnstile Privacy Addendum (checked 2026-11-23). */
 const TURNSTILE_LINK_PAGES = [
@@ -142,11 +159,163 @@ function attributeValue(attributes, name) {
   return match ? (match[1] ?? match[2] ?? match[3] ?? '') : null;
 }
 
+/** The named character references that can spell a URL character; anything else cannot hide an address. */
+const NAMED_REFERENCES = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  sol: '/',
+  bsol: '\\',
+  colon: ':',
+  period: '.',
+  Tab: '\t',
+  NewLine: '\n',
+  num: '#',
+  quest: '?',
+  commat: '@',
+  lpar: '(',
+  rpar: ')',
+  semi: ';',
+};
+
+/** One code point from a number, or U+FFFD when it is not one. */
+function fromCodePoint(code) {
+  return Number.isInteger(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '�';
+}
+
+/** Decodes HTML character references (numeric with or without `;`, and the named ones above), once. */
+function decodeReferences(value) {
+  return value.replace(/&(?:#(\d+)|#x([0-9a-f]+)|([A-Za-z]+));?/gi, (whole, decimal, hex, name) => {
+    if (decimal !== undefined) return fromCodePoint(Number.parseInt(decimal, 10));
+    if (hex !== undefined) return fromCodePoint(Number.parseInt(hex, 16));
+    return Object.hasOwn(NAMED_REFERENCES, name) ? NAMED_REFERENCES[name] : whole;
+  });
+}
+
+/**
+ * A URL attribute value as a browser reads it: references decoded, tabs and newlines removed, the control
+ * characters and spaces around it trimmed, and `\` read as `/`.
+ * @param {string} value
+ * @returns {string}
+ */
+function normaliseUrl(value) {
+  const text = decodeReferences(value).replace(/[\t\n\r]/g, '');
+  let start = 0;
+  let end = text.length;
+  while (start < end && text.charCodeAt(start) <= 0x20) start += 1;
+  while (end > start && text.charCodeAt(end - 1) <= 0x20) end -= 1;
+  return text.slice(start, end).replaceAll('\\', '/');
+}
+
+/** Whether a normalised URL leaves the site: it starts with a scheme (`https:`, `mailto:`) or with `//`. */
+function reachesAnotherOrigin(url) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith('//');
+}
+
+/** The attributes that hold a URL, or a list of them (`srcset`, `ping`). */
+const URL_ATTRIBUTES = new Set([
+  'src',
+  'srcset',
+  'poster',
+  'data',
+  'action',
+  'href',
+  'formaction',
+  'cite',
+  'background',
+  'longdesc',
+  'ping',
+  'manifest',
+  'imagesrcset',
+]);
+
+/** An attribute, quoted or not, or one with no value. */
+const ATTRIBUTE = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g;
+
+/** The URLs in an attribute value: one, or every candidate of a list, which is split on commas and spaces. */
+function urlsIn(name, value) {
+  if (name !== 'srcset' && name !== 'imagesrcset' && name !== 'ping') return [normaliseUrl(value)];
+  return decodeReferences(value)
+    .split(/[\s,]+/)
+    .filter((token) => token !== '' && !/^\d+(?:\.\d+)?[wx]$/i.test(token))
+    .map(normaliseUrl);
+}
+
+/** CSS with its escapes resolved (`\2f ` is `/`, `\u` is `u`), so a spelling cannot hide `url(` or an address. */
+function unescapeCss(css) {
+  return css.replace(/\\(?:([0-9a-f]{1,6})[ \t\n\r\f]?|([^\n\r\f]))/gi, (whole, hex, character) =>
+    hex === undefined ? character : fromCodePoint(Number.parseInt(hex, 16)),
+  );
+}
+
+/** The ways CSS (after its escapes) may reach another origin: `@import`, a remote `url()` or `image-set()`. */
+function cssProblems(raw) {
+  const css = unescapeCss(raw);
+  const problems = [];
+  if (/@import/i.test(css)) problems.push('imports a stylesheet from CSS (@import)');
+  for (const [, , argument = ''] of css.matchAll(/url\(\s*(["']?)([^)]*)/gi)) {
+    if (reachesAnotherOrigin(normaliseUrl(argument))) {
+      problems.push('loads a remote url() from CSS');
+      break;
+    }
+  }
+  for (const [, list = ''] of css.matchAll(/image-set\(([^)]*)\)/gi)) {
+    if (
+      [...list.matchAll(/["']([^"']*)["']/g)].some(([, url = '']) =>
+        reachesAnotherOrigin(normaliseUrl(url)),
+      )
+    ) {
+      problems.push('loads a remote image from CSS (image-set())');
+      break;
+    }
+  }
+  return problems;
+}
+
+/**
+ * The problems found after normalising: a URL attribute (every `srcset` candidate included) that reaches
+ * another origin, a `style` attribute or `<style>` block whose CSS does, and `http-equiv="refresh"`. The
+ * addresses the gate allows must already be neutralised.
+ * @param {string} text
+ * @returns {string[]}
+ */
+function normalisedProblems(text) {
+  const found = new Set();
+  for (const [, tag = '', attributes = ''] of text.matchAll(START_TAG)) {
+    for (const [, rawName = '', double, single, bare] of attributes.matchAll(ATTRIBUTE)) {
+      const name = rawName.toLowerCase().replace(/^xlink:/, '');
+      const value = double ?? single ?? bare;
+      if (value === undefined) continue;
+      if (URL_ATTRIBUTES.has(name)) {
+        if (urlsIn(name, value).some(reachesAnotherOrigin)) {
+          found.add(
+            `reaches another origin through ${name}: a scheme, //, a backslash, a character reference or leading space does not hide it`,
+          );
+        }
+      } else if (name === 'style') {
+        for (const why of cssProblems(decodeReferences(value))) found.add(why);
+      } else if (
+        name === 'http-equiv' &&
+        tag.toLowerCase() === 'meta' &&
+        normaliseUrl(value).toLowerCase() === 'refresh'
+      ) {
+        found.add('has <meta http-equiv="refresh">: a redirect can leave the site');
+      }
+    }
+  }
+  for (const [, css = ''] of text.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)) {
+    for (const why of cssProblems(css)) found.add(why);
+  }
+  return [...found];
+}
+
 /** Replaces each quoted `attribute` value `accepts` approves with `"#"`, so the catch-all no longer sees it. */
 function neutralise(tag, attribute, accepts) {
   const pattern = new RegExp(`(\\s${attribute}\\s*=\\s*)(?:"([^"]*)"|'([^']*)')`, 'gi');
   return tag.replace(pattern, (whole, lead, double, single) =>
-    accepts(double ?? single ?? '') ? `${lead}"#"` : whole,
+    accepts(normaliseUrl(double ?? single ?? '')) ? `${lead}"#"` : whole,
   );
 }
 
@@ -233,17 +402,78 @@ export function pageProblems(name, text) {
   for (const { pattern, why } of FORBIDDEN) {
     if (pattern.test(checked)) problems.push(`site/${name}: ${why}`);
   }
+  for (const why of normalisedProblems(checked)) problems.push(`site/${name}: ${why}`);
 
   // The other half of "plain HTML with inline CSS": a page declares its language, scales on a phone, has a
   // title and carries its own styles.
-  if (!new RegExp(`<html[^>]+lang=["'](?:${LANGUAGES.join('|')})["']`, 'i').test(text)) {
+  const lang = /<html\b[^>]*\slang=["']([^"']*)["']/i.exec(text)?.[1]?.toLowerCase();
+  if (lang === undefined || !LANGUAGES.includes(lang)) {
     problems.push(`site/${name}: no <html lang="${LANGUAGES.join('|')}">`);
+  } else if (lang !== languageOf(name)) {
+    problems.push(`site/${name}: <html lang="${lang}"> but the page is in ${languageOf(name)}`);
   }
   if (!/<meta[^>]+name=["']viewport["']/i.test(text)) {
     problems.push(`site/${name}: no viewport meta`);
   }
   if (!/<title>[^<]+<\/title>/i.test(text)) problems.push(`site/${name}: no <title>`);
   if (!/<style>/i.test(text)) problems.push(`site/${name}: no inline <style>`);
+  return problems;
+}
+
+/** A URL that starts with a scheme (`https:`, `mailto:`): not a same-origin link. */
+const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+
+/**
+ * Where a same-origin `href` on page `name` points, as a path relative to the site root, or null when the link
+ * is not a same-origin link to check (empty, a `#fragment` only, a scheme, protocol-relative). A path that
+ * ends in `/` or has no last segment means that directory's `index.html`; a path that climbs above the root
+ * resolves to `../…`, which no file matches.
+ * @param {string} name the page the link is on, relative to the site root
+ * @param {string} href
+ * @returns {string | null}
+ */
+function linkTarget(name, href) {
+  const url = href.trim();
+  if (url === '' || url.startsWith('#') || url.startsWith('//') || HAS_SCHEME.test(url))
+    return null;
+  const path = url.split(/[?#]/, 1)[0] ?? '';
+  if (path === '') return null;
+  let decoded = path;
+  try {
+    decoded = decodeURI(path);
+  } catch {
+    // keep the raw path: it will not match a file, and is reported
+  }
+  // Relative to the site root, so a climb above it stays visible as a leading `../`.
+  const joined = path.startsWith('/')
+    ? decoded.replace(/^\/+/, '')
+    : posix.join(posix.dirname(name), decoded);
+  const target = posix.normalize(joined === '' ? '.' : joined);
+  return decoded.endsWith('/') || target === '.' ? posix.join(target, 'index.html') : target;
+}
+
+/**
+ * Checks that every same-origin `href` on a page reaches a file of the site: a page, or an image or the script.
+ * A directory path (`/privacy`, `/privacy/`) reaches its `index.html`; `#fragment` and `?query` are ignored.
+ * External links are governed by `pageProblems`. Offline: `files` is the set of site paths.
+ * @param {string} name the page, relative to the site root
+ * @param {string} text
+ * @param {ReadonlySet<string>} files every file in the site, relative to its root
+ * @returns {string[]}
+ */
+export function linkProblems(name, text, files) {
+  const problems = [];
+  const seen = new Set();
+  for (const [, , attributes] of text.matchAll(START_TAG)) {
+    const href = attributeValue(attributes ?? '', 'href');
+    if (href === null) continue;
+    const target = linkTarget(name, href);
+    if (target === null || seen.has(href)) continue;
+    seen.add(href);
+    const bare =
+      target.endsWith('/index.html') || files.has(target) ? target : `${target}/index.html`;
+    if (!files.has(bare)) problems.push(`site/${name}: link to ${href} reaches no page or file`);
+  }
   return problems;
 }
 
@@ -401,11 +631,13 @@ export function siteProblems(siteDir = SITE_DIR) {
   if (files.length === 0) problems.push('site/: no files');
 
   const pages = [];
+  const names = new Set(files.map((file) => relative(siteDir, file).split(sep).join('/')));
   for (const file of files) {
     const name = relative(siteDir, file).split(sep).join('/');
     if (name.endsWith('.html')) {
       pages.push(name);
-      problems.push(...pageProblems(name, readFileSync(file, 'utf8')));
+      const text = readFileSync(file, 'utf8');
+      problems.push(...pageProblems(name, text), ...linkProblems(name, text, names));
     } else if (MAGIC[extensionOf(name)]) {
       problems.push(...binaryProblems(name, readFileSync(file)));
     } else {
@@ -427,6 +659,6 @@ if (resolve(process.argv[1] ?? '') === SCRIPT_PATH) {
     process.exit(1);
   }
   console.log(
-    `Privacy site check passed: ${String(REQUIRED_PAGES.length)} pages (${REQUIRED_PAGES.join(', ')}), scripts only on the feedback pages, no other external references.`,
+    `Privacy site check passed: ${String(REQUIRED_PAGES.length)} pages (${REQUIRED_PAGES.join(', ')}), every internal link resolves, scripts only on the feedback pages, no other external references.`,
   );
 }
