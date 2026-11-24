@@ -99,3 +99,105 @@ No High and no Medium findings. Nothing in the images looks official or uses rea
 - The animated hero mark is photographed at rest (reduced motion forced).
 - Contrast outside the measured areas was judged by eye.
 - Install buttons are inert "Próximamente" placeholders, so no store link was exercised.
+
+---
+
+# Review after phases 7 and 8 (step 16)
+
+Date: 2026-11-24. Step 16 of `plan.md`. Reviewer: builder, following `.claude/commands/review-ui.md` (read-only). The
+sections above stay as the record of step 9; this section replaces them as the current state of the baselines.
+
+## Run record
+
+- **Regeneration:** the 48 old `site-*` files were deleted (104 baselines left), then
+  `E2E_UPDATE_BASELINES=1 E2E_SPEC=visual npm run test:e2e` recreated them. 22 passing, 0 failing; network guard
+  `seen 1061, answered by the fake site 1061, outside it 0`.
+- **Non-site baselines:** none changed, nothing restored. `git status --short e2e/baselines` lists 48 `M` entries, all
+  `site-*`. `git diff --stat 546835f -- e2e/baselines` is the same 48 files and `git diff --name-only 546835f --
+e2e/baselines | grep -vc /site-` prints 0, so the 104 extension baselines equal commit 546835f.
+- **Compare run 1:** 21 passing, **1 failing**: `options: editing an application` threw `The application card offers no
+edit action` at `e2e/specs/visual.e2e.ts:453` (the spec looks the edit button up right after `browser.url` and does not
+  wait for the card). It is an extension page, not a site page, and none of its images was written. Network guard
+  `seen 1064, outside it 0`.
+- **Compare run 2 (same tree, nothing changed in between):** 22 passing, 0 failing. `index.md`: 152 images, every row
+  `0 %`, above tolerance 0 (tolerance 0.01 %). Network guard `seen 1065, answered by the fake site 1065, outside it 0`.
+  Run 1 is a timing flake in an extension test the phases did not touch. The phase verify's own `npm run test:e2e` is
+  the third run; a repeat there would confirm the flake is rare.
+- **Fonts:** same as step 9 (headless Chrome for Testing 158.0.8127.88, reduced motion, DejaVu Sans Book). Pixels from
+  other fonts are not comparable; that is a limit, not a finding.
+- **Sizes:** landing 1280 px wide about 4.8 to 4.9 k px tall, 412 px wide about 6.5 k px.
+
+## Coverage
+
+All 48 images were opened, at different resolutions: `site-landing` es, en and ca, light and dark, at 412 (full size,
+four 1700 px slices per language set, three languages side by side), es light and es dark at 1280 (full size or 0.7
+scale in two or three slices), en and ca light and dark at 1280 (0.45 scale, two halves); `site-privacy` all 12 images as
+reduced sheets (0.4 at 1280, 0.6 at 412); `site-changelog` and `site-404` all 24 as thumbnails (0.5). Small print was
+read in the es and en landing images; the privacy text, changelog and 404 were judged from layout. The screenshots inside
+the landing page are store images scaled to the column and are not judged for their small text.
+
+## Earlier findings (step 9), status now
+
+| Step 9 # | Severity | Status           | Evidence                                                                                                                                                                                                                                                                                                                    |
+| -------- | -------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | Low      | **Open**         | The Catalan note ("L'extensió encara no està en català: les captures són en castellà.") still appears only under step 1; the hero banner is Spanish too (`site-landing-light-ca-full1280.png`, `-dark-ca-full412.png`).                                                                                                     |
+| 2        | Low      | **Fixed**        | The hero is the changed-result banner (red notice, old and new status), not the options screen; step 1 keeps the saved applications. They share no image file (rendered check: no hero `currentSrc` equals a step image).                                                                                                   |
+| 3        | Low      | **Fixed**        | The theme select left the header. At 390 and 412 px the header is 76 px tall in es, en and ca (one row); at 320 px it is 120 px in all three. Measured in the visible Chrome with same-origin iframes, 0 elements past the right edge. All the 412 baselines show one row (`site-landing-*-es-full412.png` against `-en-`). |
+| 4        | Low      | **Open**         | Privacy, changelog and 404 still sit in the narrower centred column against the landing's left edge. Not touched by the phases.                                                                                                                                                                                             |
+| 5        | Low      | **Open**         | The English footer link is still "Changelog" while the page is titled "What's new in NacioCheck".                                                                                                                                                                                                                           |
+| 6        | Low      | **Open**         | Store screenshots are still white slabs on the dark page; the hero banner adds a red and white block above the fold. Not a defect.                                                                                                                                                                                          |
+| 7        | Low      | **Partly fixed** | The hero banner is readable on a phone: the 16 px status lines render at about 12.3 px at 390 px (343 px wide of a 448 px image) and 13.0 px at 412 px. Step 1, step 3 and the status guide stay unreadable illustrations at 412, as designed.                                                                              |
+| 8        | Low      | **Open**         | FAQ and agency blocks still use about two thirds of the width at 1280.                                                                                                                                                                                                                                                      |
+| 9        | Low      | **Open**         | `site/_build/partials/landing.css:147` (`.hero-facts li::before`) still rotates a fixed 45 degrees; unchanged.                                                                                                                                                                                                              |
+
+The step 9 note on the audit's four Medium findings: the first two (forced-colours logo, colour-only language cue) and
+the hero duplication are fixed, see `baseline.md`, "After phases 7 and 8".
+
+## Findings
+
+No High and no Medium findings. Nothing looks official or uses real-looking personal data.
+
+| #   | Severity | Image(s)                                                                                              | What is wrong                                                                                                                                                                       | Why it matters                                                        | Direction for the fix                                                                                                                                |
+| --- | -------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 10  | Low      | `site-landing-light-es-full1280.png`, `site-landing-dark-en-full1280.png`, and the 412 landing images | The hero banner and step 3 show the same status-change alert: the banner is the top of the screen that step 3 shows whole.                                                          | A visitor sees the red notice twice within about 1500 px.             | Acceptable as it is: the banner is a crop and carries the old and new status, step 3 explains the screen. Revisit only if the page feels repetitive. |
+| 11  | Low      | `site-landing-*-es-full412.png`, `-en-`, `-ca-` (footer)                                              | The theme switcher segments are 36 px square, below the about 44 px the review asks of phone tap targets. They sit in a group with a 1 px border and about 117 x 41 px overall.     | Small tap targets for the one control that only matters occasionally. | The plan fixed the minimum at 32 px; raise to 44 px only if the owner wants it.                                                                      |
+| 12  | Low      | `site-changelog-*-412x915.png`, `site-404-*-412x915.png`                                              | The footer is taller than the viewport at 412 x 915 in es and ca, so the non-affiliation line is below the fold of the capture (as in step 9). The switcher now takes one more row. | The line is still on the page; the capture just cuts it.              | None needed; the full-page captures show it.                                                                                                         |
+
+The footer switcher itself reads well in all 48 images: three segments, monitor, sun and moon icons, the checked one
+filled with a stronger border, on the end of the footer row at 1280 and on its own row under the links at 412. The
+header is the logo and the three language links only, with the current language underlined (not colour alone) in light
+and dark.
+
+## Checked and fine
+
+- **Brand:** teal on white and on the dark navy, the wordmark and badge not stretched or recoloured, the badge keeps its
+  white disc in the dark theme. No flag, crest or official wording. The red banner in the hero is the extension's own
+  alert shown inside a product image.
+- **Not official:** the non-affiliation line is in every footer in all three languages (landing, privacy, and the 1280
+  captures of changelog and 404). The status guide teaser still opens with "Orientativo, no oficial.", "A guide, not
+  official." and "Orientatiu, no oficial."; the hero facts say "Proyecto independiente, no oficial".
+- **Layout:** no clipped, overlapped or overflowing element and no horizontal scroll in the 24 phone images; checked also
+  by script at 320 and 390 px on the landing, privacy, changelog and a 404 in es, en and ca (0 overflowing elements).
+  Install buttons stack on the phone; FAQ rows keep their centred plus signs.
+- **Text fit:** es and ca wrap one line more than en in the hero, steps and FAQ with no truncation. Every language is
+  complete: no raw key, no pseudo-locale marker. The official status names stay in Spanish on purpose. The switcher
+  legend and labels are localized (Theme, Auto, Light, Dark / Tema, Automàtic, Clar, Fosc).
+- **Themes:** light and dark both keep the brand; borders, links and the switcher group border are visible; the checked
+  segment is distinguishable without colour (fill and a stronger edge).
+- **Data:** only invented data: "Solicitud uno", "Solicitud dos", January and February 2026 dates, `X1234567L`. The only
+  personal name is the maintainer's credit in the footer, as published.
+- **Contrast:** judged by eye only; step 15's `tests/site-contrast.test.ts` pairs (lowest 3.49:1 for the switcher group
+  border on the dark band) are the computed figures. Nothing looks low.
+- **RTL source check (code, not pixels):** `site/_build/partials/*.css` and `src/*.css` have no `margin-left`,
+  `margin-right`, `padding-left`, `padding-right`, `border-left`, `border-right`, `left:`, `right:`, `float:` or
+  `text-align: left|right`. The only direction-dependent rule is finding 9. The switcher uses no physical offsets.
+  No RTL rendering was seen.
+
+## Not reviewed and limits
+
+- No image was left unopened, but small print in the en and ca landing images, the privacy sheets and the changelog
+  and 404 thumbnails was judged by layout.
+- The matrix has no hover, focus, open-FAQ, forced-colours, reduced-data, print or tablet state; those were checked by
+  hand (see `baseline.md`). The extension's own dark theme is not in the matrix.
+- One browser (Chrome for Testing, DejaVu Sans). Firefox and real device fonts are not covered.
+- The animated hero mark is photographed at rest (reduced motion forced). Install buttons are inert placeholders.

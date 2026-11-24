@@ -51,11 +51,11 @@ segmented footer switcher. The re-verify moved to Phase 9 as step 16.
 
 **Phase 8: Move the theme control to the footer**
 
-- [x] 15. Replace the theme select with a segmented footer switcher (uncommitted)
+- [x] 15. Replace the theme select with a segmented footer switcher (4e6afc3)
 
 **Phase 9: Re-verify the finished site**
 
-- [ ] 16. Regenerate the baselines and repeat the final checks
+- [~] 16. Regenerate the baselines and repeat the final checks
 
 ## Running steps in parallel
 

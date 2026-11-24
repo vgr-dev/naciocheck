@@ -316,3 +316,181 @@ Low findings checked:
   phone profile's Fast 4G and 4x CPU are Chrome's emulation, not a real device or network.
 - The warm regression with an `immutable` theme script was not measured (no served file was changed).
 - A fresh load at 768 px wide; the Windows Chrome versus Linux Chrome for Testing difference (E2E uses the latter).
+
+# After phases 7 and 8 (step 16)
+
+Captured 2026-11-24 from `af8ca40` plus the regenerated baselines (working tree otherwise clean apart from `plan.md`),
+with `npx wrangler dev` on `http://localhost:8787/` (inspector port 9230) in the visible Chrome 158 (MCP-controlled via
+`chrome-agent`), the same profiles as the Before protocol (desktop 1365 x 900 DPR 1 unthrottled; phone 390 x 844
+mobile/touch, Fast 4G, 4x CPU; dark scheme emulated; Spanish landing page). As in step 11, `666b6d9` was built in a
+temporary git worktree outside the repository and served on port 8788, and both sites were measured in the same session
+with the same settings. Its HTML (10,608 encoded bytes) and images match the Before section. The worktree, both Workers
+and a scratch static server were removed afterwards.
+
+## Deviations from the Before protocol
+
+- **Same-session reference, again.** The recorded Before medians come from another machine state, so the table compares
+  today's `666b6d9` run with today's run of the finished site. The step 11 "After" figures are shown as recorded.
+- **Plain reloads are the main series.** `navigate_page` reloads (cache bypassed for cold, cache enabled for warm) with
+  FCP, LCP and CLS read in the page from the Paint Timing and buffered observers. Traced samples are listed separately:
+  traced loads read about 180 ms slower than plain ones on this profile. Plain samples: phone 3 to 5 per cell, desktop 3.
+  Traced samples: phone cold 1 and warm 4 per site; none on desktop (it is not the profile the threshold uses).
+- **Extra warm series.** Because the plain and traced warm results disagreed (see the threshold section), I also loaded
+  the page nine times in a same-origin `iframe` 390 px wide under the same throttling (cache default, the first load
+  counted) and read each frame's own `first-contentful-paint`. This is a measurement aid, not part of the protocol.
+- INP was not measured; no CrUX data exists for localhost. `/favicon.svg` (548 bytes) is listed apart from the totals,
+  as in step 11.
+
+## Performance samples
+
+Times in milliseconds, CLS unitless. "Step 11 after" is the figure recorded in the section above.
+
+### Phone (390 x 844, Fast 4G, 4x CPU)
+
+| Load                     | Method   | Before (`666b6d9`, today)                             | Step 11 after (recorded) | Now (finished site)                                   | LCP element (now) |
+| ------------------------ | -------- | ----------------------------------------------------- | ------------------------ | ----------------------------------------------------- | ----------------- |
+| Cold FCP (= LCP)         | plain    | 252, 252, 260, 252, 256 (**252**)                     | 432, 428 (**430**)       | 356, 260, 384, 328, 252 (**328**)                     | `p.hero-value`    |
+| Cold FCP / LCP           | traced   | 508 / 507                                             | 612 / 611                | 472 / 468                                             | `p.hero-value`    |
+| Warm FCP (= LCP)         | plain    | 260, 240, 268 (**260**)                               | 496, 488, 428 (**488**)  | 256, 252, 264, 316 (**260**)                          | `p.hero-value`    |
+| Warm FCP, in-page frames | 9 frames | 232, 252, 240, 236, 316, 244, 252, 328, 248 (**248**) | n/a                      | 308, 284, 308, 248, 296, 236, 256, 236, 240 (**256**) | n/a               |
+| Warm FCP                 | traced   | 496, 456, 452*, 475* (**466**)                        | 624, 620 (**622**)       | 536, 496, 576, 471* (**516**)                         | `p.hero-value`    |
+| CLS                      | all      | 0.00                                                  | 0.00                     | 0.00 (every load)                                     |                   |
+
+\* LCP stands in for FCP in the samples where only the trace summary was read (FCP equalled LCP in every plain sample
+and every traced sample where both were read, within 3 ms).
+
+The traced warm loads split as TTFB plus render delay (ms). TTFB: before 166, 166, 166, 166; now 192, 178, 224, 166.
+Render delay: before 329, 289, 286, 309 (median 299); now 344, 315, 352, 305 (median 330).
+
+### Desktop (1365 x 900, unthrottled), plain
+
+| Load | Before (today) FCP / LCP                    | Step 11 after (recorded, FCP / LCP) | Now FCP / LCP                               | LCP element now                      |
+| ---- | ------------------------------------------- | ----------------------------------- | ------------------------------------------- | ------------------------------------ |
+| Cold | 28, 32, 40 (**32**) / 32, 32, 40 (**32**)   | 76 / 76 (traced)                    | 28, 128, 32 (**32**) / 28, 128, 32 (**32**) | `img` `result-changed-hero-448.webp` |
+| Warm | 28, 28, 128 (**28**) / 28, 36, 128 (**36**) | 92 / 192                            | 32, 64, 32 (**32**) / 40, 64, 32 (**40**)   | `img` `result-changed-hero-448.webp` |
+| CLS  | 0.00                                        | 0.00                                | 0.00                                        |                                      |
+
+Desktop numbers fall into two clusters (about 30 ms and about 130 ms) on both sites, so they swing between the clusters;
+three samples cannot separate any difference from that noise. Before's LCP element is `result-changed-640.webp`.
+
+## Theme-script threshold (phone, warm FCP, 50 ms)
+
+| Comparison                                    | Before |    Now | Change                                   |
+| --------------------------------------------- | -----: | -----: | ---------------------------------------- |
+| Plain reloads, median (3 and 4 samples)       | 260 ms | 260 ms | 0 ms                                     |
+| In-page frames, median (9 and 9 loads)        | 248 ms | 256 ms | +8 ms                                    |
+| Traced, median (4 and 4 samples)              | 466 ms | 516 ms | **+50 ms**                               |
+| Step 11 after against the same-session before | 252 ms | 488 ms | +236 ms (the regression phase 7 removed) |
+| Now against step 11 after, plain              | 488 ms | 260 ms | -228 ms                                  |
+
+**Not tripped on two of three measures, reached on the traced one.** Plain and in-page loads show no warm regression at
+the phone profile; the traced median reaches exactly 50 ms, from samples that spread over 44 ms (before) and 105 ms
+(now) and a server TTFB that varies by 58 ms between loads. The warm traced render delay is about 30 ms higher on the
+finished site (more HTML: 12,392 encoded bytes against 10,608, an inline script, two logo images). Whichever way
+this is read, the cause is not the one the threshold was written for: the page no longer requests a script, there is
+nothing to revalidate before first paint (every warm request is a 300-byte 304 for an image or the document, none for
+CSS or script), and the cold traced load is 36 ms faster than before's. I changed nothing and propose no `_headers`
+follow-up; if the owner reads the traced figure as a trip, the hashed-name rule would not apply, as there is no served
+script left. The decision is the owner's.
+
+Cold plain loads: the finished site's median (328 ms) is 76 ms above before's (252 ms), but the five samples range from
+252 to 384 against 252 to 260 for before, and the traced cold load is the other way round (472 against 508). The
+cold threshold in the plan is for warm loads; I record this spread as a point to watch, not a trip.
+
+## First-load requests and sizes (cold)
+
+Transfer bytes from Resource Timing, 300-byte per-response accounting included, as in Before.
+
+| Item                                    | Before phone | Step 11 phone |   Now phone | Before desktop | Step 11 desktop | Now desktop | Notes                                                                               |
+| --------------------------------------- | -----------: | ------------: | ----------: | -------------: | --------------: | ----------: | ----------------------------------------------------------------------------------- |
+| HTML (document)                         |       10,908 |        10,884 |      12,692 |         10,908 |          10,884 |      12,692 | 12,392 encoded body; includes the 2,196 byte inline theme script                    |
+| Script (external)                       |            0 |         1,068 |           0 |              0 |           1,068 |           0 | the bootstrap is inline now                                                         |
+| Logos and badge (SVG)                   |        4,637 |         8,199 |       8,199 |          4,637 |           8,199 |       8,199 | `logo-light` and `logo-dark` both load (3,562 + 3,563) plus the badge (1,074)       |
+| Hero screenshot                         |       20,806 |        11,192 |       7,552 |         20,806 |          11,192 |       9,966 | phone `result-changed-hero-342.webp` (7,252 body); desktop `-448.webp` (9,666 body) |
+| Step and status screenshots             |       34,914 |         7,862 |       7,862 |         34,914 |          28,668 |      28,668 | lazy; phone loads only the first step image                                         |
+| **HTML + script + images (no favicon)** |   **71,265** |    **39,205** |  **36,305** |     **71,265** |      **60,011** |  **59,525** |                                                                                     |
+| Change against Before                   |              |       -32,060 | **-34,960** |                |         -11,254 | **-11,740** | budget was at most +45 KiB                                                          |
+| Favicon                                 |          548 |           548 |         548 |            548 |             548 |         548 | not in the totals                                                                   |
+| Requests (no favicon)                   |            6 |             7 |           6 |              6 |               8 |           7 |                                                                                     |
+
+Warm reloads: 300 bytes per revalidated request, 1,800 without the favicon for 6 requests (phone).
+
+### Budgets
+
+| Budget                                  | Limit            | Measured                                                      | Result |
+| --------------------------------------- | ---------------- | ------------------------------------------------------------- | ------ |
+| Theme script, raw                       | 3 KiB (3,072 B)  | 2,196 B inline (`site/theme.js`)                              | Met    |
+| Hero image at the measured viewport     | aim up to 35 KiB | 7,252 B body (342w at 390 px), 9,666 B body (448w at 1365 px) | Met    |
+| Extra first-load transfer at each width | at most 45 KiB   | negative: -34,960 B phone, -11,740 B desktop                  | Met    |
+| LCP / CLS lab reference                 | 2.5 s / 0.1      | worst phone LCP 576 ms traced; CLS 0.00 throughout            | Met    |
+
+### Request waterfall (phone cold, plain, ms from navigation start, representative load)
+
+| Request                                                      | Sent |      Done |
+| ------------------------------------------------------------ | ---: | --------: |
+| `/` (document)                                               |    0 | about 200 |
+| `logo-light.svg`, `logo-dark.svg`, `icon-animated.svg`       |  206 |       404 |
+| `result-changed-hero-342.webp`                               |  207 |       418 |
+| `options-several-640.webp` (step 1, lazy, near the viewport) |  247 |       431 |
+| first paint (FCP and LCP)                                    |      |       260 |
+| `/favicon.svg`                                               |  430 |       620 |
+
+No script and no stylesheet request exists, so nothing but the document can block first paint. Both logo variants
+still download in every theme (one request more than Before). Not requested on the phone: `result-changed-640.webp`
+and `statuses-guide-640.webp` (lazy, below the fold). Rendered hero image: 343 x 244 CSS px at 390 wide, 364 x 259 at
+412 wide, 470 x 294 at 1365.
+
+## Manual states
+
+Driven in the visible Chrome with the `chrome` MCP tools; "same-origin" means only requests to `localhost` were made.
+
+| State                                | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Footer switcher, keyboard            | `Tab` from the last footer link lands on the checked radio (Auto) with `:focus-visible` and a 2.67 px solid ring on its 36 x 36 px segment. `ArrowRight` moves to Light and selects it (`data-theme="light"`, `naciocheck-theme` = `light`, `theme-color` pair `all                                                                                                                                                                                                                                                                                                                                                                                 | #ffffff`, `not all | #111827`), a second `ArrowRight`selects Dark (canvas`rgb(17,24,39)`, dark logo, `theme-color`pair swaps). Six real`Tab` presses from the page start reach the skip link, logo, es, en, ca and the privacy link in that order. Pass. |
+| Footer switcher, pointer             | A real click on the Light radio selects it and stores `light`; no focus ring after a pointer click. A script click on Auto stores `auto`. Pass.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Opposite-OS theme                    | OS dark with Light stored: white canvas and `logo-light.svg`, kept across a language switch and a page type (`/ca/privacy/`); the switcher there shows Tema, Automàtic, Clar, Fosc. Auto then follows the emulated scheme live (dark `rgb(17,24,39)` to white when the OS goes light). Pass.                                                                                                                                                                                                                                                                                                                                                        |
+| Forced colours                       | `forced-colors: active`, light system scheme with Dark stored: canvas white, header and hero show `logo-light.svg` (this is the case that hid "Nacio" in step 11). Dark system scheme with Light stored and with Dark stored: canvas black, `logo-dark.svg` in header and hero. The current language is weight 700 with a 2 px underline against weight 550 and none for the other links (the colour is the forced one for all), so it is not colour alone. The checked segment shows a cyan `Highlight` outline (screenshot) and the group keeps its border. Pass.                                                                                 |
+| Tab order                            | 20 controls in DOM order, 18 tab stops: skip link, logo, es, en, ca, privacy link, five FAQ summaries, agency link, the two credit links, three footer links and the switcher (one stop for three radios). Matches step 11's 18 with the select replaced by the radio group. Pass.                                                                                                                                                                                                                                                                                                                                                                  |
+| Header at 390 and 412 px, es, en, ca | 76 px tall in all six cases (one row), no theme control in the header, 0 elements past the edge, no horizontal scroll, switcher fully inside the viewport. At 320 px it is 120 px in all three languages with no overflow either. Pass.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Reflow                               | Landing (es, en, ca), `/ca/privacy/`, `/en/changelog/` and a missing path (404) at 320 px and 390 px: no horizontal scroll and no element past the viewport. The 320 px width stands for 400% zoom (not a browser zoom). Pass.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Reduced motion                       | `prefers-reduced-motion: reduce`: the switcher segment transition is 0.00001 s, scroll behaviour `auto`, no running animation, no element with motion above 20 ms. Pass.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Feedback theme control, offline      | The three feedback pages load `challenges.cloudflare.com` unconditionally. To avoid contacting it I served a copy of the built site from the scratchpad on `localhost:8790` with Python's static server, the Turnstile `<script>` tag removed from the three feedback pages only. The built header, inline theme script and `feedback.js` are untouched. The header has no theme control, the footer switcher has Auto checked on first load, and a real click on Light stores `light` and gives the white canvas under an OS dark scheme. Resource hosts: `localhost:8790` only. Pass. The Turnstile widget and the submission were not exercised. |
+| Responsive image selection           | At 390 the hero file is `result-changed-hero-342.webp`, at 412 and 1365 it is `-448.webp`; no hero image equals a step image at 360, 390 or 412 px (es, en, ca). Catalan uses the Spanish capture. Pass.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Hero legibility                      | The status lines are 16 px in the 448 px source, so they render at 12.3 px at 390 px (343 px wide), 13.0 px at 412 px and 11.2 px at 360 px. A screenshot at 390 px shows the notice, "Abierto - En tramitación" and "Antes: Abierto - Registrado." legibly. The 12 px target holds from about 336 px of image width (a 388 px viewport) up. Pass at 390, below the target at 360 (known from step 14).                                                                                                                                                                                                                                             |
+
+## Audit findings that a rendered check confirms or refutes
+
+1. **Logo under forced colours: fixed.** All three combinations that were wrong or dim in step 11 now follow the forced
+   palette (see the table). `tests/site-contrast.test.ts` and `e2e/specs/site-theme.e2e.ts` cover it as well.
+2. **Current-language tint: fixed.** Weight 700 plus a 2 px underline, in light, dark and forced colours; `aria-current`
+   stays; `touch-action: manipulation` is on the links.
+3. **Hero duplicates step 1: fixed.** The hero is the changed-result banner; step 1 shows the saved applications.
+4. **Phone screenshot legibility: fixed for the hero** (12.3 px at 390 px); the step 1, step 3 and status guide images
+   remain illustrations on a phone, with the text beside them carrying the meaning, as designed.
+5. **Theme script on repeat visits: fixed** (see the threshold section for the reading of the traced figure).
+
+## Unchanged scope checks
+
+- `git diff --stat 666b6d9 -- tests/fixtures` is empty (0 lines).
+- Against `666b6d9`, `src/`, `public/`, `store/`, `wxt.config.ts`, `package.json`, `package-lock.json` and
+  `scripts/allowed-urls.json` have no changes (0 lines of `--stat`).
+- `git diff --name-only 546835f -- e2e/baselines` lists 48 files, all `site-*`; the 104 extension baselines are
+  unchanged against 546835f and against `666b6d9`.
+- No dependency, manifest permission, host pattern or `allowed-urls.json` change in this step. I edited no source and
+  added nothing outside `e2e/baselines/chrome/site-*`, `visual-review.md` and this file.
+
+## Uncovered cases
+
+- Firefox (desktop and Android) and Safari: not run. The Firefox checklist and release gates stay as they are.
+  `:has()` support for the segment focus ring in Firefox is therefore unverified.
+- Real operating-system high-contrast mode: only Chrome's `forced-colors` emulation, with its own palette.
+- Browser zoom and text-only zoom: emulated by narrowing the viewport.
+- A browser without `light-dark()`: not rendered. Missing images and the 320 px FAQ wrapping were not repeated here;
+  the files they depend on were not changed in phases 7 and 8 except the hero image, whose footprint the E2E suite
+  checks.
+- Screen readers: not run; the accessibility tree was read through a Chrome snapshot only.
+- Turnstile and the live feedback submission: not exercised, by design.
+- Performance: Spanish landing page only; three to five plain samples per cell and four traced warm ones; no field
+  data; INP not measured; Fast 4G and 4x CPU are Chrome's emulation. Desktop timings are dominated by two clusters.
+- The traced warm comparison is at the 50 ms threshold with noisy samples; more samples on a quieter machine would
+  settle it.
