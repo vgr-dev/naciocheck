@@ -208,6 +208,11 @@ async function maskSavedDates(): Promise<void> {
  */
 async function openSitePage(path: string, theme: (typeof THEMES)[number]): Promise<void> {
   await browser.url(siteUrl(path));
+  // The site lazy-loads the screenshots below the fold, and a lazy image the page has not scrolled to never
+  // completes. Switching them to eager in the test (never in the build) makes every image load before the wait.
+  await browser.execute(() => {
+    for (const image of document.images) image.loading = 'eager';
+  });
   await browser.waitUntil(
     async () =>
       browser.execute(
