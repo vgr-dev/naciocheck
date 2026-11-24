@@ -15,8 +15,9 @@ import sharp from 'sharp';
  * - `img/OFL.txt`: a byte copy of `brand/OFL.txt`, the Nunito licence the brand rules require next to every
  *   outlined copy of the logotype, so it sits in the same directory as the logos.
  * - `img/screens/<es|en>/<name>-<640|1280>.webp`: the store screenshots the pages use (`SITE_SCREENS`), resized.
- * - `img/screens/<es|en>/options-several-hero-<640|832>.webp`: a focused crop of the saved applications
- *   list, composed from the same authentic screenshot for the narrow hero.
+ * - `img/screens/<es|en>/result-changed-hero-<342|448>.webp`: the hero banner, stacked from three bands of the
+ *   same authentic changed-result screenshot (see `HERO_BANDS`) so the notice and the old and new status stay
+ *   legible when the image is as narrow as a phone column. Pixels are never redrawn, only cropped and stacked.
  *   `tests/site-assets.test.ts` checks these against page references, so a screenshot is never shipped unused.
  *
  * `writeSiteAssets(outDir)` is called by the site build; the module never runs on import.
@@ -41,8 +42,28 @@ const FAVICON = 32;
 /** The screenshot languages the site has images for (Catalan uses `es`) and the two widths of each image. */
 const SCREEN_LANGUAGES = ['es', 'en'];
 const SCREEN_WIDTHS = [640, 1280];
-const HERO_WIDTHS = [640, 832];
-const HERO_CROP = { left: 224, top: 20, width: 832, height: 520 };
+
+/**
+ * The hero banner is built from the `result-changed` screenshot (1280x800) at its own pixel size, 448 px wide:
+ * at the phone column (342 CSS px at a 390 px viewport, 340 inside the 1 px border) it is shown at 340/448 = 0.76,
+ * so the 16 px status lines render at 12.1 px and the 24 px notice and 28 px new status at 18 and 21 px. Three bands, top to bottom:
+ *
+ * - `notice`: the red "status changed" notice, taken from its centre (the logo and the headline) because the
+ *   full 664 px width would need a scale of 0.51 and the old status would fall to 8 px;
+ * - `current`: the application name and the new status;
+ * - `previous`: the "Before: ..." line (the old status).
+ *
+ * The bands are the same in `es` and `en` (the two screenshots share one layout). Each is in screenshot pixels.
+ */
+const HERO_WIDTHS = [342, 448];
+const HERO_BANDS = {
+  width: 448,
+  gap: 14,
+  bottom: 12,
+  notice: { left: 416, top: 24, width: 448, height: 185 },
+  current: { left: 292, top: 296, width: 448, height: 68 },
+  previous: { left: 292, top: 430, width: 448, height: 32 },
+};
 
 /**
  * The store screenshots the pages show (`<name>-<lang>-1280x800.png` in `store/screenshots/<lang>/`). The
@@ -119,6 +140,22 @@ async function copyBrandSvgs(outDir) {
   return copies.map(([, target]) => target);
 }
 
+/** Stacks the three `HERO_BANDS` of a changed-result screenshot into one lossless PNG buffer, 448 px wide. */
+async function heroBanner(source) {
+  const { width, gap, bottom, notice, current, previous } = HERO_BANDS;
+  const band = (region) => sharp(source).extract(region).png().toBuffer();
+  const tops = [0, notice.height + gap, notice.height + gap + current.height + gap / 2];
+  const height = tops[2] + previous.height + bottom;
+  return sharp({ create: { width, height, channels: 3, background: '#FFFFFF' } })
+    .composite([
+      { input: await band(notice), left: 0, top: tops[0] },
+      { input: await band(current), left: 0, top: tops[1] },
+      { input: await band(previous), left: 0, top: tops[2] },
+    ])
+    .png()
+    .toBuffer();
+}
+
 async function writeScreens(outDir) {
   const written = [];
   for (const lang of SCREEN_LANGUAGES) {
@@ -131,14 +168,11 @@ async function writeScreens(outDir) {
         await sharp(source).resize({ width }).webp({ quality: 82 }).toFile(join(outDir, file));
         written.push(file);
       }
-      if (name === 'options-several') {
+      if (name === 'result-changed') {
+        const banner = await heroBanner(source);
         for (const width of HERO_WIDTHS) {
-          const file = `img/screens/${lang}/options-several-hero-${String(width)}.webp`;
-          await sharp(source)
-            .extract(HERO_CROP)
-            .resize({ width })
-            .webp({ quality: 82 })
-            .toFile(join(outDir, file));
+          const file = `img/screens/${lang}/result-changed-hero-${String(width)}.webp`;
+          await sharp(banner).resize({ width }).webp({ quality: 82 }).toFile(join(outDir, file));
           written.push(file);
         }
       }

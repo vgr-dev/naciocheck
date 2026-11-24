@@ -261,20 +261,37 @@ for (const { lang, prefix } of LANGUAGES) {
               width: rect.width,
               height: rect.height,
               viewportWidth: window.innerWidth,
+              stepSources: [
+                ...document.querySelectorAll<HTMLImageElement>('#how-it-works img'),
+              ].map((step) => new URL(step.src).pathname),
+              heroSharedWithSteps: [
+                ...document.querySelectorAll<HTMLImageElement>('#how-it-works img'),
+              ].some((step) => step.currentSrc === image.currentSrc),
               alt: image.alt,
               caption: image.closest('figure')?.querySelector('figcaption')?.textContent?.trim(),
             };
           });
           if (observation === null) throw new Error('Hero screenshot image was not found');
           expect(observation.src).toContain(
-            `/img/screens/${screenshotLocale}/options-several-hero-`,
+            `/img/screens/${screenshotLocale}/result-changed-hero-`,
           );
+          // Not step 1 again: no other image on the page uses the hero's file, and step 1 keeps the list.
+          expect(observation.stepSources).toContain(
+            `/img/screens/${screenshotLocale}/options-several-1280.webp`,
+          );
+          expect(observation.heroSharedWithSteps).toBe(false);
           expect(observation.complete).toBe(true);
           expect(observation.naturalWidth).toBeGreaterThan(0);
           expect(observation.naturalHeight).toBeGreaterThan(0);
           expect(observation.width).toBeGreaterThan(viewport.minImageWidth);
           expect(observation.width).toBeLessThanOrEqual(observation.viewportWidth);
-          expect(Math.abs(observation.height - observation.width / 1.6)).toBeLessThan(1);
+          // The banner is 448 x 318 at its own resolution: the footprint keeps those proportions.
+          expect(Math.abs(observation.height - (observation.width * 318) / 448)).toBeLessThan(1.5);
+          // The 16 px status lines of the 448 px source render at 12 CSS px or more at a 390 px viewport.
+          if (viewport.width === 390) {
+            const imageContentWidth = observation.width - 2; // the 1 px border on each side
+            expect((imageContentWidth / 448) * 16).toBeGreaterThanOrEqual(12);
+          }
           expect(observation.alt).toBeTruthy();
           expect(observation.caption).toBeTruthy();
           observations.push({

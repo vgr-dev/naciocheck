@@ -45,7 +45,7 @@
   color: var(--muted);
 }
 
-/* 1. Hero: the logo, whose badge is the animated icon, and the saved-applications screenshot. */
+/* 1. Hero: the logo, whose badge is the animated icon, and the changed-result banner. */
 
 .hero {
   padding-block: clamp(2.5rem, 6vw, 5rem) clamp(1rem, 2vw, 1.5rem);

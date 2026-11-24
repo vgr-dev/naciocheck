@@ -93,21 +93,33 @@ describe.each(PAGES)('the $lang landing page', (page) => {
     expect(doc.querySelector('#hero .hero-tagline')?.textContent?.trim()).toBe(page.tagline);
   });
 
-  it('shows a localized saved-applications capture in the hero at every width', () => {
+  it('shows a localized changed-result banner in the hero at every width, not step 1 again', () => {
     const image = doc.querySelector<HTMLImageElement>('#hero .hero-art img');
     expect(image?.getAttribute('src')).toBe(
-      `/img/screens/${page.screens}/options-several-hero-832.webp`,
+      `/img/screens/${page.screens}/result-changed-hero-448.webp`,
     );
-    expect((image?.getAttribute('srcset') ?? '').replace(/\s+/g, ' ')).toContain(
-      `/img/screens/${page.screens}/options-several-hero-640.webp 640w`,
-    );
-    expect((image?.getAttribute('srcset') ?? '').replace(/\s+/g, ' ')).toContain(
-      `/img/screens/${page.screens}/options-several-hero-832.webp 832w`,
-    );
+    const srcset = (image?.getAttribute('srcset') ?? '').replace(/\s+/g, ' ');
+    expect(srcset).toContain(`/img/screens/${page.screens}/result-changed-hero-342.webp 342w`);
+    expect(srcset).toContain(`/img/screens/${page.screens}/result-changed-hero-448.webp 448w`);
     expect(image?.getAttribute('sizes')).toBe('(min-width: 52rem) 29.5rem, calc(100vw - 3rem)');
-    expect(image?.getAttribute('alt')).toMatch(/solicitud|sol·licitud|application/i);
+    expect(image?.getAttribute('width')).toBe('448');
+    expect(image?.getAttribute('height')).toBe('318');
+    // The alt text states the change: the old and the new status as the sede names them.
+    const alt = image?.getAttribute('alt') ?? '';
+    const statuses =
+      page.screens === 'en'
+        ? ['Open - Registered', 'Open - In progress']
+        : ['Abierto - Registrado', 'Abierto - En tramitación'];
+    for (const status of statuses) expect(alt).toContain(status);
     expect(image?.getAttribute('loading')).not.toBe('lazy');
     expect(doc.querySelector('#hero .hero-art figcaption')?.textContent?.trim()).toBeTruthy();
+    // Step 1 keeps the saved-applications screen, step 3 the full changed-result screen.
+    const steps = [...doc.querySelectorAll('#how-it-works img[srcset]')].map((node) =>
+      node.getAttribute('src'),
+    );
+    expect(steps).toContain(`/img/screens/${page.screens}/options-several-1280.webp`);
+    expect(steps).toContain(`/img/screens/${page.screens}/result-changed-1280.webp`);
+    expect(html).not.toContain('options-several-hero');
   });
 
   it('lists the main path states in the order of MAIN_PATH_STATES', () => {
@@ -176,22 +188,22 @@ describe.each(PAGES)('the $lang landing page', (page) => {
     const shots = [...doc.querySelectorAll('img[srcset]')];
     expect(shots.length).toBeGreaterThanOrEqual(3);
     for (const shot of shots) {
-      const name = /\/img\/screens\/(es|en)\/([a-z-]+)-(1280|832)\.webp$/.exec(
+      const hero = shot.closest('#hero') !== null;
+      const largeWidth = hero ? 448 : 1280;
+      const smallWidth = hero ? 342 : 640;
+      const name = new RegExp(`^/img/screens/(es|en)/([a-z-]+)-${String(largeWidth)}\\.webp$`).exec(
         shot.getAttribute('src') ?? '',
       );
       expect(name?.[1]).toBe(page.screens);
       const srcset = (shot.getAttribute('srcset') ?? '').replace(/\s+/g, ' ');
-      const suffix = name?.[2]?.endsWith('-hero') ? '-hero' : '';
-      const imageName = suffix ? name?.[2]?.slice(0, -suffix.length) : name?.[2];
       expect(srcset).toContain(
-        `/img/screens/${page.screens}/${imageName ?? ''}${suffix}-640.webp 640w`,
+        `/img/screens/${page.screens}/${name?.[2] ?? ''}-${String(smallWidth)}.webp ${String(smallWidth)}w`,
       );
-      const largeWidth = suffix ? 832 : 1280;
       expect(srcset).toContain(
-        `/img/screens/${page.screens}/${imageName ?? ''}${suffix}-${String(largeWidth)}.webp ${String(largeWidth)}w`,
+        `/img/screens/${page.screens}/${name?.[2] ?? ''}-${String(largeWidth)}.webp ${String(largeWidth)}w`,
       );
       expect(shot.getAttribute('sizes')).toBeTruthy();
-      if (shot.closest('#hero')) {
+      if (hero) {
         expect(shot.getAttribute('loading')).not.toBe('lazy');
       } else {
         expect(shot.getAttribute('loading')).toBe('lazy');

@@ -117,17 +117,42 @@ describe('site assets', () => {
     }
   });
 
-  it('renders a 1.6:1 focused hero crop at 640 and 832 in es and en', async () => {
+  it('renders the changed-result hero banner at 342 and 448 in es and en, with a 448 px source', async () => {
     for (const lang of ['es', 'en']) {
-      for (const width of [640, 832]) {
-        const file = `img/screens/${lang}/options-several-hero-${String(width)}.webp`;
+      for (const width of [342, 448]) {
+        const file = `img/screens/${lang}/result-changed-hero-${String(width)}.webp`;
         expect(written).toContain(file);
-        expect(await size(file)).toMatchObject({
-          width,
-          height: width / 1.6,
-          format: 'webp',
-        });
+        const meta = await size(file);
+        expect(meta.format, file).toBe('webp');
+        expect(meta.width, file).toBe(width);
+        // Both widths keep the 448 x 318 proportions of the stacked bands (within a pixel of rounding).
+        expect(Math.abs(meta.height - (width * 318) / 448), file).toBeLessThanOrEqual(1);
       }
+    }
+  });
+
+  it('builds the hero banner from the changed-result screen, not the saved-applications list', async () => {
+    expect(written.some((file) => file.includes('options-several-hero'))).toBe(false);
+    for (const lang of ['es', 'en']) {
+      // The red notice fills the top band: its centre pixel is the notice red of the store screenshot.
+      const { data, info } = await sharp(
+        join(dir, `img/screens/${lang}/result-changed-hero-448.webp`),
+      )
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const at = (x: number, y: number): number[] => {
+        const i = (y * info.width + x) * info.channels;
+        return [data[i] ?? 0, data[i + 1] ?? 0, data[i + 2] ?? 0];
+      };
+      const [r, g, b] = at(20, 20);
+      expect(r, lang).toBeGreaterThan(190);
+      expect(g, lang).toBeLessThan(70);
+      expect(b, lang).toBeLessThan(70);
+      // Below the notice the page is white.
+      expect(
+        at(info.width - 8, info.height - 8).every((channel) => channel > 245),
+        lang,
+      ).toBe(true);
     }
   });
 
