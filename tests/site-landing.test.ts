@@ -224,18 +224,12 @@ describe('the landing stylesheet', () => {
 
   describe('contrast of the pairs it adds', () => {
     const SOURCE = BASE.replace(/\/\*[\s\S]*?\*\//g, '');
-    const light = /^:root\s*\{([^}]*)\}/m.exec(SOURCE)?.[1] ?? '';
-    const dark =
-      /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root\s*\{([^}]*)\}\s*\}/.exec(
-        SOURCE,
-      )?.[1] ?? '';
-
-    const tokens = (block: string) =>
-      new Map(
-        [...block.matchAll(/--([\w-]+)\s*:\s*(#[0-9a-fA-F]{6})\s*;/g)].map(
-          (match) => [match[1] ?? '', (match[2] ?? '').toLowerCase()] as const,
-        ),
-      );
+    const palette = /^:root\s*\{([^}]*)\}/m.exec(SOURCE)?.[1] ?? '';
+    const entries = [
+      ...palette.matchAll(
+        /--([\w-]+)\s*:\s*light-dark\(\s*(#[\da-f]{6})\s*,\s*(#[\da-f]{6})\s*\)\s*;/gi,
+      ),
+    ];
 
     const luminance = (hex: string) => {
       const channel = (offset: number) => {
@@ -261,12 +255,12 @@ describe('the landing stylesheet', () => {
       ['accent', 'band', 3, 'timeline dots on the status band'],
     ];
 
-    for (const [theme, block] of [
-      ['light', light],
-      ['dark', dark],
+    for (const [theme, valueIndex] of [
+      ['light', 2],
+      ['dark', 3],
     ] as const) {
+      const map = new Map(entries.map((entry) => [entry[1] ?? '', entry[valueIndex] ?? '']));
       it.each(PAIRS)(`${theme}: %s on %s reaches %s:1 (%s)`, (foreground, background, minimum) => {
-        const map = tokens(block);
         const ratio = contrast(map.get(foreground) ?? '', map.get(background) ?? '');
         expect(ratio, `${foreground} on ${background}`).toBeGreaterThanOrEqual(minimum);
       });

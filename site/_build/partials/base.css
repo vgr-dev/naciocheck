@@ -1,8 +1,8 @@
 /*
  * NacioCheck site: shared layout and both themes. The build inlines it into every page (the style marker).
  *
- * Colours live only in the two token blocks below; every rule after them uses `var()`.
- * `tests/site-contrast.test.ts` reads both blocks and checks WCAG AA for each text and focus pair, so a
+ * Colours live in the paired palette and its light-only fallback. Other rules use `var()`.
+ * `tests/site-contrast.test.ts` checks WCAG AA for both schemes and the light fallback, so a
  * new colour pairing needs a new line in that test. Brand values come from `brand/README.md`.
  * System fonts only: nothing is ever loaded from elsewhere.
  */
@@ -11,71 +11,110 @@
   color-scheme: light dark;
 
   /* Surfaces */
-  --bg: #ffffff;
-  --band: #f0fdfa;
-  --surface: #ffffff;
-  --code-bg: #f0fdfa;
+  --bg: light-dark(#ffffff, #111827);
+  --band: light-dark(#f0fdfa, #0f1f26);
+  --surface: light-dark(#ffffff, #172130);
+  --code-bg: light-dark(#f0fdfa, #0f2a2c);
 
   /* Text */
-  --fg: #0f172a;
-  --muted: #4b5563;
-  --heading: #115e59;
-  --accent: #0f766e;
-  --accent-hover: #115e59;
-  --accent-soft: #ccfbf1;
-  --accent-soft-fg: #134e4a;
+  --fg: light-dark(#0f172a, #f1f5f9);
+  --muted: light-dark(#4b5563, #a3acb9);
+  --heading: light-dark(#115e59, #99f6e4);
+  --accent: light-dark(#0f766e, #5eead4);
+  --accent-hover: light-dark(#115e59, #99f6e4);
+  --accent-soft: light-dark(#ccfbf1, #134e4a);
+  --accent-soft-fg: light-dark(#134e4a, #f0fdfa);
 
   /* Lines: decorative hairlines never mark a control; controls use --control-border (3:1). */
-  --border: #e2e8f0;
-  --card-border: #99f6e4;
-  --control-border: #64748b;
+  --border: light-dark(#e2e8f0, #263244);
+  --card-border: light-dark(#99f6e4, #1f4d4b);
+  --control-border: light-dark(#64748b, #6b7280);
 
   /* Buttons and focus */
-  --button-bg: #0f766e;
-  --button-bg-hover: #115e59;
-  --button-fg: #ffffff;
-  --focus: #0f766e;
+  --button-bg: light-dark(#0f766e, #5eead4);
+  --button-bg-hover: light-dark(#115e59, #99f6e4);
+  --button-fg: light-dark(#ffffff, #042f2e);
+  --focus: light-dark(#0f766e, #5eead4);
 
   /* Decorative edge on the header: teal-700 to teal-500, carries no text. */
-  --edge-start: #0f766e;
-  --edge-end: #14b8a6;
+  --edge-start: light-dark(#0f766e, #14b8a6);
+  --edge-end: light-dark(#14b8a6, #5eead4);
 
   --font-sans:
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial, sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-size-hero: clamp(1.75rem, 1.35rem + 1.6vw, 2.5rem);
+  --font-size-section: clamp(1.4rem, 1.25rem + 0.65vw, 1.75rem);
+  --font-size-subheading: clamp(1.15rem, 1.1rem + 0.25vw, 1.25rem);
+  --font-size-body: 1.0625rem;
+  --font-size-small: 0.9375rem;
+  --font-weight-title: 750;
+  --font-weight-section: 700;
+  --font-weight-subheading: 650;
+  --line-height-body: 1.65;
   --page-max: 72rem;
-  --measure: 46rem;
+  --measure: 68ch;
   --gutter: clamp(1rem, 4vw, 2rem);
   --radius: 12px;
   --radius-small: 8px;
 }
 
-@media (prefers-color-scheme: dark) {
+@supports not (color: light-dark(#000, #fff)) {
   :root {
-    --bg: #111827;
-    --band: #0f1f26;
-    --surface: #172130;
-    --code-bg: #0f2a2c;
+    color-scheme: light;
+    --bg: #ffffff;
+    --band: #f0fdfa;
+    --surface: #ffffff;
+    --code-bg: #f0fdfa;
+    --fg: #0f172a;
+    --muted: #4b5563;
+    --heading: #115e59;
+    --accent: #0f766e;
+    --accent-hover: #115e59;
+    --accent-soft: #ccfbf1;
+    --accent-soft-fg: #134e4a;
+    --border: #e2e8f0;
+    --card-border: #99f6e4;
+    --control-border: #64748b;
+    --button-bg: #0f766e;
+    --button-bg-hover: #115e59;
+    --button-fg: #ffffff;
+    --focus: #0f766e;
+    --edge-start: #0f766e;
+    --edge-end: #14b8a6;
+  }
+}
 
-    --fg: #f1f5f9;
-    --muted: #a3acb9;
-    --heading: #99f6e4;
-    --accent: #5eead4;
-    --accent-hover: #99f6e4;
-    --accent-soft: #134e4a;
-    --accent-soft-fg: #f0fdfa;
+/* The fallback keeps the light wordmark in browsers using the light-only palette. */
+:root .logo-for-dark {
+  display: none;
+}
 
-    --border: #263244;
-    --card-border: #1f4d4b;
-    --control-border: #6b7280;
+@supports (color: light-dark(#000, #fff)) {
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
 
-    --button-bg: #5eead4;
-    --button-bg-hover: #99f6e4;
-    --button-fg: #042f2e;
-    --focus: #5eead4;
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+  }
 
-    --edge-start: #14b8a6;
-    --edge-end: #5eead4;
+  :root[data-theme='dark'] .logo-for-light {
+    display: none;
+  }
+
+  :root[data-theme='dark'] .logo-for-dark {
+    display: block;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .logo-for-light {
+      display: none;
+    }
+
+    :root:not([data-theme]) .logo-for-dark {
+      display: block;
+    }
   }
 }
 
@@ -98,8 +137,8 @@ body {
   min-block-size: 100vh;
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1.0625rem;
-  line-height: 1.65;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
   color: var(--fg);
   background: var(--bg);
   overflow-wrap: break-word;
@@ -120,21 +159,21 @@ h3 {
 h1 {
   margin-block: 0 0.5rem;
   font-size: clamp(1.85rem, 1.45rem + 1.6vw, 2.5rem);
-  font-weight: 750;
+  font-weight: var(--font-weight-title);
   color: var(--fg);
 }
 
 h2 {
   margin-block: 2.5rem 0.6rem;
-  font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.45rem);
-  font-weight: 700;
+  font-size: var(--font-size-section);
+  font-weight: var(--font-weight-section);
   color: var(--heading);
 }
 
 h3 {
   margin-block: 1.75rem 0.5rem;
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: var(--font-size-subheading);
+  font-weight: var(--font-weight-subheading);
   color: var(--fg);
 }
 
@@ -332,7 +371,7 @@ svg {
 }
 
 .hint {
-  font-size: 0.95rem;
+  font-size: var(--font-size-small);
   color: var(--muted);
 }
 
@@ -496,7 +535,7 @@ a.install:hover {
 }
 
 .install-note {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-small);
   font-weight: 550;
   letter-spacing: 0.02em;
   color: var(--muted);
@@ -507,7 +546,7 @@ a.install:hover {
 .site-footer {
   padding-block: 2.5rem 2rem;
   padding-inline: max(var(--gutter), (100% - var(--page-max)) / 2);
-  font-size: 0.9375rem;
+  font-size: var(--font-size-small);
   color: var(--muted);
   background: var(--band);
   border-block-start: 1px solid var(--border);
@@ -553,7 +592,7 @@ a.install:hover {
 .footer-note {
   margin-block: 2rem 0;
   padding-block-start: 1.25rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-small);
   border-block-start: 1px solid var(--border);
 }
 

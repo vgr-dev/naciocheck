@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The site's shared stylesheet (`site/_build/partials/base.css`) defines its colours as tokens on `:root`, and
- * again under `@media (prefers-color-scheme: dark)`. This test reads both blocks and checks WCAG 2.2 AA for
+ * The site's shared stylesheet (`site/_build/partials/base.css`) defines its paired colour tokens on `:root`.
+ * This test reads both modes and the light fallback and checks WCAG 2.2 AA for
  * every pairing the stylesheet uses: 4.5:1 for text, 3:1 for focus rings and control boundaries. A new
  * pairing in the CSS needs a new line in `PAIRS`.
  */
@@ -12,22 +12,19 @@ import { describe, expect, it } from 'vitest';
 const CSS = readFileSync(resolve(import.meta.dirname, '../site/_build/partials/base.css'), 'utf8');
 const SOURCE = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
 
-const LIGHT_BLOCK = /^:root\s*\{([^}]*)\}/m.exec(SOURCE)?.[1] ?? '';
-const DARK_BLOCK =
-  /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root\s*\{([^}]*)\}\s*\}/.exec(SOURCE)?.[1] ??
-  '';
-
-function colourTokens(block: string): Map<string, string> {
-  const tokens = new Map<string, string>();
-  for (const match of block.matchAll(/--([\w-]+)\s*:\s*(#[0-9a-fA-F]{6})\s*;/g)) {
-    tokens.set(match[1] ?? '', (match[2] ?? '').toLowerCase());
-  }
-  return tokens;
-}
-
+const PALETTE = /^:root\s*\{([^}]*)\}/m.exec(SOURCE)?.[1] ?? '';
+const FALLBACK =
+  /@supports not \(color: light-dark\(#000, #fff\)\)\s*\{\s*:root\s*\{([^}]*)\}\s*\}/.exec(
+    SOURCE,
+  )?.[1] ?? '';
+const PALETTE_ENTRIES = [
+  ...PALETTE.matchAll(
+    /--([\w-]+)\s*:\s*light-dark\(\s*(#[\da-f]{6})\s*,\s*(#[\da-f]{6})\s*\)\s*;/gi,
+  ),
+];
 const THEMES = {
-  light: colourTokens(LIGHT_BLOCK),
-  dark: colourTokens(DARK_BLOCK),
+  light: new Map(PALETTE_ENTRIES.map(([, name = '', light = '']) => [name, light.toLowerCase()])),
+  dark: new Map(PALETTE_ENTRIES.map(([, name = '', , dark = '']) => [name, dark.toLowerCase()])),
 } as const;
 
 function luminance(hex: string): number {
@@ -76,13 +73,22 @@ const PAIRS: [string, string, number, string][] = [
 ];
 
 describe('site colour tokens', () => {
-  it('finds both theme blocks', () => {
-    expect(THEMES.light.size).toBeGreaterThan(10);
-    expect(THEMES.dark.size).toBeGreaterThan(10);
+  it('defines each paired colour once', () => {
+    expect(PALETTE_ENTRIES.length).toBeGreaterThan(10);
+    expect(THEMES.light.size).toBe(PALETTE_ENTRIES.length);
+    expect(
+      PALETTE.replaceAll(/light-dark\(\s*#[\da-f]{6}\s*,\s*#[\da-f]{6}\s*\)/gi, ''),
+    ).not.toMatch(/#(?:[\da-f]{3}){1,2}\b/i);
   });
 
-  it('redefines every colour token for the dark theme, and adds none', () => {
-    expect([...THEMES.dark.keys()].sort()).toEqual([...THEMES.light.keys()].sort());
+  it('uses the same palette and native scheme in the light fallback', () => {
+    const fallbackColours = new Map(
+      [...FALLBACK.matchAll(/--([\w-]+)\s*:\s*(#[\da-f]{6})\s*;/gi)].map(
+        ([, name = '', colour = '']) => [name, colour.toLowerCase()],
+      ),
+    );
+    expect(fallbackColours).toEqual(THEMES.light);
+    expect(FALLBACK).toMatch(/color-scheme:\s*light\s*;/);
   });
 
   it('keeps the brand teal for links and buttons (brand/README.md)', () => {
@@ -111,11 +117,32 @@ describe('site colour tokens', () => {
 });
 
 describe('site stylesheet rules', () => {
-  const outsideTokens = SOURCE.replace(LIGHT_BLOCK, '').replace(DARK_BLOCK, '');
+  const supportGuard = '@supports (color: light-dark(#000, #fff))';
+  const [withoutSupport = '', withSupport = ''] = SOURCE.split(supportGuard);
+  const outsideTokens = SOURCE.replace(PALETTE, '')
+    .replace(FALLBACK, '')
+    .replaceAll(/light-dark\(#000, #fff\)/g, '');
 
   it('uses colours only through the tokens', () => {
     expect(outsideTokens).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(outsideTokens).not.toMatch(/\brgba?\(|\bhsla?\(/);
+  });
+
+  it('matches the wordmark and native scheme to the effective palette', () => {
+    expect(PALETTE).toMatch(/color-scheme:\s*light dark\s*;/);
+    expect(withoutSupport).toMatch(/:root \.logo-for-dark\s*\{\s*display:\s*none\s*;/);
+    expect(withoutSupport).not.toMatch(/:root\[data-theme|\.logo-for-light/);
+    expect(withSupport).toMatch(/:root\[data-theme='light'\]\s*\{\s*color-scheme:\s*light\s*;/);
+    expect(withSupport).toMatch(/:root\[data-theme='dark'\]\s*\{\s*color-scheme:\s*dark\s*;/);
+    expect(withSupport).toMatch(
+      /:root\[data-theme='dark'\] \.logo-for-light\s*\{\s*display:\s*none;/,
+    );
+    expect(withSupport).toMatch(
+      /:root\[data-theme='dark'\] \.logo-for-dark\s*\{\s*display:\s*block;/,
+    );
+    expect(withSupport).toMatch(
+      /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme\]\) \.logo-for-light\s*\{\s*display:\s*none;\s*\}\s*:root:not\(\[data-theme\]\) \.logo-for-dark\s*\{\s*display:\s*block;/,
+    );
   });
 
   it('loads nothing: no url(), @import or @font-face', () => {

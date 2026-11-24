@@ -12,13 +12,13 @@ Scope revised on 2026-11-24 at the owner’s request to use static product scree
 **Phase 1: Baseline and site policy**
 
 - [x] 1. Record the performance and visual baseline (c563e0b)
-- [x] 2. Allow the theme script and enforce the static-image policy (uncommitted)
+- [x] 2. Allow the theme script and enforce the static-image policy (546835f)
 - [-] 3. Produce the offline demo clips and posters (withdrawn)
 - [-] 4. Serve WebM and byte ranges from the offline site server (withdrawn)
 
 **Phase 2: Tokens and type scale**
 
-- [ ] 5. Make the palette theme-switchable and set the type scale
+- [x] 5. Make the palette theme-switchable and set the type scale (uncommitted)
 
 **Phase 3: Theme selection and landing sections**
 
@@ -230,9 +230,10 @@ Withdrawn with the clips. See `progress.md` for prior work.
   the effective theme, in Auto through the media query and in explicit modes through the root
   attribute, so they also work with JavaScript disabled. Without a `data-theme` attribute the
   pages look as before apart from the measure and type scale.
-- **Files:** `site/_build/partials/base.css`, `tests/site-contrast.test.ts`.
-- **Verify:** `npx vitest run tests/site-contrast.test.ts`. The test reads both sides of every
-  `light-dark()` pair and checks each text, icon and focus pairing in both modes.
+- **Files:** `site/_build/partials/base.css`, `tests/site-contrast.test.ts`,
+  `tests/site-landing.test.ts` (palette parsing only).
+- **Verify:** `npx vitest run tests/{site-contrast,site-landing}.test.ts`. Both contrast suites read
+  the `light-dark()` palette and check their existing text, icon and focus pairings in both modes.
 - **Out of scope:** Header markup, the theme control, landing sections.
 
 ## Phase 3: Theme selection and landing sections

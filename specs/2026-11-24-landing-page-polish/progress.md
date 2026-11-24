@@ -96,3 +96,38 @@ fix(e2e): serve WebM byte ranges
   remains recorded in `demo-assets.md` for context.
 - The verification chain passed. It included all 1,428 tests, lint, format, typecheck, and
   the site gate on all 15 pages. The build contained no demo videos.
+
+## 2026-11-24 - Step 5: Make the palette theme-switchable and set the type scale
+
+- **Status:** done
+- **Changed:** `site/_build/partials/base.css`, `tests/site-contrast.test.ts`,
+  `tests/site-landing.test.ts`
+- **Verified:** `npx vitest run tests/{site-contrast,site-landing}.test.ts` passed 115 tests with
+  local loopback access. Targeted format and whitespace checks passed. A visible Chrome smoke
+  check using the shared CSS passed Auto, Light and Dark against both system schemes. It also
+  passed a simulated unsupported-feature check for the light fallback and wordmark selectors.
+- **Commit:** uncommitted, proposed "refactor(site): consolidate theme palette and type scale"
+- **Run by:** implement-phase (builder subagent, model GPT-6 inherited)
+- **Proposed commit (builder):**
+
+```
+refactor(site): consolidate theme palette and type scale
+```
+
+- **Open issues:** Steps 6 and 7 connect the prepared wordmark classes to the page markup.
+  Until then, existing browser-selected wordmarks can mismatch the light palette in browsers
+  that lack `light-dark()` and prefer dark. Visual baselines are scheduled for Phase 5.
+
+## 2026-11-24 - Phase 2: Tokens and type scale
+
+- **Status:** done
+- **Steps:** 5 done.
+- **File check:** pass. Added the existing landing contrast parser to Step 5 because it read
+  the old palette block. Builder changes matched the revised Files list.
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`
+  passed. 1,398 application tests and 31 Worker tests passed. The offline gate passed for all
+  15 generated pages.
+- **Commit proposal:** Consolidate theme and type tokens, update both contrast readers, and
+  record the phase together.
+- **Open issues:** Theme selection and landing sections are next. Phase 1's static-image policy
+  was reconciled to `546835f`.
