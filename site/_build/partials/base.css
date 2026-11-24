@@ -116,6 +116,30 @@
       display: block;
     }
   }
+
+  /* Forced colours: the system palette, not a stored theme, decides which wordmark is legible. The forced
+     palette reports its own prefers-color-scheme, so the variant follows that and ignores data-theme.
+     `:is([data-theme], :root)` matches every page and ties the specificity of the theme rules above, so
+     the later source order wins. */
+  @media (forced-colors: active) {
+    :root:is([data-theme], :root) .logo-for-light {
+      display: block;
+    }
+
+    :root:is([data-theme], :root) .logo-for-dark {
+      display: none;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:is([data-theme], :root) .logo-for-light {
+        display: none;
+      }
+
+      :root:is([data-theme], :root) .logo-for-dark {
+        display: block;
+      }
+    }
+  }
 }
 
 /* Base */
@@ -322,6 +346,7 @@ svg {
   color: var(--muted);
   text-decoration: none;
   border-radius: 999px;
+  touch-action: manipulation;
 }
 
 .lang-switch a:hover {
@@ -329,8 +354,13 @@ svg {
   text-decoration: underline;
 }
 
+/* The current language: the tint is only a hint, so it also gets a heavier weight and a thick underline. */
 .lang-switch a[aria-current='page'] {
+  font-weight: 700;
   color: var(--accent-soft-fg);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3em;
   background: var(--accent-soft);
 }
 

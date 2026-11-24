@@ -145,6 +145,41 @@ describe('site stylesheet rules', () => {
     );
   });
 
+  it('picks the wordmark from the forced palette, not a stored theme, in forced colours', () => {
+    const forced =
+      /@media \(forced-colors: active\)\s*\{([\s\S]*?\n {2}\})\s*\}/.exec(withSupport)?.[1] ?? '';
+    // Always shown or hidden by the palette's scheme: the selector matches with or without data-theme.
+    expect(forced).toMatch(
+      /:root:is\(\[data-theme\], :root\) \.logo-for-light\s*\{\s*display:\s*block;[^}]*\}\s*:root:is\(\[data-theme\], :root\) \.logo-for-dark\s*\{\s*display:\s*none;/,
+    );
+    expect(forced).toMatch(
+      /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:is\(\[data-theme\], :root\) \.logo-for-light\s*\{\s*display:\s*none;[^}]*\}\s*:root:is\(\[data-theme\], :root\) \.logo-for-dark\s*\{\s*display:\s*block;/,
+    );
+    // No stored-theme selector without the `:is()` that also matches pages with no data-theme.
+    expect(forced.replaceAll(':is([data-theme], :root)', '')).not.toMatch(/\[data-theme/);
+    // The block comes after every rule it has to beat, so a tie in specificity goes to it.
+    const forcedAt = withSupport.indexOf('@media (forced-colors: active)');
+    expect(forcedAt).toBeGreaterThan(
+      withSupport.lastIndexOf(":root[data-theme='dark'] .logo-for-dark"),
+    );
+    expect(forcedAt).toBeGreaterThan(
+      withSupport.lastIndexOf(':root:not([data-theme]) .logo-for-dark'),
+    );
+  });
+
+  it('marks the current language by more than colour and keeps touch-action on the links', () => {
+    const rule = (selector: string) =>
+      new RegExp(`${selector.replaceAll(/[[\]().']/g, String.raw`\$&`)}\\s*\\{([^}]*)\\}`).exec(
+        SOURCE,
+      )?.[1] ?? '';
+    const current = rule(".lang-switch a[aria-current='page']");
+    expect(current).toMatch(/font-weight:\s*700\s*;/);
+    expect(current).toMatch(/text-decoration:\s*underline\s*;/);
+    expect(current).toMatch(/text-decoration-thickness:\s*2px\s*;/);
+    expect(current).toMatch(/background:\s*var\(--accent-soft\)\s*;/);
+    expect(rule('.lang-switch a')).toMatch(/touch-action:\s*manipulation\s*;/);
+  });
+
   it('loads nothing: no url(), @import or @font-face', () => {
     expect(SOURCE).not.toMatch(/url\(/i);
     expect(SOURCE).not.toMatch(/@import/i);
