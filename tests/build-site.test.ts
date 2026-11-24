@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildSite, loadConfig, type SiteConfig } from '../scripts/build-site.mjs';
 import { REQUIRED_PAGES, pageProblems } from '../scripts/check-site.mjs';
@@ -52,7 +52,9 @@ const CHROME = 'https://chromewebstore.google.com/detail/naciocheck/abc';
 const FIREFOX = 'https://addons.mozilla.org/firefox/addon/naciocheck/';
 const CONFIG: SiteConfig = { chromeStoreUrl: null, firefoxStoreUrl: null, repositoryPublic: false };
 const BASE_CSS = ':root { --bg: light-dark(#ffffff, #111827); }';
-const THEME_SCRIPT = '<script src="/theme.js"></script>';
+/** The real theme bootstrap: the build inlines it, byte for byte, in every page's head, and the gate requires it. */
+const THEME_TEXT = readFileSync(resolve(import.meta.dirname, '../site/theme.js'), 'utf8');
+const THEME_SCRIPT = `<script>${THEME_TEXT}</script>`;
 const CHANGELOG =
   '## [Unreleased]\n\n### Added\n\n- Pending.\n\n## [1.2.3] - 2026-01-02\n\n### Fixed\n\n- A **bug**.\n';
 
@@ -88,6 +90,7 @@ beforeEach(() => {
   out = join(root, 'out');
   write(source, '_build/strings.json', JSON.stringify(STRINGS));
   write(source, '_build/config.json', JSON.stringify(CONFIG));
+  write(source, 'theme.js', THEME_TEXT);
   write(source, '_build/partials/base.css', BASE_CSS);
   write(source, '_build/partials/landing.css', '.hero { margin: 0; }');
   for (const lang of ['es', 'en', 'ca']) {
@@ -204,6 +207,7 @@ describe('site build', () => {
       expect(notFound).toContain('<link rel="apple-touch-icon"');
       expect(notFound).toContain('<link rel="me"');
       expect(notFound).toContain(THEME_SCRIPT);
+      expect(notFound).not.toContain('/theme.js');
       expect(notFound).not.toContain('canonical');
       expect(notFound).not.toContain('hreflang');
       expect(notFound).not.toContain('og:');
@@ -233,6 +237,59 @@ describe('site build', () => {
       await build();
       expect(pageProblems('index.html', read('index.html'))).toEqual([]);
       expect(pageProblems('en/privacy/index.html', read('en/privacy/index.html'))).toEqual([]);
+    });
+  });
+
+  describe('the inline theme bootstrap', () => {
+    it('inlines the source once in the head, before the styles, on every page', async () => {
+      for (const page of ['index.html', 'en/index.html', 'ca/privacy/index.html', '404.html']) {
+        write(source, page, PAGE('', page.startsWith('en/') ? 'en' : 'es'));
+      }
+      await build();
+      for (const page of ['index.html', 'en/index.html', 'ca/privacy/index.html', '404.html']) {
+        const html = read(page);
+        expect(html.split(THEME_SCRIPT), page).toHaveLength(2);
+        expect(html.match(/<script\b/g), page).toHaveLength(1);
+        const head = /<head>([\s\S]*?)<\/head>/.exec(html)?.[1] ?? '';
+        expect(head, page).toContain(THEME_SCRIPT);
+        expect(html.indexOf(THEME_SCRIPT), page).toBeLessThan(html.indexOf('<style>'));
+        expect(html.indexOf('name="theme-color"'), page).toBeLessThan(html.indexOf(THEME_SCRIPT));
+        expect(html, page).not.toContain('/theme.js');
+      }
+    });
+
+    it('does not serve theme.js and leaves the source unchanged', async () => {
+      write(source, 'index.html', PAGE(''));
+      await build();
+      expect(existsSync(join(out, 'theme.js'))).toBe(false);
+      expect(readFileSync(join(source, 'theme.js'), 'utf8')).toBe(THEME_TEXT);
+    });
+
+    it('is taken from the source file, not a built-in copy', async () => {
+      write(source, 'index.html', PAGE(''));
+      write(source, 'theme.js', '/* another */\n');
+      await build();
+      expect(read('index.html')).toContain('<script>/* another */\n</script>');
+      expect(read('index.html')).not.toContain(THEME_TEXT);
+    });
+
+    it('fails when theme.js is missing', async () => {
+      write(source, 'index.html', PAGE(''));
+      rmSync(join(source, 'theme.js'));
+      await expect(build()).rejects.toThrow(/theme\.js: missing/);
+    });
+
+    it.each(['</script>', '<!-- x -->'])('fails when theme.js contains %s', async (text) => {
+      write(source, 'index.html', PAGE(''));
+      write(source, 'theme.js', `/* ${text} */`);
+      await expect(build()).rejects.toThrow(/cannot be inlined/);
+    });
+
+    it('leaves $ patterns in the source untouched', async () => {
+      write(source, 'index.html', PAGE(''));
+      write(source, 'theme.js', "const a = '$&$1$`';\n");
+      await build();
+      expect(read('index.html')).toContain("<script>const a = '$&$1$`';\n</script>");
     });
   });
 
@@ -522,11 +579,15 @@ describe('the real build inputs', () => {
         expect.arrayContaining(['index.html', 'en/index.html', 'privacy/index.html']),
       );
       expect(existsSync(join(outDir, '_build'))).toBe(false);
-      expect(existsSync(join(outDir, 'theme.js'))).toBe(true);
+      expect(existsSync(join(outDir, 'theme.js'))).toBe(false);
+      const realTheme = readFileSync(resolve(real, 'theme.js'), 'utf8');
+      const realScript = `<script>${realTheme}</script>`;
       for (const page of REQUIRED_PAGES) {
         const html = readFileSync(join(outDir, page), 'utf8');
-        expect(html.split(THEME_SCRIPT).length, page).toBe(2);
-        expect(html.indexOf(THEME_SCRIPT), page).toBeLessThan(html.indexOf('<style>'));
+        expect(html.split(realScript).length, page).toBe(2);
+        expect(html.indexOf(realScript), page).toBeLessThan(html.indexOf('<style>'));
+        expect(html, page).not.toContain('/theme.js');
+        expect(pageProblems(page, html), page).toEqual([]);
         expect(html, page).toContain('<select id="site-theme" autocomplete="off">');
       }
     } finally {

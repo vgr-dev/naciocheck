@@ -14,7 +14,8 @@ import { writeSiteAssets } from './site-assets.mjs';
  *
  * Markers are HTML comments in a source page, each replaced by the build; an unknown one fails the build:
  *
- * - `<!-- @head -->`: theme metadata and bootstrap, favicon links, canonical, `hreflang` alternates, Open Graph and Twitter tags, `og:locale`,
+ * - `<!-- @head -->`: theme metadata and the inline theme bootstrap (the text of `site/theme.js`, which is
+ *   not served itself), favicon links, canonical, `hreflang` alternates, Open Graph and Twitter tags, `og:locale`,
  *   author and `rel="me"`. The title and description come from the page's own `<title>` and
  *   `<meta name="description">`. A `404.html` gets only the shared theme, icons, author and `rel="me"`: it has no address.
  * - `<!-- @style -->` / `<!-- @style landing -->`: an inline `<style>` with `partials/base.css`, plus
@@ -39,6 +40,8 @@ const AUTHOR = 'Victor Gonzalez';
 const SOCIAL_CARD = `${SITE_ORIGIN}/social-card.png`;
 const LOGO_SIZE = { width: 260, height: 64 };
 const THEME_MODES = ['auto', 'light', 'dark'];
+/** The theme bootstrap's source, relative to the source directory: inlined into every page, not served. */
+const THEME_SOURCE = 'theme.js';
 
 const STORE_PREFIXES = {
   chromeStoreUrl: 'https://chromewebstore.google.com/',
@@ -130,12 +133,12 @@ function urlPath(language, subpath) {
   return `${prefix}${subpath}`;
 }
 
-function head(page, text, colors) {
+function head(page, text, colors, themeScript) {
   const { language, subpath } = splitPage(page);
   const lines = [
     `<meta name="theme-color" content="${colors.light}" media="(prefers-color-scheme: light)" />`,
     `<meta name="theme-color" content="${colors.dark}" media="(prefers-color-scheme: dark)" />`,
-    '<script src="/theme.js"></script>',
+    `<script>${themeScript}</script>`,
     '<link rel="icon" href="/favicon.ico" sizes="32x32" />',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml" />',
     '<link rel="apple-touch-icon" href="/apple-touch-icon.png" />',
@@ -256,10 +259,21 @@ export async function buildSite(options) {
     return partials.get(name);
   };
 
+  // The theme bootstrap is inlined in every page's head, so the file itself is never served.
+  const themeFile = join(sourceDir, THEME_SOURCE);
+  if (!existsSync(themeFile)) throw new Error(`site/${THEME_SOURCE}: missing`);
+  const themeScript = await readFile(themeFile, 'utf8');
+  if (/<\/script|<!--/i.test(themeScript)) {
+    throw new Error(`site/${THEME_SOURCE}: cannot be inlined (it contains </script or <!--)`);
+  }
+
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
   const buildDir = join(sourceDir, '_build');
-  await cp(sourceDir, outDir, { recursive: true, filter: (path) => path !== buildDir });
+  await cp(sourceDir, outDir, {
+    recursive: true,
+    filter: (path) => path !== buildDir && path !== themeFile,
+  });
 
   const pages = (await readdir(outDir, { recursive: true }))
     .map(posix)
@@ -298,7 +312,7 @@ export async function buildSite(options) {
           /--bg:\s*light-dark\(\s*(#[\da-f]{6})\s*,\s*(#[\da-f]{6})\s*\)\s*;/i.exec(base) ?? [];
         if (!light || !dark)
           throw new Error('site/_build/partials/base.css: missing theme background pair');
-        value = head(page, text, { light, dark });
+        value = head(page, text, { light, dark }, themeScript);
       } else if (name === 'header') value = header(page, strings);
       else if (name === 'footer') value = await partial(`footer.${language}.html`);
       else if (name === 'install') value = install(language, strings, config);

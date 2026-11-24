@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   LANGUAGES,
@@ -38,7 +38,9 @@ function pageProblems(name: string, html: string): string[] {
   return checkPage(name, inLanguageOf(name, html));
 }
 
-const THEME = '<script src="/theme.js"></script>';
+/** The theme bootstrap source: the gate requires every page to inline exactly this text. */
+const THEME_SOURCE = readFileSync(resolve(import.meta.dirname, '../site/theme.js'), 'utf8');
+const THEME = `<script>${THEME_SOURCE}</script>`;
 
 const VALID = `<!doctype html>
 <html lang="es">
@@ -101,46 +103,125 @@ describe('site page gate', () => {
   });
 });
 
-describe('site gate: required theme bootstrap', () => {
-  it.each(REQUIRED_PAGES)('requires one exact theme script in the head of %s', (name) => {
+describe('site gate: required inline theme bootstrap', () => {
+  const needsOne = /needs exactly one inline <script> in <head> whose text is site\/theme\.js/;
+
+  it.each(REQUIRED_PAGES)('requires the inline theme script once in the head of %s', (name) => {
     const base = baseFor(name);
     expect(pageProblems(name, base)).toEqual([]);
-    expect(pageProblems(name, base.replace(THEME, '')).join('\n')).toMatch(
-      /needs exactly one.*theme/,
-    );
+    expect(pageProblems(name, base.replace(THEME, '')).join('\n')).toMatch(needsOne);
   });
 
-  it('rejects duplicate or modified theme script tags and a missing theme asset', () => {
-    const duplicate = VALID.replace(THEME, `${THEME}${THEME}`);
-    expect(pageProblems('index.html', duplicate).join('\n')).toMatch(/needs exactly one.*theme/);
+  it('rejects a duplicate, a misplaced or a commented theme script', () => {
+    expect(pageProblems('index.html', VALID.replace(THEME, `${THEME}${THEME}`)).join('\n')).toMatch(
+      needsOne,
+    );
     expect(
-      pageProblems('index.html', VALID.replace(THEME, '<script defer src="/theme.js"></script>')),
-    ).not.toEqual([]);
-    expect(
-      pageProblems(
-        'index.html',
-        VALID.replace(THEME, '').replace('</body>', `${THEME}</body>`),
-      ).join('\n'),
-    ).toMatch(/in <head>/);
+      pageProblems('index.html', VALID.replace(THEME, '').replace('</body>', `${THEME}</body>`)),
+    ).toEqual(expect.arrayContaining([expect.stringMatching(needsOne)]));
     expect(
       pageProblems('index.html', VALID.replace(THEME, `<!-- ${THEME} -->`)).join('\n'),
-    ).toMatch(/in <head>/);
-    const dir = mkdtempSync(join(tmpdir(), 'site-gate-theme-missing-'));
+    ).toMatch(needsOne);
+  });
+
+  it('rejects an inline script that differs from the source by one byte', () => {
+    const edited = THEME_SOURCE.replace("'naciocheck-theme'", "'naciocheck-theme2'");
+    expect(edited).not.toBe(THEME_SOURCE);
+    for (const text of [
+      edited,
+      THEME_SOURCE.trimEnd(),
+      `${THEME_SOURCE} `,
+      THEME_SOURCE.slice(1),
+    ]) {
+      const problems = pageProblems('index.html', VALID.replace(THEME, `<script>${text}</script>`));
+      expect(problems.join('\n')).toMatch(needsOne);
+      expect(problems.join('\n')).toMatch(/unapproved <script>/);
+    }
+  });
+
+  it('rejects an unrelated inline script, alone or beside the theme script', () => {
+    const other = '<script>document.title = "x";</script>';
+    expect(pageProblems('index.html', VALID.replace(THEME, other)).join('\n')).toMatch(needsOne);
+    const beside = pageProblems('index.html', inBody(other));
+    expect(beside).toContain('site/index.html: only the exact theme script is allowed');
+    expect(beside.join('\n')).toMatch(/unapproved <script>/);
+  });
+
+  it('rejects a script element with attributes around the source', () => {
+    for (const tag of ['<script defer>', '<script type="module">', '<script async>']) {
+      const problems = pageProblems(
+        'index.html',
+        VALID.replace(THEME, `${tag}${THEME_SOURCE}</script>`),
+      );
+      expect(problems.join('\n'), tag).toMatch(needsOne);
+    }
+  });
+
+  it('rejects the old external /theme.js script and any other reference to it', () => {
+    const external = '<script src="/theme.js"></script>';
+    const problems = pageProblems('index.html', VALID.replace(THEME, external));
+    expect(problems.join('\n')).toMatch(needsOne);
+    expect(problems.join('\n')).toMatch(/references \/theme\.js/);
+    expect(pageProblems('index.html', VALID.replace(THEME, `${THEME}${external}`))).toEqual(
+      expect.arrayContaining([expect.stringMatching(/references \/theme\.js/)]),
+    );
+    expect(
+      pageProblems('index.html', inBody('<link rel="preload" href="/theme.js" as="script" />')),
+    ).toEqual(expect.arrayContaining([expect.stringMatching(/references \/theme\.js/)]));
+  });
+
+  it('keeps the feedback pages at their two external scripts plus the inline one', () => {
+    for (const name of FEEDBACK_PAGES) {
+      expect(pageProblems(name, FEEDBACK)).toEqual([]);
+      expect(pageProblems(name, FEEDBACK.replace(THEME, '')).join('\n')).toMatch(needsOne);
+      const extra = FEEDBACK.replace('</body>', '<script>1</script></body>');
+      expect(pageProblems(name, extra).join('\n')).toMatch(/exactly 3 are allowed/);
+      expect(pageProblems(name, FEEDBACK.replace(OWN_SCRIPT, '')).join('\n')).toMatch(
+        /exactly one <script src="\/feedback\/feedback\.js" defer>/,
+      );
+    }
+  });
+
+  it.each(['fetch', 'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'EventSource'])(
+    'applies the network-API check to an inline script using %s',
+    (api) => {
+      const page = VALID.replace(THEME, `<script>window.${api}('/x');</script>`);
+      expect(pageProblems('index.html', page).join('\n')).toMatch(/references a network API/);
+    },
+  );
+
+  it.each([
+    ['eval', 'eval("1")', /uses eval/],
+    ['new Function', 'new Function("1")', /uses new Function/],
+    ['import()', 'import("/x.js")', /dynamic import/],
+    ['an address', 'var a = "https://evil.example/";', /http\(s\) address/],
+  ])('applies the dynamic-code check to an inline script using %s', (_label, code, pattern) => {
+    const page = VALID.replace(THEME, `<script>${code}</script>`);
+    expect(pageProblems('index.html', page).join('\n')).toMatch(pattern);
+  });
+
+  it('no longer serves theme.js as a file', () => {
+    expect(assetProblems('theme.js', THEME_SOURCE)).toEqual([
+      'site/theme.js: only HTML is served, this file is not a page',
+    ]);
+    const dir = mkdtempSync(join(tmpdir(), 'site-gate-theme-file-'));
     try {
       writeSite(dir);
-      rmSync(join(dir, 'theme.js'));
+      expect(siteProblems(dir)).toEqual([]);
+      writeFileSync(join(dir, 'theme.js'), THEME_SOURCE);
       expect(siteProblems(dir)).toContain(
-        'site/index.html: references /theme.js, but the asset is missing',
+        'site/theme.js: only HTML is served, this file is not a page',
       );
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  it.each(['fetch', 'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'EventSource', 'import('])(
-    'rejects theme.js with network or dynamic code API %s',
-    (api) => expect(assetProblems('theme.js', `window.${api}('/x');`)).not.toEqual([]),
-  );
+  it('the real theme source passes the dynamic-code and network-API checks', () => {
+    expect(pageProblems('index.html', VALID).join('\n')).not.toMatch(
+      /network API|uses eval|new Function|dynamic import/,
+    );
+  });
 });
 
 describe('site gate: static product images', () => {
@@ -1001,7 +1082,6 @@ describe('site gate: language parity', () => {
 
 /** Writes every required page, valid, with its lang, into `dir`. */
 function writeSite(dir: string, skip: readonly string[] = []): void {
-  writeFileSync(join(dir, 'theme.js'), '/* local theme bootstrap */');
   for (const name of REQUIRED_PAGES) {
     if (skip.includes(name)) continue;
     const path = join(dir, name);

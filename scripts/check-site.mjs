@@ -11,14 +11,16 @@ import { fileURLToPath } from 'node:url';
  * without linking it is written as plain text (`sede.mjusticia.gob.es`).
  *
  * Exceptions, each matched exactly:
- * - every page carries one exact `theme.js` script in the head; feedback pages additionally carry the
- *   site's own `feedback.js` and Cloudflare's Turnstile, and those pages plus the privacy pages
+ * - every page carries one inline classic `<script>` in the head whose text is, byte for byte, `site/theme.js`
+ *   (the theme bootstrap, which is not served as a file); it gets the dynamic-code and network-API checks of
+ *   the other scripts. Feedback pages additionally carry the site's own `feedback.js` and Cloudflare's
+ *   Turnstile, and those pages plus the privacy pages
  *   (`TURNSTILE_LINK_PAGES`) may link Turnstile's privacy addendum;
  * - any page may carry an outbound `<a href>` that starts with one of `OUTBOUND_LINKS`, and the site's own
  *   origin in `<link rel="canonical|alternate">` and `og:`/`twitter:` `<meta content>`, and `https://vgr.cat/`
  *   in `<link rel="me">`. Nothing absolute is ever allowed in `src`, `srcset`, `poster`, `data`, `action`,
  *   CSS `url()` or `@import`;
- * - the files served besides pages are `feedback/feedback.js`, `theme.js`, images (`.png`, `.webp`, `.svg`,
+ * - the files served besides pages are `feedback/feedback.js`, images (`.png`, `.webp`, `.svg`,
  *   `.ico`) and one text file, `img/OFL.txt` (the Nunito licence, which must sit
  *   next to the outlined logos whenever `img/logo-light.svg` or `img/logo-dark.svg` ships); an SVG may not
  *   script, embed or reach anything outside itself.
@@ -40,6 +42,8 @@ import { fileURLToPath } from 'node:url';
  */
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
+/** The theme bootstrap's source: the build inlines it into every page, and the gate compares it byte for byte. */
+const THEME_SOURCE_FILE = resolve(import.meta.dirname, '../site/theme.js');
 const SITE_DIR = resolve(import.meta.dirname, '../.output/site');
 
 /** The site's languages. Spanish is served at `/`, the others at `/<lang>/`. */
@@ -78,9 +82,8 @@ const TURNSTILE_LINK_PAGES = [
   ...LANGUAGES.map((language) => `${languagePrefix(language)}privacy/index.html`),
 ];
 
-/** The two same-origin scripts served. */
+/** The one same-origin script file served. The theme bootstrap is inline, never a file. */
 const FEEDBACK_SCRIPT = 'feedback/feedback.js';
-const THEME_SCRIPT = 'theme.js';
 /** The image types served besides pages. */
 const IMAGE_TYPES = ['.png', '.webp', '.svg', '.ico'];
 
@@ -115,7 +118,8 @@ const TEST_KEY_SHAPE = /\b[123]x[0-9A-Za-z_-]{10,}/g;
 const ALLOWED_TEST_KEY = '1x00000000000000000000AA';
 
 const OWN_SCRIPT_TAG = /<script\s+src="\/feedback\/feedback\.js"\s+defer\s*><\/script>/gi;
-const THEME_SCRIPT_TAG = '<script src="/theme.js"></script>';
+/** A bare classic inline script element: its attributes would make it something else. */
+const INLINE_SCRIPT = /<script>([\s\S]*?)<\/script\s*>/g;
 const TURNSTILE_SCRIPT_TAG =
   /<script\s+src="https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js"\s+async\s+defer\s*><\/script>/gi;
 const TURNSTILE_LINK_TAG =
@@ -374,8 +378,19 @@ function withoutAllowedAddresses(text) {
   });
 }
 
+let themeSourceText;
+/** The text of `site/theme.js`, or null when it cannot be read. Read once. */
+function themeSource() {
+  if (themeSourceText === undefined) {
+    themeSourceText = existsSync(THEME_SOURCE_FILE)
+      ? readFileSync(THEME_SOURCE_FILE, 'utf8')
+      : null;
+  }
+  return themeSourceText;
+}
+
 /**
- * Checks one page's text without touching the filesystem, so the rules can be tested offline.
+ * Checks one page's text. The only file it reads is `site/theme.js`, the source of the inline theme script.
  * @param {string} name
  * @param {string} text
  * @returns {string[]}
@@ -384,17 +399,28 @@ export function pageProblems(name, text) {
   const problems = [];
   let checked = text;
 
-  const themeMatches = text.match(/<script src="\/theme\.js"><\/script>/g) ?? [];
+  const source = themeSource();
+  if (source === null) problems.push('site/theme.js: missing, the pages inline it');
+  const inline = (html) => [...html.matchAll(INLINE_SCRIPT)];
+  const themeMatches = inline(text).filter((match) => match[1] === source);
   const markup = text.replace(/<!--[\s\S]*?-->/g, '');
   const head = /<head\b[^>]*>([\s\S]*?)<\/head\s*>/i.exec(markup)?.[1] ?? '';
-  const themeInHead = head.match(/<script src="\/theme\.js"><\/script>/g) ?? [];
+  const themeInHead = inline(head).filter((match) => match[1] === source);
   if (themeMatches.length !== 1 || themeInHead.length !== 1) {
-    problems.push(`site/${name}: needs exactly one <script src="/theme.js"></script> in <head>`);
+    problems.push(
+      `site/${name}: needs exactly one inline <script> in <head> whose text is site/theme.js`,
+    );
   }
-  checked = checked.replaceAll(THEME_SCRIPT_TAG, '');
+  // Every bare inline script gets the dynamic-code and network-API checks. One that is not the theme source
+  // is refused below as unapproved as well.
+  for (const match of inline(text)) problems.push(...scriptProblems(name, match[1] ?? '', true));
+  if (source !== null) checked = checked.replaceAll(`<script>${source}</script>`, '');
+  if (checked.includes('/theme.js')) {
+    problems.push(`site/${name}: references /theme.js: the bootstrap is inline, not a file`);
+  }
 
   if (FEEDBACK_PAGES.includes(name)) {
-    // Alongside the theme bootstrap, only the two exact feedback tags are allowed.
+    // Alongside the inline theme bootstrap, only the two exact feedback tags are allowed.
     const own = text.match(OWN_SCRIPT_TAG)?.length ?? 0;
     const turnstile = text.match(TURNSTILE_SCRIPT_TAG)?.length ?? 0;
     const tags = text.match(/<script\b/gi)?.length ?? 0;
@@ -586,7 +612,6 @@ function extensionOf(name) {
  */
 export function assetProblems(name, text) {
   if (name === LICENCE_FILE) return [];
-  if (name === THEME_SCRIPT) return scriptProblems(name, text, true);
   if (name !== FEEDBACK_SCRIPT) {
     if (IMAGE_TYPES.includes(extensionOf(name))) {
       return extensionOf(name) === '.svg' ? svgProblems(name, text) : [];
@@ -596,7 +621,7 @@ export function assetProblems(name, text) {
   return scriptProblems(name, text, false);
 }
 
-/** Shared source checks for the two narrowly approved same-origin scripts. */
+/** Shared source checks for the narrowly approved scripts: `feedback.js` and the inline theme bootstrap. */
 function scriptProblems(name, text, theme) {
   const problems = [];
   const rules = [
@@ -680,9 +705,6 @@ export function siteProblems(siteDir = SITE_DIR) {
       pages.push(name);
       const text = readFileSync(file, 'utf8');
       problems.push(...pageProblems(name, text), ...linkProblems(name, text, names));
-      if (text.includes(THEME_SCRIPT_TAG) && !names.has(THEME_SCRIPT)) {
-        problems.push(`site/${name}: references /theme.js, but the asset is missing`);
-      }
     } else if (MAGIC[extensionOf(name)]) {
       problems.push(...binaryProblems(name, readFileSync(file)));
     } else {

@@ -1,7 +1,7 @@
 # 0005. Store-only distribution, public repo after first release, pages on vgr.cat
 
 - **Status:** accepted
-- **Date:** 2026-11-06, amended 2026-11-23 (recorded 2026-11-18)
+- **Date:** 2026-11-06, amended 2026-11-24 (recorded 2026-11-18)
 
 ## Context
 
@@ -141,7 +141,7 @@ extension.
 #### Decision
 
 - Pages may include at most one exact classic `<script src="/theme.js"></script>` element in the
-  document head. It reads and writes only the `naciocheck-theme` local-storage key, whose accepted
+  document head (superseded 2026-11-24, see the amendment below: the script is inline). It reads and writes only the `naciocheck-theme` local-storage key, whose accepted
   values are `auto`, `light` and `dark`, and applies the selected theme before first paint. It must
   not use network APIs, dynamic code or telemetry. The existing feedback pages retain their exact
   feedback and Turnstile script elements; the theme script is an additional optional same-origin
@@ -152,3 +152,31 @@ extension.
 - The offline site gate enforces the optional script exception and the existing static-image policy.
   It rejects video elements and video files, unrelated scripts, external resources and inline
   handlers. The theme script is checked for dynamic code and network APIs.
+
+### Amendment 2026-11-24: the theme bootstrap is inline
+
+#### Context
+
+An external blocking `<script src="/theme.js">` in the head costs a round trip before first paint, even
+when the file is cached. Step 11 of `specs/2026-11-24-landing-page-polish/` measured about +186 ms cold and
++236 ms warm first contentful paint on the phone profile (Fast 4G, 4x CPU) against the site without it.
+
+#### Decision
+
+- Every page, including the `404.html` pages, carries exactly one inline classic `<script>` in the document
+  head, before the inline styles, and no other inline script. Its text equals, byte for byte, the source
+  `site/theme.js`, which stays the single source and is not served: `npm run build:site` reads it and writes
+  its contents into each page, and the output has no `/theme.js` and no reference to it.
+- What the script may do is unchanged: read and write only the `naciocheck-theme` local-storage key (`auto`,
+  `light`, `dark`), apply the choice before first paint, and use no network API, dynamic code or telemetry.
+- The feedback pages keep their exact two external scripts (`/feedback/feedback.js` and Turnstile) beside it.
+  No other page loads any external script.
+
+#### Consequences
+
+- `npm run check:site` requires that inline script once per page, in the head, compared byte for byte with
+  `site/theme.js`, and applies the dynamic-code and network-API checks to it. It keeps rejecting every other
+  inline script, every `on*` handler, every external script, a script element with attributes around the
+  bootstrap, any reference to `/theme.js`, and a served `theme.js` file.
+- The build fails if `site/theme.js` is missing or contains `</script` or `<!--`.
+- Any change to `site/theme.js` changes every page; the gate follows it because it reads the same file.
