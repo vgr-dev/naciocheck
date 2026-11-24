@@ -7,6 +7,8 @@ Scope revised on 2026-11-24 at the owner’s request to use static product scree
 Step 9 Files extended on 2026-11-24 with the owner’s approval to include `e2e/specs/visual.e2e.ts`.
 Phases 7 and 8 added on 2026-11-24 with the owner’s approval: inline the theme bootstrap, fix the
 confirmed Medium audit findings, and show the changed-result banner in the hero.
+Phase 8 inserted on 2026-11-24 with the owner’s approval: replace the header theme select with a
+segmented footer switcher. The re-verify moved to Phase 9 as step 16.
 
 ## Status
 
@@ -39,17 +41,21 @@ confirmed Medium audit findings, and show the changed-result banner in the hero.
 
 **Phase 6: Verify the finished site**
 
-- [!] 11. Compare performance and check the manual states (theme-script threshold tripped; fixed in phase 7, rerun as step 15)
+- [!] 11. Compare performance and check the manual states (theme-script threshold tripped; fixed in phase 7, rerun as step 16)
 
 **Phase 7: Fix the measured and audited issues**
 
-- [x] 12. Inline the theme bootstrap (uncommitted)
-- [x] 13. Fix the forced-colours logo and the current-language cue (uncommitted)
-- [x] 14. Make the hero a legible changed-result banner (uncommitted)
+- [x] 12. Inline the theme bootstrap (f2aa426)
+- [x] 13. Fix the forced-colours logo and the current-language cue (a955670)
+- [x] 14. Make the hero a legible changed-result banner (7ca7d91)
 
-**Phase 8: Re-verify the finished site**
+**Phase 8: Move the theme control to the footer**
 
-- [ ] 15. Regenerate the baselines and repeat the final checks
+- [x] 15. Replace the theme select with a segmented footer switcher (uncommitted)
+
+**Phase 9: Re-verify the finished site**
+
+- [ ] 16. Regenerate the baselines and repeat the final checks
 
 ## Running steps in parallel
 
@@ -401,7 +407,7 @@ share no files and do not build; builds, the gate and E2E run in the Phase verif
 
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`,
   then `E2E_SPEC=site npm run test:e2e` and `E2E_SPEC=site-theme npm run test:e2e`, one after the
-  other. Zero unexpected requests. No visual compare yet (step 15 regenerates the baselines).
+  other. Zero unexpected requests. No visual compare yet (step 16 regenerates the baselines).
 
 ### 12. Inline the theme bootstrap
 
@@ -456,23 +462,79 @@ share no files and do not build; builds, the gate and E2E run in the Phase verif
   no duplicate of step 1) runs in the Phase verify.
 - **Out of scope:** New captures, store screenshots, other sections, `base.css`.
 
-## Phase 8: Re-verify the finished site
+## Phase 8: Move the theme control to the footer
+
+The owner preferred a compact segmented switcher in the footer, in the style of the Tailwind CSS
+documentation, over the native select in the header. Moving it also leaves the header as the logo
+and language links, which removes the locale-dependent header wrap at 412 px noted in
+`visual-review.md`. One step, alone in its phase, so it may build.
+
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`,
+  then `E2E_SPEC=site npm run test:e2e` and `E2E_SPEC=site-theme npm run test:e2e`, one after the
+  other. Zero unexpected requests. No visual compare yet (step 16 regenerates the baselines).
+
+### 15. Replace the theme select with a segmented footer switcher
+
+- **Goal:** Remove the theme `<select>` from the generated header. The build adds the switcher to
+  the shared footer output on every page (landing, privacy, feedback, changelog and 404, all three
+  languages) through one `<!-- @theme -->` marker in each footer partial, so the markup is
+  defined once in `build-site.mjs`. The switcher is a `<fieldset>` with a visually hidden localized
+  legend, holding three native radio inputs in a fixed order: Auto, Light, Dark. All three share
+  one `name`, and each has a visually hidden localized label. Each segment shows a small inline SVG
+  icon (monitor, sun, moon) drawn for this site, with `aria-hidden="true"` and `focusable="false"`,
+  using `currentColor` with no external references.
+- **Look and behaviour:**
+  - One rounded group with even segments of at least 32 × 32 px and a 1 px control border. It sits
+    at the end of the footer row and wraps under the links on a phone.
+  - The checked segment has a filled surface and a stronger border, so selection does not rely on
+    colour alone. Hover is quieter than checked.
+  - The focus ring follows `:focus-visible` on the input and is drawn on its segment.
+  - Icons meet 3:1 against every surface they sit on, in both themes.
+  - Under `forced-colors: active`, the checked segment uses `Highlight` for its outline.
+  - `touch-action: manipulation` on the segments.
+  - The control stays hidden until the script marks the root ready, with its space reserved, as
+    today. Without JavaScript the system theme still applies.
+- **Script:** `site/theme.js` sets the checked radio from storage and saves on `change`, instead
+  of reading the select. Storage, accepted values, `theme-color`, the `pageshow` and `storage`
+  resync and the inline delivery are unchanged. The gate follows the new script text because it
+  compares the inline script with this file.
+- **Gate:** reject inline `<svg>` in pages that carries `<script>`, `foreignObject`, event
+  attributes or any `href`/`xlink:href`, so the new icons cannot open a path the site rules close.
+- **Files:** `scripts/build-site.mjs`, `scripts/check-site.mjs`, `site/theme.js`,
+  `site/_build/strings.json`, `site/_build/partials/footer.{es,en,ca}.html` (marker only),
+  `site/_build/partials/base.css`, `tests/{build-site,site-gate,site-contrast,feedback-page}.test.ts`,
+  `e2e/specs/site-theme.e2e.ts`.
+- **Verify:** `npx vitest run tests/{build-site,site-gate,site-contrast,feedback-page}.test.ts`,
+  then `npm run check:site` and `E2E_SPEC=site-theme npm run test:e2e`.
+  - E2E drives the real radios by pointer and by keyboard (arrow keys move and select). It covers
+    both overrides, Auto following live OS emulation, reload and cross-page/locale persistence, a
+    nested 404 and the feedback page.
+  - It also checks the accessible names (the group and each option in all three languages), that
+    exactly one radio is checked, the forced-colours checked outline, and that the header no
+    longer holds a theme control.
+  - Storage exceptions and the script-disabled fallback stay covered in the DOM harness.
+- **Out of scope:** Landing sections, the hero, footer links and wording, new brand assets, a
+  served icon file.
+
+## Phase 9: Re-verify the finished site
 
 - **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site && npm run test:e2e && npm run check:privacy`.
   Zero unexpected requests and zero screenshot differences above tolerance.
 
-### 15. Regenerate the baselines and repeat the final checks
+### 16. Regenerate the baselines and repeat the final checks
 
 - **Goal:** First, regenerate the 48 `site-*` baselines (delete the old `site-*` files, then run
   the writer, as step 9 found the writer only saves missing images), review them per
   `.claude/commands/review-ui.md`, and update `visual-review.md`. Then repeat step 11 with its
   same-session method: compare against the `666b6d9` build and the step 11 "After" figures,
   apply the 50 ms threshold, and recheck the four Medium findings, forced colours and the hero
-  legibility in the visible Chrome via `chrome-agent`. Add an "After phase 7" section to
-  `baseline.md`. Extension baselines and fixture bytes stay unchanged.
+  legibility in the visible Chrome via `chrome-agent`, plus the footer switcher by keyboard,
+  pointer and forced colours, and the header at 390 px and 412 px in all three languages. Add an
+  "After phases 7 and 8" section to `baseline.md`. Extension baselines and fixture bytes stay
+  unchanged.
 - **Files:** `e2e/baselines/chrome/site-*`, this spec's `visual-review.md` and `baseline.md`.
 - **Verify:** `E2E_SPEC=visual npm run test:e2e` in compare mode passes; the phase verify above.
-- **Out of scope:** Source changes (a failed check goes back to the owning phase 7 step),
+- **Out of scope:** Source changes (a failed check goes back to the owning phase 7 or 8 step),
   `_headers`, deployment.
 
 ## Risks / open questions

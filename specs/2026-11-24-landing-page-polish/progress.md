@@ -450,3 +450,52 @@ feat(site): show the changed-result banner in the landing hero
   checks, 0 unexpected requests.
 - **Commit proposal:** one commit per step, then the Phase 6 and 7 records together.
 - **Open issues:** Visual baselines are stale until step 15 regenerates them.
+
+## 2026-11-24 - Step 15: Replace the theme select with a segmented footer switcher
+
+- **Status:** done
+- **Changed:** `scripts/{build-site,check-site}.mjs`, `site/theme.js`,
+  `site/_build/partials/{base.css,footer.es.html,footer.en.html,footer.ca.html}`,
+  `tests/{build-site,site-gate,site-contrast,feedback-page}.test.ts`,
+  `e2e/specs/site-theme.e2e.ts`. `site/_build/strings.json` is unchanged: the existing theme
+  label and option strings serve as legend and option labels.
+- **Verified:** The header is the logo and language links only. The build fills a
+  `<!-- @theme -->` marker after each footer's links with one fieldset: a visually hidden
+  legend and three native radios (Auto, Light, Dark) with visually hidden labels and inline
+  monitor, sun and moon icons drawn for the site (`currentColor`, `aria-hidden`, no references).
+  Segments are 36 px squares in a 1 px bordered group. Checked is a soft accent fill plus a 2 px
+  accent edge; hover is quieter. The focus ring sits on the segment via `:has(:focus-visible)`.
+  Under forced colours the checked radio gets a `Highlight` outline. The control is hidden until
+  the script marks the root ready, with its space kept. `theme.js` syncs and saves through the
+  radios; storage, values, `theme-color` and resync are unchanged. The gate rejects inline SVG
+  with scripts, `foreignObject`, event attributes or any `href`.
+- **Verified:** `npx vitest run tests/{build-site,site-gate,site-contrast,feedback-page}.test.ts`
+  passed 775 tests, with six new contrast pairs (lowest 3.49:1, the group border on the dark
+  band). `npm run check:site` passed. `E2E_SPEC=site-theme npm run test:e2e` passed 25 checks with
+  0 unexpected requests: pointer and arrow-key selection, Auto following the OS, persistence
+  across reload, locales, page types and a nested 404, localized names in es/en/ca, one radio
+  checked, no header control, segment size, the 390 px width and the forced-colours outline.
+- **Commit:** uncommitted, proposed "feat(site): move the theme control to a segmented footer switcher"
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+feat(site): move the theme control to a segmented footer switcher
+```
+
+- **Open issues:** The feedback page is not in the E2E path list because it loads Turnstile,
+  which the network guard rejects; its switcher is covered by the offline DOM harness and the
+  gate. The focus ring without `:has()` and Firefox are unverified.
+
+## 2026-11-24 - Phase 8: Move the theme control to the footer
+
+- **Status:** done
+- **Steps:** 15 done.
+- **File check:** pass. Every changed file is in step 15's Files list; `plan.md` carries the
+  orchestrator's edits (Phase 8 inserted, status lines).
+- **Phase verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`,
+  then `E2E_SPEC=site npm run test:e2e` and `E2E_SPEC=site-theme npm run test:e2e`: pass. 1,499
+  application and 31 Worker tests, the offline gate for 15 pages, site 67 and site-theme 25 E2E
+  checks, 0 unexpected requests.
+- **Commit proposal:** the switcher as one commit, then the plan and progress records.
+- **Open issues:** Visual baselines are stale until step 16 regenerates them.
