@@ -36,15 +36,16 @@ numbers are global across phases. -->
 
 **Phase 5: Full gate and E2E harness**
 
-- [x] 10. Require every page in every language uncommitted
-- [x] 11. Serve the built site to the E2E browser uncommitted
+- [x] 10. Require every page in every language c9a1124
+- [x] 11. Serve the built site to the E2E browser 60f8ce2
 
 **Phase 6: Baselines and docs**
 
-- [x] 12. Photograph the site and rewrite the baselines uncommitted
-- [x] 13. Document the site build uncommitted
-- [x] 14. Polish the findings of the UI review uncommitted
-- [x] 15. Close the review's gate gaps and small findings uncommitted
+- [x] 12. Photograph the site and rewrite the baselines dba6457
+- [x] 13. Document the site build 52fc2ed
+- [x] 14. Polish the findings of the UI review fba1ea9
+- [x] 15. Close the review's gate gaps and small findings 5072da1
+- [x] 16. Fix the independent review's findings uncommitted
 
 ## Before building (gates)
 
@@ -428,6 +429,35 @@ Lows). The spec requires the gate to fail on any remote resource.
   `npm run check:site`; `npm run test:e2e` with the guard at 0 and no baseline change.
 - **Out of scope:** the privacy wording about the repository and store listings that do not exist yet (review
   Medium 2, the owner's call); the ADR 0005 status line (the owner's); axe incomplete results; the teal tints.
+
+### 16. Fix the independent review's findings
+
+Added 2026-11-24 at the owner's request ("check and fix"), after the independent review in `review.md`
+(verdict FAIL, five findings).
+
+- **Goal:**
+  - Gate: any HTML event-handler attribute (`on*=`) fails on every page, in any spelling the gate already
+    normalises; the feedback pages' two approved script tags still pass. The gate allows exactly one text file,
+    `img/OFL.txt`, and requires it whenever an outlined logo ships.
+  - Build: `img/OFL.txt` is a byte copy of `brand/OFL.txt`, shipped next to the outlined logos
+    (`brand/README.md`: keep the licence next to any outlined copy).
+  - Privacy pages (es, en, ca): the contact section names the feedback page as the route that works now; the
+    repository issues route sits inside `@if repository`; the store listing is mentioned only as "once
+    published" or through the install config, never as a working route today.
+  - E2E: the axe run records `incomplete` results (rule, target) in the run output for a manual AA check,
+    without failing on them.
+  - 404 alternates: the spec and ADR 0005 exempt the 404 pages from `hreflang` alternates (no address of
+    their own, `noindex`); the build already behaves so and its test stays.
+  - Then the site baselines are rewritten; only `site-privacy-*` may change.
+- **Files:** builder A `scripts/check-site.mjs`, `scripts/check-site.d.mts`, `tests/site-gate.test.ts`;
+  builder B `scripts/site-assets.mjs`, `tests/site-assets.test.ts`; builder C `site/privacy/index.html`,
+  `site/en/privacy/index.html`, `site/ca/privacy/index.html`, `tests/feedback-page.test.ts`; builder D
+  `e2e/specs/site.e2e.ts`; orchestrator `spec.md`, `docs/adr/0005-distribution-and-public-pages.md`,
+  `e2e/baselines/chrome/site-privacy-*`.
+- **Verify:** `npm test && npm run lint && npm run format:check && npm run typecheck && npm run check:site`;
+  `npm run test:e2e:update-baselines` with a before/after checksum showing only `site-privacy-*` changed;
+  `npm run test:e2e` with the guard at 0.
+- **Out of scope:** the Catalan wording review and the ADR acceptance line (the owner's).
 
 ## Risks / open questions
 

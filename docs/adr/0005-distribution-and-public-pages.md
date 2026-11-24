@@ -83,8 +83,10 @@ stay static and has to keep the privacy properties of the pages it replaces.
 ### Decision
 
 - The site is a product page in `es` (`/`), `en` (`/en/`) and `ca` (`/ca/`). Each language has a landing,
-  privacy, feedback and changelog page and a `404.html`, with a language switcher and `hreflang` alternates
-  on every page. Catalan uses the Spanish screenshots until the extension has a Catalan locale.
+  privacy, feedback and changelog page and a `404.html`, with a language switcher on every page and
+  `hreflang` alternates on every page except the 404 pages (added 2026-11-24: a 404 has no address of its own
+  and is `noindex`; its switcher links each language's home). Catalan uses the Spanish screenshots until the
+  extension has a Catalan locale.
 - The hand-written pages stay in `site/`. `npm run build:site` (`scripts/build-site.mjs`) writes the
   deployable site into `.output/site/`, and `wrangler.jsonc` serves that directory. The build copies the
   pages (not `site/_build/`, which holds its config, strings and partials), expands a fixed set of HTML

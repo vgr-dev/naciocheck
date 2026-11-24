@@ -94,7 +94,9 @@ widget on the feedback page, it loads nothing from elsewhere.
 ## Acceptance criteria
 
 - [ ] Every landing, privacy, feedback, changelog and 404 page exists in es, en and ca, with a working
-      language switcher and `hreflang` alternates; the gate fails if a language lacks a page.
+      language switcher; every page except the 404 pages has `hreflang` alternates (a 404 has no address of
+      its own and is `noindex`; its switcher links each language's home); the gate fails if a language lacks a
+      page.
 - [ ] The landing page has the seven sections above in each language; the install buttons show the
       "coming soon" state until store URLs are set in one place.
 - [ ] `npm run check:site` passes and fails on any remote resource, any outbound link outside the allowed

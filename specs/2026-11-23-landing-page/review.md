@@ -263,3 +263,54 @@ Run `npm run dev:site`. In Chrome and Firefox, open `http://localhost:8787/ca/`,
 the language switcher and FAQ, and switch to English from the privacy page. Open
 `http://localhost:8787/ca/missing` and use the 404 recovery links. Toggle the system color
 scheme and reduced motion, then reload the landing page to check the icon and agency animation.
+
+### Follow-up — 2026-11-24
+
+All five findings are addressed in step 16 (see `progress.md`): event attributes refused by the gate, the 404
+alternates exempted in the spec and ADR 0005, `img/OFL.txt` shipped and gated, the privacy contact pointed at the
+feedback page, and axe `incomplete` results recorded (108 colour-contrast elements over the hero gradient and the
+language pill, left for a manual AA check).
+
+## 2026-11-24 — Independent recheck of step 16
+
+**Verdict: PASS WITH CHANGES.** The five earlier findings are addressed in the implementation.
+One documentation discrepancy remains for owner sign-off.
+
+- **Low — ADR 0005 still omits the licence exception.** Its Consequences section
+  (`docs/adr/0005-distribution-and-public-pages.md:115`) limits the allowed asset types to images.
+  Step 16 adds exactly one text asset, `img/OFL.txt`. Explicitly record that path and the requirement
+  to serve it with the outlined logos when confirming the 404 amendment. The output already contains
+  the correct licence.
+- The gate rejected an empty HTML event attribute on each of the 15 generated pages in an offline
+  check. The generated pages themselves passed, including the three feedback pages with their approved
+  scripts. The built licence matches `brand/OFL.txt` byte for byte.
+- The 12 non-error pages emit four head alternates each. The three localized 404 pages use
+  `noindex` and their switchers link to the language home pages, matching the amended spec.
+- Each built privacy contact section links to its localized feedback form. An isolated build with
+  `repositoryPublic` enabled verified that the repository wording follows that option in all three
+  languages. The store wording is conditional on publication.
+- Source-pair contrast for the elements axe could not assess clears the 4.5:1 AA text threshold.
+  Using the conservative RGB channel bounds of the hero gradient gives minimum ratios of
+  7.25:1 in light and 7.33:1 in dark. The language switcher's default, current and hovered text
+  pairs are at least 7.56:1 in light and 7.74:1 in dark.
+- Reviewed the contact section in all 12 updated privacy baselines at desktop and phone widths
+  in both themes. The links and updated paragraphs fit in all three languages. The working-tree
+  diff touches only those 12 baseline images. The extension, Worker, permissions and dependencies
+  are outside the step 16 diff.
+
+### Verification
+
+- `npm test` passed (1,388 application tests and 31 Worker tests).
+- Lint, typecheck, formatting, `git diff --check`, the site gate (15 pages and 20 generated files)
+  and the extension privacy gate passed.
+- The full `npm run test:e2e` run passed all five Chrome specs and 133 tests, with zero unexpected
+  requests in every worker and zero of 152 screenshot comparisons above tolerance. Axe reported
+  zero violations across 24 audits. Its fresh JSON report records 72 language-switcher targets
+  and 36 hero text targets under `color-contrast`, covered by the manual source check above.
+
+### Manual smoke test
+
+Run `npm run dev:site`. In Chrome and Firefox, open `http://localhost:8787/ca/privacy/#contacte`
+and follow the contact link to the Catalan feedback form. Open `http://localhost:8787/ca/missing`
+and check the language recovery links. The spec stays active pending owner confirmation of the ADR
+amendment, Catalan wording review and the post-deploy Chrome and Firefox check.

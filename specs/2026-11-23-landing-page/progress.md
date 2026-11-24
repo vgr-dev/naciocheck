@@ -363,3 +363,19 @@ fix(site): normalise URLs in the gate and ship only used screenshots
   - optionally: the teal tints in `brand/README.md`, the repeated hero screenshot, the interim `vgr.cat` URLs (the vgr.cat tie-in spec);
   - deploy (`npm run deploy:site` now runs the gate first), then Firefox checklist row 17 and the spec's last acceptance criterion;
   - follow-up: the flaky "options: editing an application" E2E test, which deletes its baselines when it fails under `update-baselines`.
+
+## 2026-11-24 - Step 16: Fix the independent review's findings
+
+- **Status:** done
+- **Run by:** implement-phase (four builder subagents in parallel, model sonnet; the 404 decision and the baselines by the orchestrator), at the owner's request "check and fix with sonnet sub agents"
+- **Changed:**
+  - A (finding 1, High; finding 3, gate side): `scripts/check-site.mjs`, `tests/site-gate.test.ts` — any `on*` event attribute fails on every page (15 spellings × 9 pages; the two approved feedback script tags still pass; "onboarding", `data-on`, `content="on"` do not trip it); exactly `img/OFL.txt` is the one allowed text file, and it must ship whenever an outlined logo ships. 187 of the new tests fail against the old gate.
+  - B (finding 3): `scripts/site-assets.mjs`, `tests/site-assets.test.ts` — `img/OFL.txt` is a byte copy of `brand/OFL.txt` next to the outlined logos (the test checks bytes and directory).
+  - C (finding 4): the three privacy pages and `tests/feedback-page.test.ts` — the contact section names the same-language feedback page as the route that works now; the repository and "the history is in the repository" sit inside `@if repository`; the store listing appears only as "once it is published". Tests check the feedback route per language and that no repository mention survives outside `@if repository`.
+  - D (finding 5): `e2e/specs/site.e2e.ts` — axe `incomplete` results (rule, impact, targets) per page, language and scheme go to the run output and `e2e/.artifacts/axe-incomplete.json`, without failing.
+  - Orchestrator (finding 2): `spec.md` and `docs/adr/0005-distribution-and-public-pages.md` exempt the 404 pages from `hreflang` alternates (no address of their own, `noindex`; the switcher links each language's home). **Decided by Claude (on the owner's request to fix):** the build already behaved so, and pointing alternates at other 404 files would be meaningless. This edits a settled ADR line; the owner should confirm.
+  - Orchestrator: the 12 `site-privacy-*` baselines rewritten.
+- **Verified:** `npm test` -> pass (extension 37 files, 1388 tests; worker 31); lint, format, typecheck -> clean; `npm run check:site` -> 15 pages. `npm run test:e2e:update-baselines`: the first run failed with the guard at "seen 0" (the local servers did not answer; transient) and deleted 80 baselines, restored from git with `git restore e2e/baselines`; the rerun passed (22, guard 0). A checksum of all 152 baselines before and after shows exactly the 12 `site-privacy-*` images changed. `npm run test:e2e` -> 13 + 41 + 55 + 2 + 22 passing, guard `outside it 0` in all five workers.
+- **axe incomplete:** 108 elements in 24 of 24 audits, all `color-contrast`: `.hero-facts > li`, `.hero-tagline`, `.hero-value` (text over the hero's teal gradient) and the language switcher links (the pill). Their token pairs pass the contrast unit test in both themes; axe cannot compute contrast over a gradient. Left as a manual AA check for the owner.
+- **Commit:** uncommitted, proposed per part (see the end of the turn)
+- **Open issues:** confirm the 404 exemption in the ADR and the privacy pages' promise that the store listing will take questions once published.
