@@ -9,14 +9,20 @@ specs, and never stage, commit or push.
 # What the matrix is
 
 `e2e/specs/visual.e2e.ts` photographs every extension page in its main states, in Spanish (`es`) and English (`en`),
-at three viewports, against the production build and invented data only. Image names are
-`<page>-<state>-<locale>-<viewport>.png`:
+at three viewports, against the production build and invented data only. It also photographs the built product site
+(`.output/site/`, served locally as `site.naciocheck.test`) in Spanish, English and Catalan (`ca`), in the light and
+the dark theme. Image names are `<page>-<state>-<locale>-<viewport>.png`; for a site page the state is the theme:
 
-| Part      | Values                                                                                                       |
-| --------- | ------------------------------------------------------------------------------------------------------------ |
-| page      | `onboarding`, `popup`, `options`, `statuses`, `result`, `unlock`, `form` (the fake official form + overlays) |
-| viewport  | `1280x800` desktop, `412x915` phone, `380x600` popup (popup only)                                            |
-| locale    | `es`, `en`                                                                                                   |
+| Part     | Values                                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------------------ |
+| page     | `onboarding`, `popup`, `options`, `statuses`, `result`, `unlock`, `form` (the fake official form + overlays) |
+|          | site: `site-landing`, `site-privacy`, `site-changelog`, `site-404`                                           |
+| state    | the extension page's state (`empty`, `saved`, `several`, `changed`, …); for a site page the theme, `light` or `dark` |
+| viewport | `1280x800` desktop, `412x915` phone, `380x600` popup (popup only)                                            |
+|          | `full1280`, `full412`: the whole page, scrolled and stitched (long extension pages, `site-landing`, `site-privacy`) |
+| locale   | `es`, `en`; the site pages also `ca` (its screenshots of the extension stay in Spanish until it has `ca`)     |
+
+The site matrix is 4 pages × 3 languages × 2 themes × 2 widths = 48 images.
 
 Two folders matter:
 
@@ -63,28 +69,38 @@ Two folders matter:
   crowded.
 - Spacing, alignment and the heading hierarchy are consistent from one page to the next; the same control looks the
   same everywhere.
+- In a stitched whole-page image (`full1280`, `full412`), a sticky element may appear where the scroll left it; judge
+  it against what a visitor would see, not as a duplicate.
 - State screens say what happened: the changed-status alert is unmistakable, an error shows the page's message, and
   an empty state tells the person what to do next.
 
-**es / en text fit**
+**es / en / ca text fit**
 
-- Compare the `es` and `en` image of the same page, state and viewport side by side. Spanish is usually the longer:
-  look for wrapped, truncated or overflowing labels, buttons that grew past their container, and lines that now
-  collide.
-- Both languages must be complete: no untranslated string, no raw key, no `⟦…⟧` pseudo-locale marker.
+- Compare the `es` and `en` image (and `ca` for the site) of the same page, state and viewport side by side. Spanish
+  and Catalan are usually the longer: look for wrapped, truncated or overflowing labels, buttons that grew past their
+  container, and lines that now collide.
+- Every language must be complete: no untranslated string, no raw key, no `⟦…⟧` pseudo-locale marker. The official
+  status names on the site stay in Spanish in every language, on purpose.
+
+**Site themes**
+
+- Compare the `light` and `dark` image of the same site page: both must keep the brand (teal on white or on the dark
+  background, never a recoloured icon), legible text, visible borders and links that look like links.
+- The site is a product page, not an official one: the non-affiliation line is in every footer, and the status guide
+  teaser says it is orientative and not official.
 
 **Data in the images**
 
 - Only invented data may appear: the NIE `X0000000X`, labels such as `Solicitud uno`, dates frozen in February 2026,
   the `TEST CAPTCHA STUB` box. Anything that looks like a real NIE, name or birth date is a **High** finding, whatever
-  else is fine.
+  else is fine. The site's how-it-works images are store screenshots with the same invented data.
 - The `form-*` images contain a capture of somebody else's page plus the test stub. Review only what the extension
   adds to it (the captcha-only view, the hint, the picker). The stub and the captured page are never defects of ours,
   and they must never reach a store image.
 
 **RTL readiness (code, not pixels)**
 
-The matrix has no right-to-left image. Check the readiness in the stylesheets instead: search `src/` for physical
+The matrix has no right-to-left image. Check the readiness in the stylesheets instead: search `src/` and `site/_build/partials/` for physical
 properties — `margin-left`, `margin-right`, `padding-left`, `padding-right`, `border-left`, `border-right`, `left:`,
 `right:`, `float:`, and `text-align: left|right` — and for sizes or transforms that assume a reading direction. Each
 hit is a finding unless the property is deliberately physical (say why). The logical equivalents
@@ -106,14 +122,14 @@ Reviewed: <n> of <total> images (<how chosen>). Index: <found / missing>, above 
 <one line per area: brand, layout, text fit, data, RTL source>
 
 ### Not reviewed / limits
-<images not opened; states the matrix does not contain (hover, focus, dark theme, RTL rendering, real data);
+<images not opened; states the matrix does not contain (hover, focus, the extension's dark theme, RTL rendering, real data);
 contrast judged by eye>
 ```
 
 Severity:
 
 - **High** — breaks use or a hard rule: unreadable or unreachable content, real-looking personal data, an official
-  look, a changed-status alert that is not unmistakable, a Spanish or English screen that is not usable.
+  look, a changed-status alert that is not unmistakable, a Spanish, English or Catalan screen that is not usable.
 - **Medium** — visibly wrong but usable: overflow that keeps the text readable, inconsistent spacing or controls,
   low contrast on secondary text, a physical CSS property that would break in RTL.
 - **Low** — polish: alignment, wording that nearly overflows, small inconsistencies.

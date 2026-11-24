@@ -24,6 +24,7 @@ import {
   setFallbackSwitch,
   setStoredLanguage,
 } from '../support/seed';
+import { siteUrl } from '../support/site-server';
 import {
   BASELINE_DIR,
   MISMATCH_TOLERANCE,
@@ -37,7 +38,9 @@ failOnLeakedRequest();
 
 /**
  * The screenshot matrix: every extension page in its usual states and the fake form's three overlays, in
- * Spanish and English, at a desktop and a phone width — and at its own width for the popup.
+ * Spanish and English, at a desktop and a phone width — and at its own width for the popup. Then the built site
+ * (served as `site.naciocheck.test` by `../support/site-server.ts`): landing, privacy, changelog and 404 in Spanish,
+ * English and Catalan, light and dark, at both widths.
  *
  * Each image is compared with its baseline under `e2e/baselines/` and the run fails above `MISMATCH_TOLERANCE`.
  * `npm run test:e2e:update-baselines` regenerates them, and `index.md` is written after every run. Every
@@ -52,6 +55,34 @@ failOnLeakedRequest();
 const LOCALES = ['es', 'en'] as const;
 
 type Locale = (typeof LOCALES)[number];
+
+/** The site has a third language the extension does not have yet: Catalan. */
+const SITE_LANGUAGES = [
+  { lang: 'es', prefix: '' },
+  { lang: 'en', prefix: '/en' },
+  { lang: 'ca', prefix: '/ca' },
+] as const;
+
+type SiteLanguage = (typeof SITE_LANGUAGES)[number]['lang'];
+
+/** The site follows the system's colour scheme, so each page is photographed in both. */
+const THEMES = ['light', 'dark'] as const;
+
+/**
+ * The site pages in the matrix. The landing and privacy pages are long and are photographed whole; the changelog
+ * and the 404 fit a screen. The 404 is reached through a path that does not exist, as a visitor does. The feedback
+ * pages are left out: they load Turnstile from a host the suite cannot reach (plan Q6).
+ */
+const SITE_PAGES: ReadonlyArray<{
+  readonly name: string;
+  readonly path: string;
+  readonly viewports: readonly Viewport[];
+}> = [
+  { name: 'landing', path: '/', viewports: ['full1280', 'full412'] },
+  { name: 'privacy', path: '/privacy/', viewports: ['full1280', 'full412'] },
+  { name: 'changelog', path: '/changelog/', viewports: ['1280x800', '412x915'] },
+  { name: '404', path: '/no-such-page', viewports: ['1280x800', '412x915'] },
+];
 
 type Viewport = '1280x800' | '412x915' | '380x600' | 'full1280' | 'full412';
 
@@ -110,7 +141,7 @@ async function shoot(
 async function compareCurrent(
   page: string,
   state: string,
-  locale: Locale,
+  locale: Locale | SiteLanguage,
   viewport: Viewport,
 ): Promise<void> {
   const tag = screenTag(page, state, locale, viewport);
@@ -163,10 +194,33 @@ async function maskSavedDates(): Promise<void> {
   await browser.execute(() => {
     for (const meta of document.querySelectorAll('.app-card .meta')) {
       meta.textContent = (meta.textContent ?? '').replace(
-        /\d{1,2} \S+ \d{4}, \d{2}:\d{2}/,
+        // The hour has one digit before 10:00 in some locales ("0:10"), so the mask must accept it.
+        /\d{1,2} \S+ \d{4}, \d{1,2}:\d{2}/,
         '1 Jan 2026, 10:00',
       );
     }
+  });
+}
+
+/**
+ * Opens a page of the built site and waits until it is complete, every image decoded and the colour scheme the one
+ * asked for: a half-loaded screenshot would differ from run to run.
+ */
+async function openSitePage(path: string, theme: (typeof THEMES)[number]): Promise<void> {
+  await browser.url(siteUrl(path));
+  await browser.waitUntil(
+    async () =>
+      browser.execute(
+        (wanted: string) =>
+          document.readyState === 'complete' &&
+          [...document.images].every((image) => image.complete) &&
+          matchMedia(`(prefers-color-scheme: ${wanted})`).matches,
+        theme,
+      ),
+    { timeoutMsg: `${path} did not finish loading in the ${theme} theme` },
+  );
+  await browser.execute(async () => {
+    await Promise.all([...document.images].map((image) => image.decode().catch(() => undefined)));
   });
 }
 
@@ -512,6 +566,25 @@ describe('screenshots', () => {
     }
   });
 
+  for (const theme of THEMES) {
+    it(`site: every page in the ${theme} theme`, async () => {
+      const restore = await browser.emulate('colorScheme', theme);
+      try {
+        for (const { lang, prefix } of SITE_LANGUAGES) {
+          for (const { name, path, viewports } of SITE_PAGES) {
+            for (const viewport of viewports) {
+              await browser.setViewport(VIEWPORTS[viewport]);
+              await openSitePage(`${prefix}${path}`, theme);
+              await compareCurrent(`site-${name}`, theme, lang, viewport);
+            }
+          }
+        }
+      } finally {
+        await restore();
+      }
+    });
+  }
+
   /**
    * `index.md`, after every run (the plan's 6.3). Written here rather than by a separate command, so the list
    * and the run that produced it cannot disagree.
@@ -533,10 +606,12 @@ describe('screenshots', () => {
       'Written by `e2e/specs/visual.e2e.ts` after every run. Baselines are tracked by git (D3): an image that',
       'changes is a change to review, so its new version belongs in the history next to the code that made it.',
       '',
-      `- **Images**: ${comparisons.length} — 2 locales × 52: onboarding 3 states × 2 viewports (6), popup 4 × 3 (12),`,
-      '  options 5 × 2 (10), statuses 1 × 2 (2), result 4 × 2 (8), unlock 1 × 2 (2), the fake form 3 overlays × 2 (6),',
-      '  and the long pages whole: onboarding (empty), options (two applications) and the changed-status alert,',
-      '  × 2 widths (6).',
+      `- **Images**: ${comparisons.length} — the extension, 2 locales × 52: onboarding 3 states × 2 viewports (6), popup`,
+      '  4 × 3 (12), options 5 × 2 (10), statuses 1 × 2 (2), result 4 × 2 (8), unlock 1 × 2 (2), the fake form 3',
+      '  overlays × 2 (6), and the long pages whole: onboarding (empty), options (two applications) and the',
+      '  changed-status alert, × 2 widths (6); and the site (`site-*`), 3 languages (es, en, ca) × 2 themes (light,',
+      '  dark) × 8: landing and privacy whole at both widths (4), changelog and 404 at 1280×800 and 412×915 (4).',
+      '  A site image names the theme where an extension image names its state.',
       '- **Viewports**: desktop 1280×800, phone 412×915, popup 380×600 (popup only); `full1280` and `full412` are the',
       '  whole page, scrolled and stitched, at those two widths.',
       `- **Tolerance**: ${MISMATCH_TOLERANCE} % of the pixels; above it the spec fails and a diff is written next`,
