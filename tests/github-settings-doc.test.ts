@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ADMIN_ROLE_ACTOR_ID,
   EXPECTED_SETTINGS,
+  GITHUB_ACTIONS_APP_ID,
   REQUIRED_CHECKS,
 } from '../scripts/check-github-settings.mjs';
 
@@ -52,7 +53,12 @@ function parseEntries(markdown: string): Entry[] {
 function expectedSection(id: string): string {
   if (id.startsWith('main-ruleset-')) return '`main` ruleset';
   if (id.startsWith('tag-ruleset-')) return '`v*` tag rulesets';
-  if (id === 'wiki-off' || id === 'delete-branch-on-merge' || id === 'merge-squash-only') {
+  if (
+    id === 'default-branch-main' ||
+    id === 'wiki-off' ||
+    id === 'delete-branch-on-merge' ||
+    id === 'merge-squash-only'
+  ) {
     return 'General';
   }
   if (/^(private-vulnerability|secret-scanning|dependabot-)/.test(id)) return 'Security';
@@ -96,6 +102,22 @@ describe('docs/github-settings.md', () => {
     for (const name of REQUIRED_CHECKS) {
       expect(required?.body, name).toContain(`\`${name}\``);
     }
+  });
+
+  it('documents the Actions source of the required checks and the bypass mode', () => {
+    const source = entries.find((entry) => entry.id === 'main-ruleset-checks-from-actions');
+    expect(source?.body).toContain('GitHub Actions');
+    expect(source?.body).toContain('`checks`');
+    expect(source?.body).toContain('`workflow-lint`');
+    expect(DOC).toContain(`${GITHUB_ACTIONS_APP_ID}`);
+    const create = entries.find((entry) => entry.id === 'tag-ruleset-creation-admin-bypass');
+    expect(create?.body).toContain('Always allow');
+  });
+
+  it('documents the default branch and the empty exclude lists', () => {
+    const branch = entries.find((entry) => entry.id === 'default-branch-main');
+    expect(branch?.body).toContain('main');
+    expect(DOC).toContain('Exclude target');
   });
 
   it('documents the tag rule as two rulesets, with admin-only bypass for creation', () => {

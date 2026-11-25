@@ -76,12 +76,14 @@ Settings > Actions > General.
 ## `main` ruleset
 
 Settings > Rules > Rulesets > New ruleset > New branch ruleset. One ruleset, named for example `main`, with
-Enforcement status "Active", the target branch "Include default branch" (no exclusions), and **an empty
-bypass list**. Needs the repository to be public on the Free plan.
+Enforcement status "Active", the target branch "Include default branch" (no Exclude target entries), and
+**an empty bypass list**. The default branch must be `main` (see `default-branch-main`): the script counts
+"Include default branch" as `main` only then, and a ruleset that excludes `main` (by name, as the default
+branch or as all branches) does not count. Needs the repository to be public on the Free plan.
 
 - **`main-ruleset-active`**
   - Where: the ruleset's Enforcement status and Target branches.
-  - Expected: Active; targets the default branch (`main`); excludes nothing.
+  - Expected: Active; targets the default branch (`main`); excludes nothing (no Exclude target entry).
   - Why: A ruleset in "Evaluate" or "Disabled" mode blocks nothing.
 - **`main-ruleset-no-bypass`**
   - Where: the ruleset's Bypass list.
@@ -109,6 +111,14 @@ bypass list**. Needs the repository to be public on the Free plan.
   - Expected: `checks` and `workflow-lint` (the job ids in `.github/workflows/ci.yml`).
   - Why: A change that fails formatting, lint, types, tests, the builds, the privacy gate, the site check or
     the workflow linters cannot be merged. The names appear in the picker after CI has run once.
+- **`main-ruleset-checks-from-actions`**
+  - Where: "Require status checks to pass", the source selector next to each check (the integration that
+    must provide it).
+  - Expected: GitHub Actions for both `checks` and `workflow-lint`. The script reads this as
+    `integration_id` 15368, the id of the GitHub Actions app.
+  - Why: A required check with no source ("any source") is satisfied by a commit status from any
+    integration or token that can write statuses. Pinning the source to GitHub Actions means only the
+    workflow's own jobs can satisfy it.
 - **`main-ruleset-strict-checks`**
   - Where: "Require status checks to pass", "Require branches to be up to date before merging".
   - Expected: ticked.
@@ -134,12 +144,21 @@ single bypass list, so the tag rules are **two rulesets**, both Active and both 
 `refs/tags/v*` (enter `v*` as the tag name pattern):
 
 1. A ruleset named for example `v-tags-create`, with the rule "Restrict creations" and a bypass list holding
-   exactly one entry: the role **Repository admin**, "Always allow".
+   exactly one entry: the role **Repository admin**, with the mode "Always allow" ("For pull requests only"
+   or "Exempt" is not accepted).
 2. A ruleset named for example `v-tags-protect`, with the rules "Restrict updates" and "Restrict deletions"
    and **an empty bypass list**.
 
+Both rulesets target exactly `refs/tags/v*` (or all tags) with **no Exclude target entry**: an excluded tag,
+for example `v0.1.0`, would be left unprotected, so a tag ruleset with any exclusion does not count.
+
+Rules layer: no other active ruleset that could apply to `v*` tags may restrict creation without the same
+Repository admin "Always allow" bypass, or it blocks the owner's publication of the draft release (a ruleset
+in Evaluate or Disabled mode enforces nothing and is ignored).
+
 Needs the repository to be public on the Free plan. The script identifies the Repository admin role by
-`actor_id` 5 in the bypass list, which step 10 of the spec confirms against the real ruleset.
+`actor_type` `RepositoryRole`, `actor_id` 5 and `bypass_mode` `always`, which step 10 of the spec confirms
+against the real ruleset.
 
 - **`tag-ruleset-creation-restricted`**
   - Where: the `v-tags-create` ruleset, Rules, "Restrict creations".
@@ -147,7 +166,7 @@ Needs the repository to be public on the Free plan. The script identifies the Re
   - Why: A `v*` tag marks a release, so a pull request, a workflow or a collaborator cannot create one.
 - **`tag-ruleset-creation-admin-bypass`**
   - Where: the `v-tags-create` ruleset, Bypass list.
-  - Expected: only the Repository admin role.
+  - Expected: only the Repository admin role, with "Always allow".
   - Why: Publishing the draft release creates the tag as the owner, who is an admin. Nobody else may.
 - **`tag-ruleset-no-update`**
   - Where: the `v-tags-protect` ruleset, Rules, "Restrict updates", with an empty bypass list.
@@ -186,6 +205,12 @@ public repositories; on a private Free-plan repository the script reports them a
 
 Settings > General.
 
+- **`default-branch-main`**
+  - Where: Branches, "Default branch".
+  - Expected: `main`.
+  - Why: The `main` ruleset targets "the default branch"; if another branch were the default, the rules
+    would protect that branch and leave `main` open, so the script counts the default-branch pattern as
+    `main` only when this holds.
 - **`wiki-off`**
   - Where: Features, "Wikis".
   - Expected: unticked.

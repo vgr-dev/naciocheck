@@ -23,8 +23,20 @@
  * - Private vulnerability reporting and vulnerability alerts (204 enabled, 404 disabled):
  *   https://docs.github.com/en/rest/repos/repos
  *
- * The `actor_id` of the Repository admin role is not documented on those pages. `5` is the value
- * GitHub's own UI and API use for it; step 10 of the spec confirms it against the real ruleset.
+ * Ruleset fields used, from https://docs.github.com/en/rest/repos/rules (Create a repository ruleset):
+ * - `conditions.ref_name.include` / `exclude`: ref patterns; `include` also accepts `~DEFAULT_BRANCH`
+ *   and `~ALL`. A ruleset counts for a ref only when `include` covers it and `exclude` does not.
+ * - `bypass_actors[]`: `actor_id`, `actor_type` (`RepositoryRole`, ...) and `bypass_mode`, one of
+ *   `always`, `pull_request` or `exempt` (default `always`).
+ * - `required_status_checks` rule: `parameters.required_status_checks[]` has `context` and the optional
+ *   `integration_id`, "the integration ID that this status check must originate from".
+ * - The repository's `default_branch` comes from the repository response (get a repository).
+ *
+ * Two values are not documented on those pages:
+ * - `actor_id` 5 is the Repository admin role, the value GitHub's own UI and API use for it; step 10 of
+ *   the spec confirms it against the real ruleset.
+ * - `integration_id` 15368 is the GitHub Actions app. Source: `gh api --method GET apps/github-actions`
+ *   (a public, read-only GET) returns `{"id":15368,"slug":"github-actions","name":"GitHub Actions"}`.
  */
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -36,6 +48,12 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 export const REQUIRED_CHECKS = ['checks', 'workflow-lint'];
 /** `actor_id` of the Repository admin role in a ruleset's `bypass_actors` (see the header). */
 export const ADMIN_ROLE_ACTOR_ID = 5;
+/** `integration_id` of the GitHub Actions app: the source a required check must come from. */
+export const GITHUB_ACTIONS_APP_ID = 15368;
+/** The only bypass mode the creation ruleset may use for the Repository admin role. */
+export const ADMIN_BYPASS_MODE = 'always';
+/** The ref pattern of the release tags. */
+export const TAG_PATTERN = 'refs/tags/v*';
 
 const REPO_ENDPOINT = 'repository';
 const SELECTED_ACTIONS_ENDPOINT = 'actions/permissions/selected-actions';
@@ -58,39 +76,98 @@ function expectField(body, field, expected) {
   return body[field] === expected ? undefined : drift(`${field} is ${JSON.stringify(body[field])}`);
 }
 
-/** Does `include` target the default branch? */
-function includesMain(ruleset) {
-  const include = ruleset?.conditions?.ref_name?.include;
-  return (
-    Array.isArray(include) &&
-    (include.includes('~DEFAULT_BRANCH') || include.includes('refs/heads/main'))
-  );
+const refList = (value) => (Array.isArray(value) ? value : []);
+
+/**
+ * How a ruleset relates to `main`: `'covers'` (`include` reaches it and `exclude` does not),
+ * `'excluded'` (`include` reaches it but `exclude` removes it), or `undefined`. `~DEFAULT_BRANCH` is
+ * `main` only when the repository's default branch is `main`.
+ */
+function mainCoverage(ruleset, defaultBranch) {
+  const refs = ruleset?.conditions?.ref_name;
+  const named = (list) =>
+    list.includes('refs/heads/main') ||
+    list.includes('~ALL') ||
+    (defaultBranch === 'main' && list.includes('~DEFAULT_BRANCH'));
+  if (!named(refList(refs?.include))) return undefined;
+  return named(refList(refs?.exclude)) ? 'excluded' : 'covers';
 }
 
-function includesVTags(ruleset) {
-  const include = ruleset?.conditions?.ref_name?.include;
-  return Array.isArray(include) && include.includes('refs/tags/v*');
+/**
+ * How a ruleset relates to the release tags: it covers them only when `include` is exactly
+ * `refs/tags/v*` (or `~ALL`) and `exclude` is empty; any excluded ref could be a release tag.
+ */
+function tagCoverage(ruleset) {
+  const refs = ruleset?.conditions?.ref_name;
+  const include = refList(refs?.include);
+  if (!include.includes(TAG_PATTERN) && !include.includes('~ALL')) return undefined;
+  return refList(refs?.exclude).length > 0 ? 'excluded' : 'covers';
+}
+
+/**
+ * Whether one `include` entry could match a `v*` tag. Deliberately conservative: only entries that
+ * cannot name a `v` tag (branch refs, other tag names, the default branch) are ruled out.
+ */
+function mayMatchReleaseTag(pattern) {
+  if (typeof pattern !== 'string') return true;
+  if (pattern === '~ALL') return true;
+  if (pattern === '~DEFAULT_BRANCH' || pattern.startsWith('refs/heads/')) return false;
+  if (!pattern.startsWith('refs/tags/')) return true;
+  const name = pattern.slice('refs/tags/'.length);
+  return name === '' || name.startsWith('v') || /^[*?[]/.test(name);
+}
+
+/**
+ * Whether a ruleset could apply to a `v*` tag: any `include` entry that may match one, whatever the
+ * `exclude` list says. Used to find every creation rule that layers on top of the release tags.
+ */
+function tagMayApply(ruleset) {
+  const include = refList(ruleset?.conditions?.ref_name?.include);
+  return include.some(mayMatchReleaseTag) ? 'covers' : undefined;
+}
+
+const excludedRefs = (ruleset) => refList(ruleset?.conditions?.ref_name?.exclude).join(', ');
+
+/** The default branch from the repository response, or `{ error }` when it cannot be read. */
+function defaultBranchOf(responses) {
+  const repository = responses[REPO_ENDPOINT];
+  if (!isOk(repository) || !isRecord(repository.body)) {
+    return { error: `the repository (${REPO_ENDPOINT}) response is needed for default_branch` };
+  }
+  const { default_branch: branch } = repository.body;
+  return typeof branch === 'string' && branch !== ''
+    ? { branch }
+    : { error: 'default_branch not returned' };
 }
 
 /**
  * The full rulesets (detail response when collected, otherwise the list item) for one target.
- * Returns `{ error }` when a ruleset has no `rules` array to read.
+ * `coverage(ruleset)` returns `'covers'`, `'excluded'` or `undefined`: only covering rulesets are
+ * returned in `rulesets`; the ones that reach the ref but exclude it are described in `excluded`.
+ * Returns `{ error }` when a covering ruleset has no `rules` array to read.
  */
-function rulesetsFor(list, responses, target, matches, { activeOnly }) {
+function rulesetsFor(list, responses, target, coverage, { activeOnly }) {
   if (!Array.isArray(list)) return { error: 'the rulesets list is not an array' };
   const found = [];
+  const excluded = [];
   for (const summary of list) {
     if (!isRecord(summary)) continue;
     const detail = responses[`${RULESETS_ENDPOINT}/${summary.id}`];
     const ruleset = isOk(detail) && isRecord(detail.body) ? detail.body : summary;
-    if (ruleset.target !== target || !matches(ruleset)) continue;
+    if (ruleset.target !== target) continue;
+    const reach = coverage(ruleset);
+    if (reach === undefined) continue;
+    if (activeOnly && ruleset.enforcement !== 'active') continue;
+    if (reach === 'excluded') {
+      excluded.push(`ruleset ${String(summary.id)} excludes ${excludedRefs(ruleset)}`);
+      continue;
+    }
     if (!Array.isArray(ruleset.rules)) {
       return { error: `ruleset ${String(summary.id)} has no rules in the response` };
     }
-    if (activeOnly && ruleset.enforcement !== 'active') continue;
     found.push(ruleset);
   }
-  return { rulesets: found };
+  return { rulesets: found, excluded };
 }
 
 const rulesOfType = (rulesets, type) =>
@@ -99,29 +176,82 @@ const rulesOfType = (rulesets, type) =>
 const hasBypass = (ruleset) =>
   Array.isArray(ruleset.bypass_actors) && ruleset.bypass_actors.length > 0;
 
+/** Exactly one bypass actor: the Repository admin role, with the mode "Always allow". */
 const isAdminOnlyBypass = (ruleset) =>
   Array.isArray(ruleset.bypass_actors) &&
   ruleset.bypass_actors.length === 1 &&
   ruleset.bypass_actors[0]?.actor_type === 'RepositoryRole' &&
-  ruleset.bypass_actors[0]?.actor_id === ADMIN_ROLE_ACTOR_ID;
+  ruleset.bypass_actors[0]?.actor_id === ADMIN_ROLE_ACTOR_ID &&
+  ruleset.bypass_actors[0]?.bypass_mode === ADMIN_BYPASS_MODE;
 
-/** Wraps a check on the active rulesets that target `main`. */
+/** The bypass list holds the Repository admin role with the mode "Always allow" (others may be there). */
+const hasAdminAlwaysBypass = (ruleset) =>
+  Array.isArray(ruleset.bypass_actors) &&
+  ruleset.bypass_actors.some(
+    (actor) =>
+      actor?.actor_type === 'RepositoryRole' &&
+      actor?.actor_id === ADMIN_ROLE_ACTOR_ID &&
+      actor?.bypass_mode === ADMIN_BYPASS_MODE,
+  );
+
+/** A short description of the bypass list for a drift message. */
+function describeBypass(ruleset) {
+  if (!hasBypass(ruleset)) return 'none';
+  return ruleset.bypass_actors
+    .map(
+      (actor) =>
+        `${String(actor?.actor_type)} ${String(actor?.actor_id)} (${String(actor?.bypass_mode)})`,
+    )
+    .join(', ');
+}
+
+/** Adds what the excluded rulesets said to a drift, so the reason names the excluded refs. */
+function withExcluded(outcome, excluded) {
+  if (excluded.length === 0 || outcome === undefined || !('drift' in outcome)) return outcome;
+  return drift(`${outcome.drift}; ${excluded.join('; ')}`);
+}
+
+/** Endpoints a `main` ruleset setting reads: the rulesets and the repository (`default_branch`). */
+const MAIN_RULESET = { endpoint: RULESETS_ENDPOINT, extraEndpoints: [REPO_ENDPOINT] };
+
+/** Wraps a check on the active rulesets that cover `main` (see `mainCoverage`). */
 function onMain(check) {
   return (list, responses) => {
-    const result = rulesetsFor(list, responses, 'branch', includesMain, { activeOnly: true });
+    const defaultBranch = defaultBranchOf(responses);
+    if (defaultBranch.error) return error(defaultBranch.error);
+    const result = rulesetsFor(
+      list,
+      responses,
+      'branch',
+      (ruleset) => mainCoverage(ruleset, defaultBranch.branch),
+      { activeOnly: true },
+    );
     if (result.error) return error(result.error);
-    if (result.rulesets.length === 0) return drift('no active ruleset targets main');
-    return check(result.rulesets);
+    if (result.rulesets.length === 0) {
+      return drift(noMainRuleset(defaultBranch.branch, result.excluded));
+    }
+    return withExcluded(check(result.rulesets), result.excluded);
   };
 }
 
-/** Wraps a check on the active rulesets that target `v*` tags. */
+function noMainRuleset(defaultBranch, excluded, qualifier = 'active ') {
+  const base =
+    defaultBranch === 'main'
+      ? `no ${qualifier}ruleset targets main`
+      : `no ${qualifier}ruleset targets main (the default branch is "${defaultBranch}")`;
+  return excluded.length > 0 ? `${base}; ${excluded.join('; ')}` : base;
+}
+
+/** Wraps a check on the active rulesets that cover every `v*` tag (see `tagCoverage`). */
 function onTags(check) {
   return (list, responses) => {
-    const result = rulesetsFor(list, responses, 'tag', includesVTags, { activeOnly: true });
+    const result = rulesetsFor(list, responses, 'tag', tagCoverage, { activeOnly: true });
     if (result.error) return error(result.error);
-    if (result.rulesets.length === 0) return drift('no active ruleset targets refs/tags/v*');
-    return check(result.rulesets);
+    if (result.rulesets.length === 0) {
+      const base = `no active ruleset targets ${TAG_PATTERN}`;
+      return drift(result.excluded.length > 0 ? `${base}; ${result.excluded.join('; ')}` : base);
+    }
+    return withExcluded(check(result.rulesets), result.excluded);
   };
 }
 
@@ -146,8 +276,40 @@ function tagRuleCheck(type, bypassOk) {
       ruleset.rules.some((rule) => rule?.type === type),
     );
     if (withRule.length === 0) return drift(`no ${type} rule`);
-    return withRule.some(bypassOk) ? undefined : drift(`${type} rule has the wrong bypass actors`);
+    return withRule.some(bypassOk)
+      ? undefined
+      : drift(
+          `${type} rule has the wrong bypass actors: ${withRule.map(describeBypass).join(' | ')}`,
+        );
   });
+}
+
+/**
+ * The creation settings. Rules layer: every active ruleset that could apply to a `v*` tag and has a
+ * `creation` rule applies, so each one must let the Repository admin create the tag, or the owner's
+ * publication of the draft release is blocked. Rulesets in `evaluate` or `disabled` mode do not
+ * enforce anything and are ignored.
+ * https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets#about-rule-layering
+ */
+function creationAdminBypassCheck(list, responses) {
+  const dedicated = tagRuleCheck('creation', isAdminOnlyBypass)(list, responses);
+  if (dedicated !== undefined) return dedicated;
+  const applying = rulesetsFor(list, responses, 'tag', tagMayApply, { activeOnly: true });
+  if (applying.error) return error(applying.error);
+  const offenders = applying.rulesets.filter(
+    (ruleset) =>
+      ruleset.rules.some((rule) => rule?.type === 'creation') && !hasAdminAlwaysBypass(ruleset),
+  );
+  if (offenders.length === 0) return undefined;
+  const names = offenders
+    .map(
+      (ruleset) =>
+        `ruleset ${String(ruleset.id)} "${String(ruleset.name)}" (bypass: ${describeBypass(ruleset)})`,
+    )
+    .join('; ');
+  return drift(
+    `creation rule without the Repository admin "Always allow" bypass, which blocks publishing the draft release: ${names}`,
+  );
 }
 
 /**
@@ -208,25 +370,34 @@ export const EXPECTED_SETTINGS = [
   },
   {
     id: 'main-ruleset-active',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'A ruleset on the default branch (main) is active',
     check(list, responses) {
-      const result = rulesetsFor(list, responses, 'branch', includesMain, { activeOnly: false });
+      const defaultBranch = defaultBranchOf(responses);
+      if (defaultBranch.error) return error(defaultBranch.error);
+      const result = rulesetsFor(
+        list,
+        responses,
+        'branch',
+        (ruleset) => mainCoverage(ruleset, defaultBranch.branch),
+        { activeOnly: false },
+      );
       if (result.error) return error(result.error);
-      if (result.rulesets.length === 0) return drift('no ruleset targets main');
       const active = result.rulesets.filter((ruleset) => ruleset.enforcement === 'active');
       if (active.length === 0) {
-        return drift(`enforcement is "${String(result.rulesets[0].enforcement)}"`);
+        return result.rulesets.length === 0
+          ? drift(noMainRuleset(defaultBranch.branch, result.excluded, ''))
+          : drift(`enforcement is "${String(result.rulesets[0].enforcement)}"`);
       }
       const excluding = active.some(
-        (ruleset) => (ruleset.conditions?.ref_name?.exclude ?? []).length > 0,
+        (ruleset) => refList(ruleset.conditions?.ref_name?.exclude).length > 0,
       );
       return excluding ? drift('the ruleset excludes some refs') : undefined;
     },
   },
   {
     id: 'main-ruleset-no-bypass',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'The main ruleset has no bypass actors, so it applies to the owner too',
     check: onMain((rulesets) => {
       const bypassing = rulesets.filter(hasBypass);
@@ -237,13 +408,13 @@ export const EXPECTED_SETTINGS = [
   },
   {
     id: 'main-ruleset-pull-request',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'Every change to main goes through a pull request',
     check: mainHasRule('pull_request'),
   },
   {
     id: 'main-ruleset-zero-approvals',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'The pull request rule requires 0 approvals (the owner is the only maintainer)',
     check: onMain((rulesets) => {
       const rules = pullRequestParameters(rulesets);
@@ -256,7 +427,7 @@ export const EXPECTED_SETTINGS = [
   },
   {
     id: 'main-ruleset-conversation-resolution',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'Conversations must be resolved before merging',
     check: onMain((rulesets) => {
       const rules = pullRequestParameters(rulesets);
@@ -268,7 +439,7 @@ export const EXPECTED_SETTINGS = [
   },
   {
     id: 'main-ruleset-squash-only',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'Squash is the only allowed merge method',
     check: onMain((rulesets) => {
       const rules = pullRequestParameters(rulesets);
@@ -288,7 +459,7 @@ export const EXPECTED_SETTINGS = [
   },
   {
     id: 'main-ruleset-required-checks',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: `The checks ${REQUIRED_CHECKS.join(' and ')} must pass`,
     check: onMain((rulesets) => {
       const rules = rulesOfType(rulesets, 'required_status_checks');
@@ -305,8 +476,35 @@ export const EXPECTED_SETTINGS = [
     }),
   },
   {
+    id: 'main-ruleset-checks-from-actions',
+    ...MAIN_RULESET,
+    describe: `The checks ${REQUIRED_CHECKS.join(' and ')} must come from GitHub Actions`,
+    check: onMain((rulesets) => {
+      const rules = rulesOfType(rulesets, 'required_status_checks');
+      if (rules.length === 0) return drift('no required_status_checks rule');
+      const entries = rules.flatMap((rule) =>
+        refList(rule.parameters?.required_status_checks).filter(isRecord),
+      );
+      const present = REQUIRED_CHECKS.filter((name) =>
+        entries.some((entry) => entry.context === name),
+      );
+      if (present.length === 0) return drift(`none of ${REQUIRED_CHECKS.join(', ')} is required`);
+      const foreign = entries.filter(
+        (entry) =>
+          REQUIRED_CHECKS.includes(entry.context) && entry.integration_id !== GITHUB_ACTIONS_APP_ID,
+      );
+      return foreign.length > 0
+        ? drift(
+            `integration_id is not ${GITHUB_ACTIONS_APP_ID} for ${foreign
+              .map((entry) => `${entry.context} (${JSON.stringify(entry.integration_id ?? null)})`)
+              .join(', ')}`,
+          )
+        : undefined;
+    }),
+  },
+  {
     id: 'main-ruleset-strict-checks',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'The branch must be up to date before merging',
     check: onMain((rulesets) => {
       const rules = rulesOfType(rulesets, 'required_status_checks');
@@ -318,19 +516,19 @@ export const EXPECTED_SETTINGS = [
   },
   {
     id: 'main-ruleset-linear-history',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'Linear history is required',
     check: mainHasRule('required_linear_history'),
   },
   {
     id: 'main-ruleset-no-force-push',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'Force pushes to main are blocked',
     check: mainHasRule('non_fast_forward'),
   },
   {
     id: 'main-ruleset-no-deletion',
-    endpoint: RULESETS_ENDPOINT,
+    ...MAIN_RULESET,
     describe: 'Deleting main is blocked',
     check: mainHasRule('deletion'),
   },
@@ -346,7 +544,7 @@ export const EXPECTED_SETTINGS = [
     id: 'tag-ruleset-creation-admin-bypass',
     endpoint: RULESETS_ENDPOINT,
     describe: 'Only Repository admin may create v* tags (publishing the draft release)',
-    check: tagRuleCheck('creation', isAdminOnlyBypass),
+    check: creationAdminBypassCheck,
   },
   {
     id: 'tag-ruleset-no-update',
@@ -385,6 +583,12 @@ export const EXPECTED_SETTINGS = [
     // 204 means enabled; 404 means disabled.
     missingIsDrift: true,
     check: () => undefined,
+  },
+  {
+    id: 'default-branch-main',
+    endpoint: REPO_ENDPOINT,
+    describe: 'The default branch is main (the rulesets protect main, not another branch)',
+    check: (body) => expectField(body, 'default_branch', 'main'),
   },
   {
     id: 'wiki-off',

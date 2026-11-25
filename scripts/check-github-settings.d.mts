@@ -31,6 +31,9 @@ export interface SettingsComparison {
 
 export const REQUIRED_CHECKS: readonly string[];
 export const ADMIN_ROLE_ACTOR_ID: number;
+export const GITHUB_ACTIONS_APP_ID: number;
+export const ADMIN_BYPASS_MODE: string;
+export const TAG_PATTERN: string;
 export const EXPECTED_SETTINGS: readonly ExpectedSetting[];
 
 export function endpointsToCollect(): string[];

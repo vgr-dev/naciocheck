@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ADMIN_ROLE_ACTOR_ID,
   EXPECTED_SETTINGS,
+  GITHUB_ACTIONS_APP_ID,
   compareSettings,
   endpointsToCollect,
   parseHttpResponse,
@@ -42,7 +43,10 @@ function mainRuleset(overrides: Record<string, unknown> = {}) {
         type: 'required_status_checks',
         parameters: {
           strict_required_status_checks_policy: true,
-          required_status_checks: [{ context: 'checks' }, { context: 'workflow-lint' }],
+          required_status_checks: [
+            { context: 'checks', integration_id: GITHUB_ACTIONS_APP_ID },
+            { context: 'workflow-lint', integration_id: GITHUB_ACTIONS_APP_ID },
+          ],
         },
       },
       { type: 'required_linear_history' },
@@ -111,6 +115,7 @@ function compliant(): SettingResponses {
     'private-vulnerability-reporting': ok({ enabled: true }),
     'vulnerability-alerts': { status: 204, body: null },
     repository: ok({
+      default_branch: 'main',
       has_wiki: false,
       delete_branch_on_merge: true,
       allow_squash_merge: true,
@@ -136,6 +141,24 @@ function drifted(change: (responses: SettingResponses) => void): SettingResponse
 const body = (responses: SettingResponses, endpoint: string) =>
   responses[endpoint]!.body as Record<string, unknown>;
 
+/** Adds a ruleset to the list and to the per-ruleset detail responses of a snapshot. */
+function addRuleset(responses: SettingResponses, ruleset: ReturnType<typeof creationRuleset>) {
+  const list = responses.rulesets!.body as Record<string, unknown>[];
+  const { id, name, target, enforcement } = ruleset;
+  list.push({ id, name, target, enforcement });
+  responses[`rulesets/${ruleset.id}`] = ok(ruleset);
+}
+
+/** A second tag ruleset layered over the release tags, with no bypass unless overridden. */
+const layeredRuleset = (overrides: Record<string, unknown> = {}) =>
+  creationRuleset({
+    id: 4,
+    name: 'tags layered',
+    bypass_actors: [],
+    rules: [{ type: 'creation' }, { type: 'update' }, { type: 'deletion' }],
+    ...overrides,
+  });
+
 const driftIds = (responses: SettingResponses) => compareSettings(responses).drift.map((d) => d.id);
 
 describe('EXPECTED_SETTINGS', () => {
@@ -157,6 +180,7 @@ describe('EXPECTED_SETTINGS', () => {
       'secret-scanning',
       'secret-scanning-push-protection',
       'dependabot-alerts',
+      'default-branch-main',
       'wiki-off',
       'delete-branch-on-merge',
       'merge-squash-only',
@@ -165,6 +189,7 @@ describe('EXPECTED_SETTINGS', () => {
     }
     expect(ids.some((id) => id.startsWith('main-ruleset-'))).toBe(true);
     expect(ids.some((id) => id.startsWith('tag-ruleset-'))).toBe(true);
+    expect(ids).toContain('main-ruleset-checks-from-actions');
   });
 
   it('collects every endpoint a setting reads, once', () => {
@@ -276,13 +301,107 @@ describe('compareSettings', () => {
       expect(driftIds(responses)).toContain('main-ruleset-active');
     });
 
-    it('flags excluded refs', () => {
+    it('flags excluded refs that are not main', () => {
       const responses = drifted((r) => {
         body(r, 'rulesets/1').conditions = {
           ref_name: { include: ['~DEFAULT_BRANCH'], exclude: ['refs/heads/x'] },
         };
       });
       expect(driftIds(responses)).toEqual(['main-ruleset-active']);
+    });
+
+    it.each([['refs/heads/main'], ['~DEFAULT_BRANCH'], ['~ALL']])(
+      'does not count a ruleset that excludes main as %s',
+      (excluded) => {
+        const responses = drifted((r) => {
+          body(r, 'rulesets/1').conditions = {
+            ref_name: { include: ['~DEFAULT_BRANCH'], exclude: [excluded] },
+          };
+        });
+        const result = compareSettings(responses);
+        const ids = result.drift.map((d) => d.id);
+        expect(ids.filter((id) => id.startsWith('main-ruleset-')).length).toBeGreaterThanOrEqual(
+          10,
+        );
+        expect(ids).toContain('main-ruleset-active');
+        expect(result.ok.filter((id) => id.startsWith('main-ruleset-'))).toEqual([]);
+        const active = result.drift.find((d) => d.id === 'main-ruleset-active')!;
+        expect(active.actual).toContain(`excludes ${excluded}`);
+      },
+    );
+
+    it('does not let ~DEFAULT_BRANCH in exclude remove main when the default is another branch', () => {
+      const responses = drifted((r) => {
+        body(r, 'repository').default_branch = 'develop';
+        body(r, 'rulesets/1').conditions = {
+          ref_name: { include: ['refs/heads/main'], exclude: ['~DEFAULT_BRANCH'] },
+        };
+      });
+      expect(driftIds(responses)).toEqual(['main-ruleset-active', 'default-branch-main']);
+    });
+
+    it('accepts ~ALL as the target of main', () => {
+      const responses = drifted((r) => {
+        body(r, 'rulesets/1').conditions = { ref_name: { include: ['~ALL'], exclude: [] } };
+      });
+      expect(driftIds(responses)).toEqual([]);
+    });
+
+    describe('default branch', () => {
+      const develop = (r: SettingResponses) => {
+        body(r, 'repository').default_branch = 'develop';
+      };
+
+      it('does not count a ~DEFAULT_BRANCH ruleset when the default branch is not main', () => {
+        const result = compareSettings(drifted(develop));
+        const ids = result.drift.map((d) => d.id);
+        expect(ids).toContain('default-branch-main');
+        for (const id of [
+          'main-ruleset-active',
+          'main-ruleset-no-bypass',
+          'main-ruleset-pull-request',
+          'main-ruleset-no-force-push',
+          'main-ruleset-no-deletion',
+        ]) {
+          expect(ids, id).toContain(id);
+        }
+        expect(result.ok.filter((id) => id.startsWith('main-ruleset-'))).toEqual([]);
+        const active = result.drift.find((d) => d.id === 'main-ruleset-active')!;
+        expect(active.actual).toContain('the default branch is "develop"');
+      });
+
+      it('still counts a ruleset that names refs/heads/main', () => {
+        const responses = drifted((r) => {
+          develop(r);
+          body(r, 'rulesets/1').conditions = {
+            ref_name: { include: ['refs/heads/main'], exclude: [] },
+          };
+        });
+        expect(driftIds(responses)).toEqual(['default-branch-main']);
+      });
+
+      it('accepts main as the default branch', () => {
+        expect(driftIds(compliant())).toEqual([]);
+      });
+
+      it('reports a missing default_branch as an error for the main settings', () => {
+        const responses = drifted((r) => {
+          delete body(r, 'repository').default_branch;
+        });
+        const result = compareSettings(responses);
+        expect(result.errors.map((e) => e.id)).toContain('main-ruleset-active');
+        expect(result.unavailable.map((u) => u.id)).toContain('default-branch-main');
+        expect(result.ok.filter((id) => id.startsWith('main-ruleset-'))).toEqual([]);
+      });
+
+      it('reports an unreadable repository as an error for the main settings', () => {
+        const responses = drifted((r) => {
+          r.repository = { status: 500, body: null };
+        });
+        const result = compareSettings(responses);
+        expect(result.errors.map((e) => e.id)).toContain('main-ruleset-no-deletion');
+        expect(result.ok.filter((id) => id.startsWith('main-ruleset-'))).toEqual([]);
+      });
     });
 
     it('flags bypass actors', () => {
@@ -327,11 +446,63 @@ describe('compareSettings', () => {
 
     it('flags a missing required check', () => {
       const responses = drifted((r) => {
-        mainRules(r)[1]!.parameters!.required_status_checks = [{ context: 'checks' }];
+        mainRules(r)[1]!.parameters!.required_status_checks = [
+          { context: 'checks', integration_id: GITHUB_ACTIONS_APP_ID },
+        ];
       });
       const result = compareSettings(responses);
       expect(result.drift.map((d) => d.id)).toEqual(['main-ruleset-required-checks']);
       expect(result.drift[0]!.actual).toContain('workflow-lint');
+    });
+
+    describe('required check source', () => {
+      const checks = (r: SettingResponses) =>
+        mainRules(r)[1]!.parameters!.required_status_checks as Record<string, unknown>[];
+
+      it('flags a required check without an integration_id', () => {
+        const responses = drifted((r) => {
+          delete checks(r)[1]!.integration_id;
+        });
+        const result = compareSettings(responses);
+        expect(result.drift.map((d) => d.id)).toEqual(['main-ruleset-checks-from-actions']);
+        expect(result.drift[0]!.actual).toContain('workflow-lint (null)');
+      });
+
+      it('flags a required check from another integration', () => {
+        const responses = drifted((r) => {
+          checks(r)[0]!.integration_id = 12345;
+        });
+        const result = compareSettings(responses);
+        expect(result.drift.map((d) => d.id)).toEqual(['main-ruleset-checks-from-actions']);
+        expect(result.drift[0]!.actual).toContain('checks (12345)');
+        expect(result.drift[0]!.actual).not.toContain('workflow-lint');
+      });
+
+      it('flags a second entry for a required check from another source', () => {
+        const responses = drifted((r) => {
+          checks(r).push({ context: 'checks', integration_id: 1 });
+        });
+        expect(driftIds(responses)).toEqual(['main-ruleset-checks-from-actions']);
+      });
+
+      it('names the required checks and the Actions app id', () => {
+        expect(GITHUB_ACTIONS_APP_ID).toBe(15368);
+      });
+
+      it('flags a missing rule, and leaves a missing name to the required-checks setting', () => {
+        expect(driftIds(drifted(removeRule('required_status_checks')))).toEqual([
+          'main-ruleset-required-checks',
+          'main-ruleset-checks-from-actions',
+          'main-ruleset-strict-checks',
+        ]);
+        const responses = drifted((r) => {
+          mainRules(r)[1]!.parameters!.required_status_checks = [];
+        });
+        expect(driftIds(responses)).toEqual([
+          'main-ruleset-required-checks',
+          'main-ruleset-checks-from-actions',
+        ]);
+      });
     });
 
     it('flags a branch that need not be up to date', () => {
@@ -345,6 +516,7 @@ describe('compareSettings', () => {
       const responses = drifted(removeRule('required_status_checks'));
       expect(driftIds(responses)).toEqual([
         'main-ruleset-required-checks',
+        'main-ruleset-checks-from-actions',
         'main-ruleset-strict-checks',
       ]);
     });
@@ -394,6 +566,31 @@ describe('compareSettings', () => {
       expect(driftIds(other)).toEqual(['tag-ruleset-creation-admin-bypass']);
     });
 
+    it.each(['exempt', 'pull_request', undefined])(
+      'flags a Repository admin bypass whose mode is %s',
+      (mode) => {
+        const responses = drifted((r) => {
+          body(r, 'rulesets/2').bypass_actors = [
+            { actor_id: ADMIN_ROLE_ACTOR_ID, actor_type: 'RepositoryRole', bypass_mode: mode },
+          ];
+        });
+        const result = compareSettings(responses);
+        expect(result.drift.map((d) => d.id)).toEqual(['tag-ruleset-creation-admin-bypass']);
+        expect(result.drift[0]!.actual).toContain(`RepositoryRole ${ADMIN_ROLE_ACTOR_ID}`);
+        expect(result.drift[0]!.actual).toContain(`(${String(mode)})`);
+      },
+    );
+
+    it('flags a second bypass actor next to Repository admin', () => {
+      const responses = drifted((r) => {
+        body(r, 'rulesets/2').bypass_actors = [
+          { actor_id: ADMIN_ROLE_ACTOR_ID, actor_type: 'RepositoryRole', bypass_mode: 'always' },
+          { actor_id: 1, actor_type: 'Team', bypass_mode: 'always' },
+        ];
+      });
+      expect(driftIds(responses)).toEqual(['tag-ruleset-creation-admin-bypass']);
+    });
+
     it('flags update and deletion locks that have a bypass', () => {
       const responses = drifted((r) => {
         body(r, 'rulesets/3').bypass_actors = [
@@ -415,6 +612,199 @@ describe('compareSettings', () => {
         body(r, 'rulesets/3').enforcement = 'disabled';
       });
       expect(driftIds(responses)).toEqual(['tag-ruleset-no-update', 'tag-ruleset-no-deletion']);
+    });
+
+    describe('coverage of every release tag', () => {
+      it.each([
+        [
+          'creation ruleset',
+          'rulesets/2',
+          ['tag-ruleset-creation-restricted', 'tag-ruleset-creation-admin-bypass'],
+        ],
+        ['lock ruleset', 'rulesets/3', ['tag-ruleset-no-update', 'tag-ruleset-no-deletion']],
+      ])('does not count the %s when it excludes refs/tags/v0.1.0', (_name, endpoint, ids) => {
+        const responses = drifted((r) => {
+          body(r, endpoint).conditions = {
+            ref_name: { include: ['refs/tags/v*'], exclude: ['refs/tags/v0.1.0'] },
+          };
+        });
+        const result = compareSettings(responses);
+        expect(result.drift.map((d) => d.id)).toEqual(ids);
+        for (const item of result.drift) {
+          expect(item.actual).toContain('excludes refs/tags/v0.1.0');
+        }
+      });
+
+      it('reports all four tag settings when both rulesets exclude a release tag', () => {
+        const responses = drifted((r) => {
+          for (const endpoint of ['rulesets/2', 'rulesets/3']) {
+            body(r, endpoint).conditions = {
+              ref_name: { include: ['refs/tags/v*'], exclude: ['refs/tags/v0.1.0'] },
+            };
+          }
+        });
+        expect(driftIds(responses).filter((id) => id.startsWith('tag-ruleset-'))).toHaveLength(4);
+      });
+
+      it('names the excluded refs when a covering ruleset lacks the rule', () => {
+        const responses = drifted((r) => {
+          body(r, 'rulesets/3').conditions = {
+            ref_name: { include: ['refs/tags/v*'], exclude: ['refs/tags/v1.*'] },
+          };
+        });
+        const result = compareSettings(responses);
+        expect(result.drift.map((d) => d.id)).toEqual([
+          'tag-ruleset-no-update',
+          'tag-ruleset-no-deletion',
+        ]);
+        expect(result.drift[0]!.actual).toContain(
+          'no update rule; ruleset 3 excludes refs/tags/v1.*',
+        );
+      });
+
+      it('accepts ~ALL as a target that covers the release tags', () => {
+        const responses = drifted((r) => {
+          body(r, 'rulesets/3').conditions = { ref_name: { include: ['~ALL'], exclude: [] } };
+        });
+        expect(driftIds(responses)).toEqual([]);
+      });
+
+      it('accepts a ruleset without an exclude list', () => {
+        const responses = drifted((r) => {
+          body(r, 'rulesets/3').conditions = { ref_name: { include: ['refs/tags/v*'] } };
+        });
+        expect(driftIds(responses)).toEqual([]);
+      });
+
+      it('does not count a narrower pattern such as refs/tags/v1*', () => {
+        const responses = drifted((r) => {
+          body(r, 'rulesets/3').conditions = {
+            ref_name: { include: ['refs/tags/v1*'], exclude: [] },
+          };
+        });
+        expect(driftIds(responses)).toEqual(['tag-ruleset-no-update', 'tag-ruleset-no-deletion']);
+      });
+    });
+
+    describe('rule layering over the release tags', () => {
+      it('flags a second covering ruleset with creation and no bypass', () => {
+        const responses = drifted((r) => addRuleset(r, layeredRuleset()));
+        const result = compareSettings(responses);
+        expect(result.drift.map((d) => d.id)).toEqual(['tag-ruleset-creation-admin-bypass']);
+        expect(result.drift[0]!.actual).toContain('ruleset 4 "tags layered"');
+        expect(result.drift[0]!.actual).not.toContain('ruleset 2');
+      });
+
+      it('names every offending ruleset', () => {
+        const responses = drifted((r) => {
+          addRuleset(r, layeredRuleset());
+          addRuleset(r, layeredRuleset({ id: 5, name: 'tags other' }));
+        });
+        const actual = compareSettings(responses).drift[0]!.actual;
+        expect(actual).toContain('ruleset 4 "tags layered"');
+        expect(actual).toContain('ruleset 5 "tags other"');
+      });
+
+      it.each(['evaluate', 'disabled'])('ignores the second ruleset in %s mode', (mode) => {
+        const responses = drifted((r) => addRuleset(r, layeredRuleset({ enforcement: mode })));
+        expect(driftIds(responses)).toEqual([]);
+      });
+
+      it.each([
+        ['refs/tags/*'],
+        ['refs/tags/v1*'],
+        ['refs/tags/v1.0.0'],
+        ['~ALL'],
+        ['refs/tags/**/v*'],
+      ])('flags a second ruleset that may apply through %s', (pattern) => {
+        const responses = drifted((r) =>
+          addRuleset(
+            r,
+            layeredRuleset({ conditions: { ref_name: { include: [pattern], exclude: [] } } }),
+          ),
+        );
+        expect(driftIds(responses)).toEqual(['tag-ruleset-creation-admin-bypass']);
+      });
+
+      it.each([['refs/tags/x*'], ['refs/tags/1.0'], ['refs/heads/main'], ['~DEFAULT_BRANCH']])(
+        'ignores a second ruleset that cannot apply through %s',
+        (pattern) => {
+          const responses = drifted((r) =>
+            addRuleset(
+              r,
+              layeredRuleset({ conditions: { ref_name: { include: [pattern], exclude: [] } } }),
+            ),
+          );
+          expect(driftIds(responses)).toEqual([]);
+        },
+      );
+
+      it('flags a second ruleset that excludes a tag but may still apply', () => {
+        const responses = drifted((r) =>
+          addRuleset(
+            r,
+            layeredRuleset({
+              conditions: {
+                ref_name: { include: ['refs/tags/v*'], exclude: ['refs/tags/v0.1.0'] },
+              },
+            }),
+          ),
+        );
+        expect(driftIds(responses)).toEqual(['tag-ruleset-creation-admin-bypass']);
+      });
+
+      it('accepts a second covering ruleset with only update and deletion', () => {
+        const responses = drifted((r) =>
+          addRuleset(r, layeredRuleset({ rules: [{ type: 'update' }, { type: 'deletion' }] })),
+        );
+        expect(driftIds(responses)).toEqual([]);
+      });
+
+      it('accepts a second creation ruleset with the admin Always-allow bypass', () => {
+        const responses = drifted((r) =>
+          addRuleset(
+            r,
+            layeredRuleset({
+              bypass_actors: [
+                {
+                  actor_id: ADMIN_ROLE_ACTOR_ID,
+                  actor_type: 'RepositoryRole',
+                  bypass_mode: 'always',
+                },
+              ],
+            }),
+          ),
+        );
+        expect(driftIds(responses)).toEqual([]);
+      });
+
+      it('flags a second creation ruleset whose admin bypass is not Always allow', () => {
+        const responses = drifted((r) =>
+          addRuleset(
+            r,
+            layeredRuleset({
+              bypass_actors: [
+                {
+                  actor_id: ADMIN_ROLE_ACTOR_ID,
+                  actor_type: 'RepositoryRole',
+                  bypass_mode: 'pull_request',
+                },
+              ],
+            }),
+          ),
+        );
+        expect(driftIds(responses)).toEqual(['tag-ruleset-creation-admin-bypass']);
+      });
+
+      it('reports an error when an applying ruleset has no rules to read', () => {
+        const responses = drifted((r) => {
+          addRuleset(r, layeredRuleset());
+          delete body(r, 'rulesets/4').rules;
+        });
+        expect(compareSettings(responses).errors.map((e) => e.id)).toContain(
+          'tag-ruleset-creation-admin-bypass',
+        );
+      });
     });
 
     it('ignores rulesets for other tag patterns', () => {
