@@ -15,13 +15,13 @@ Spec: `spec.md`
 
 **Phase 2: Settings checklist and workflow linters**
 
-- [x] 3. Write the public-repo settings checklist uncommitted
-- [x] 4. Add the pinned actionlint and zizmor runner uncommitted
+- [x] 3. Write the public-repo settings checklist 0e5c968
+- [x] 4. Add the pinned actionlint and zizmor runner 46e9a7e
 
 **Phase 3: Workflows**
 
-- [ ] 5. Add the CI workflow and Dependabot config
-- [ ] 6. Add the manual release workflow
+- [x] 5. Add the CI workflow and Dependabot config uncommitted
+- [x] 6. Add the manual release workflow uncommitted
 
 **Phase 4: Tie the workflows together**
 

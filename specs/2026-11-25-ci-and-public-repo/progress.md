@@ -110,3 +110,79 @@ feat: add a pinned actionlint and zizmor workflow lint runner
   `feat: add a pinned actionlint and zizmor workflow lint runner`;
   `docs: log phase 2 of the CI plan`
 - **Open issues:** Step 10 confirms the UI paths in the checklist and the admin `actor_id`.
+
+## 2026-11-25 - Step 5: Add the CI workflow and Dependabot config
+
+- **Status:** done (the builder reported partial; it was completed after the step 4 follow-up fix below)
+- **Changed:** `.github/workflows/ci.yml`, `.github/dependabot.yml`
+- **Verified:** `npm run check:workflows` -> pass; `npx prettier --check` on both files -> pass;
+  `npm run lint:workflows -- .github/workflows/ci.yml .github/dependabot.yml` -> fail at first (actionlint
+  parsed `dependabot.yml` as a workflow and reported 4 false errors), then pass after the fix (actionlint
+  checked 1 file, zizmor 2 targets, no findings).
+- **Commit:** uncommitted, proposed "ci: add the CI workflow and Dependabot config for actions"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+ci: add the CI workflow and Dependabot config for actions
+```
+
+- **Open issues:** Pins: `actions/checkout` v7.0.1 `3d3c42e5aac5ba805825da76410c181273ba90b1` and
+  `actions/setup-node` v7.1.0 `949feb2413d6458794dcd2491c4babbbce0c15c1`. Both are the latest
+  releases, both tags are lightweight, and both were cross-checked with the commits API. zizmor asked for a
+  Dependabot cooldown, so `cooldown: default-days: 7` was added. Where `setup-node` gets Node from (the
+  toolcache, or a nodejs.org fallback) is observed in step 10.
+
+## 2026-11-25 - Step 4 follow-up: Give actionlint only workflow files
+
+- **Status:** done (approved by the owner during Phase 3 to unblock step 5's Verify)
+- **Changed:** `scripts/lint-workflows.mjs`
+- **Verified:** targeted eslint and prettier -> pass; `npm run lint:workflows` with
+  `ci.yml dependabot.yml`, with `dependabot.yml` alone (actionlint skipped with a note), with `release.yml`
+  alone, with no arguments, and with `.github/` -> all exit 0, no findings; `npm run check:workflows` ->
+  pass.
+- **Commit:** uncommitted, proposed "fix: give actionlint only workflow files when paths are passed"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+fix: give actionlint only workflow files when paths are passed
+```
+
+- **Open issues:** none
+
+## 2026-11-25 - Step 6: Add the manual release workflow
+
+- **Status:** done
+- **Changed:** `.github/workflows/release.yml` (and the git-ignored `.output/` from `npm run zip:sources`)
+- **Verified:** `npm run check:workflows` -> pass; `npm run lint:workflows -- .github/workflows/release.yml`
+  -> pass, no findings; prettier -> pass; `npm run zip:sources` -> pass; `ls .output/*.zip` ->
+  `naciocheck-0.1.0-{chrome,firefox,sources}.zip`, the same names the workflow attaches.
+- **Commit:** uncommitted, proposed "feat: add the manual draft release workflow"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+feat: add the manual draft release workflow
+```
+
+- **Open issues:** Same action SHAs as `ci.yml`. The job has `timeout-minutes: 30`. `GH_TOKEN` is set only
+  on the existence-check step and the release step. The existence check treats only "release not found" or
+  "HTTP 404" as absent and fails closed on any other error. Whether `gh release view` finds drafts and uses
+  that wording is confirmed in step 10. The release notes say the files are for verification and store
+  upload, which relies on the Q1(a) amendment to ADR 0005 that step 9 writes.
+
+## 2026-11-25 - Phase 3: Workflows
+
+- **Status:** done
+- **Steps:** 5 done (after the follow-up fix); 6 done; follow-up to step 4 done
+- **File check:** pass. `scripts/lint-workflows.mjs` is outside this phase's Files, but the owner approved
+  the change as a step 4 follow-up.
+- **Phase verify:** `npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:workflows && npm run lint:workflows && npm run build:chrome && npm run build:firefox && npm run check:privacy && npm run check:site`
+  -> pass (40 files, 1616 tests; zero actionlint or zizmor findings). Format, lint, typecheck,
+  `check:workflows` and `lint:workflows` were rerun after the fix -> pass.
+- **Commit proposal:** `fix: give actionlint only workflow files when paths are passed`;
+  `ci: add the CI workflow and Dependabot config for actions`;
+  `feat: add the manual draft release workflow`; `docs: record phase 2 hashes and log phase 3 of the CI plan`
+- **Open issues:** Step 10 confirms how `gh release view` handles drafts and where Node is downloaded from.
+  Step 9 must write the ADR 0005 amendment (Q1) before the release workflow is used.
