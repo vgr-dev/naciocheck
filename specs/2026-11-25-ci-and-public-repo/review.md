@@ -81,3 +81,23 @@ Return the two remaining findings to the builder. Keep the spec active through t
 - The read-only private-repo settings check exited 1 with 2 matching settings, 7 with drift, 20 unavailable and 0 errors. Browser E2E is outside the CI acceptance scope. A green PR, intentional CI failures, live rulesets and throwaway release acceptance remain pending.
 
 **Manual smoke test** — From a fresh checkout, run `npm ci && npm run typecheck` before running either browser build. Confirm typecheck exits 0, then check that both GitHub CI jobs pass on the PR.
+
+## 2026-11-25 — Third re-review — PASS
+
+Commit `7cce151` fixes the clean-checkout typecheck failure. In a fresh export of `6458eeb`, `npm ci --offline` ran `wxt prepare` on the workflow's pinned Node 24.22.1. `public/icon/` was still absent when `npm run typecheck` passed. The generated WXT type listed all five icon paths exactly once before and after building. Both browser archives contain the five icons.
+
+### Checklist follow-up
+
+The [order for applying settings](../../docs/github-settings.md#applying-the-checklist) puts all Actions settings before the visibility change. The live GET for `fork-pr-approval-all-outside` returned HTTP 422 with GitHub's explanation that fork PR approval is unavailable for private repositories. List that setting among the ones to apply after going public.
+
+### Verification
+
+- `npm run format:check`, `npm run lint`, and `npm run typecheck` passed. `npm test` passed 1,696 extension tests and 31 Worker tests. The install and tests used the checksum-verified Node 24.22.1 GitHub runner artifact. The sandbox initially blocked the install subprocess on Node 24.22.0. A retry with subprocess access passed, as did the clean run on 24.22.1.
+- `npm run check:workflows` and `npm run lint:workflows` passed. Actionlint reported zero findings. Zizmor reported zero findings and three advisories suppressed by its default persona.
+- Both browser builds, `npm run check:privacy`, `npm run check:site`, `npm run zip`, and `npm run zip:sources` passed. All three archives passed `sha256sum -c` and `unzip -tq`. Packaging was repeated with verification logs stored outside the exported checkout.
+- The read-only settings check exited 1 with 2 matching settings, 7 with drift, 20 unavailable and 0 errors. GitHub's [latest CI run](https://github.com/vgr-dev/naciocheck/actions/runs/45689113138) was for `21fdf7c`, which predates the fix.
+- The fix is limited to WXT's generated public-path types and three regression tests. The committed diff passed `git diff --check`. Review added no implementation changes. Browser E2E is outside this CI acceptance suite.
+
+Step 10 and the spec remain active. Owner-side acceptance still requires a green PR, the five intentional CI failures, settings and ruleset verification after the visibility switch, and a throwaway release run that verifies the four draft assets, the duplicate guard and the non-`main` guard.
+
+**Manual smoke test** — Push a branch containing `7cce151`, open a PR to `main`, and confirm both `checks` and `workflow-lint` pass, including the Typecheck step before either browser build starts.

@@ -535,3 +535,26 @@ fix: extract lint tool binaries into a per-run temp directory
 - **Open issues:** Confirm on GitHub with a green CI run on the next push or PR. Repeat the review. Step 10's
   owner-side runs are still pending. The second re-review confirms that `setup-node` took Node 24.22.1 from
   `actions/node-versions` on GitHub, not from nodejs.org, which settles one step 10 item.
+
+## 2026-11-25 - Third re-review PASS and checklist follow-up
+
+- **Status:** done
+- **Review:** PASS (`review.md`, third re-review) on `6458eeb`. A fresh export on Node 24.22.1 typechecked
+  with `public/icon/` absent, and the full local suite and packaging passed.
+- **Changed:** `docs/github-settings.md`. In the apply order, `fork-pr-approval-all-outside` moves from
+  "before going public" to "after going public", because GitHub answers HTTP 422 on a private repository.
+- **Verified:** `npx prettier --check docs/github-settings.md` -> pass;
+  `npx vitest run tests/github-settings-doc.test.ts tests/workflows.test.ts` -> pass (37 tests).
+- **Commit:** uncommitted, proposed "docs: apply fork PR approval after the repository goes public"
+- **Run by:** main session
+- **Open issues:** Step 10 stays `[~]` and the spec stays active until the owner-side acceptance runs:
+  1. A PR containing `7cce151` with green `checks` and `workflow-lint`, where Typecheck passes before the
+     builds.
+  2. The five intentional CI failures (format, lint, type, test, privacy).
+  3. After the visibility switch: apply the checklist, then a settings check with no drift, no error and
+     nothing unavailable, plus confirmation of the UI paths and the admin `actor_id` 5 on the real
+     rulesets.
+  4. A throwaway-repo release run: a draft with four assets that pass `sha256sum -c`, then the duplicate
+     guard, including the draft case, and the non-`main` guard.
+
+  The Node download source is settled: it is `actions/node-versions` (second re-review).
