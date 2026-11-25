@@ -29,12 +29,12 @@ Spec: `spec.md`
 
 **Phase 5: Contribution flow and documentation**
 
-- [x] 8. Add CONTRIBUTING.md and the PR template uncommitted
-- [x] 9. Document CI, releases and the PR flow uncommitted
+- [x] 8. Add CONTRIBUTING.md and the PR template 936dd71
+- [x] 9. Document CI, releases and the PR flow 71a35be
 
 **Phase 6: Acceptance**
 
-- [ ] 10. Run the acceptance checks
+- [~] 10. Run the acceptance checks
 
 ## Fixed names (all steps use these)
 

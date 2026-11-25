@@ -275,3 +275,84 @@ docs: amend ADR 0005 for release assets as verification only
   `docs: document CI, releases and the PR flow`;
   `docs: record phase 4 hashes and log phase 5 of the CI plan`
 - **Open issues:** none
+
+## 2026-11-25 - Step 10: Run the acceptance checks (local part)
+
+- **Status:** partial (the local part is done; the GitHub-side runs are pending on the owner)
+- **Changed:** none
+- **Verified:** `node scripts/check-github-settings.mjs vgr-dev/naciocheck; echo "exit $?"` -> exit 1. First
+  run: `1 ok, 7 drift, 18 unavailable, 1 error`. After the step 2 follow-up below:
+  `1 ok, 7 drift, 19 unavailable, 0 error`.
+  - Drift, expected until the owner applies the checklist: `actions-allowed-github-owned`,
+    `actions-sha-pinning`, `workflow-token-read`, `actions-no-pr-approval`, `dependabot-alerts`,
+    `delete-branch-on-merge`, `merge-squash-only`. `wiki-off` is ok.
+  - Unavailable on the private Free repo: all 15 ruleset checks (403 "Upgrade to GitHub Pro or make this
+    repository public"), `private-vulnerability-reporting` (404), `secret-scanning` and
+    `secret-scanning-push-protection` (`security_and_analysis` is null), and `fork-pr-approval-all-outside`
+    (422, after the fix).
+  - The script made only GET requests, and so did the builder's read-only `gh api --method GET` probes.
+- **Confirmed:** `gh api --include` keeps the `HTTP/2.0 <status>` line on 403, 404 and 422, so the status is
+  read correctly. `gh release view` on a missing release prints `release not found`, and the missing tag ref
+  prints `HTTP 404`; both match the greps in `release.yml`.
+- **Acceptance criteria:**
+  - **Covered locally:**
+    - CI token, triggers and secrets: `tests/workflows.test.ts` and `tests/check-workflows.test.ts`.
+    - SHA pinning: `check:workflows`, plus the step 7 negative check.
+    - Dependabot scope: `tests/workflows.test.ts`.
+    - Settings doc: `tests/github-settings-doc.test.ts`.
+    - Settings script, GET-only and unavailable vs drift: the run above and the read-only source guard.
+    - Local checks: the Phase 5 and Phase 6 verify runs.
+    - Release workflow, statically: `tests/workflows.test.ts`, plus the zip names confirmed in step 6.
+    - `CONTRIBUTING.md`, the PR template and AGENTS.md: written in steps 8 and 9, with no content test.
+  - **Pending on the owner:**
+    1. A PR with green `checks` and `workflow-lint`.
+    2. Five throwaway branches (format, lint, type, test, privacy), each failing CI at the matching step.
+    3. In a throwaway repo: a release run that creates a draft `v<version>` with four assets, then
+       `sha256sum -c` on the downloads. A second run must fail on the existing release before the build. A
+       run from a non-`main` branch must fail before the build.
+    4. Whether `gh release view` finds an existing draft.
+    5. The UI paths in `docs/github-settings.md`, and the admin `actor_id` 5 against a real ruleset.
+    6. Whether `setup-node` downloads Node from nodejs.org.
+- **Commit:** uncommitted, proposed "docs: log the local acceptance checks for step 10"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+docs: log the local acceptance checks for step 10
+```
+
+- **Open issues:** If `gh release view` did not find drafts, the release check would miss an existing draft;
+  the tag check would still run. The throwaway-repo run settles this. A 404 on private vulnerability reporting
+  cannot tell "off" from "plan-gated" until the repo is public.
+
+## 2026-11-25 - Step 2 follow-up: Treat the private-repo 422 as unavailable
+
+- **Status:** done (approved by the owner during Phase 6)
+- **Changed:** `scripts/check-github-settings.mjs`, `tests/check-github-settings.test.ts`
+- **Verified:** `npx vitest run` on the settings, settings-doc and workflows test files -> pass (89 tests);
+  targeted eslint and prettier -> pass; `npm run typecheck` -> pass. The real check now shows
+  `fork-pr-approval-all-outside` as unavailable: `1 ok, 7 drift, 19 unavailable, 0 error`, exit 1 on the
+  real drift.
+- **Commit:** uncommitted, proposed "fix: treat the private-repo 422 as unavailable in the settings check"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+fix: treat the private-repo 422 as unavailable in the settings check
+```
+
+- **Open issues:** The real 422 body puts the reason in `errors`, not `message`, so the script matches
+  `/private repositor/i` in either, and only on status 422. Any other 422 still counts as an error.
+
+## 2026-11-25 - Phase 6: Acceptance
+
+- **Status:** partial (the local part is done; step 10 waits on the owner's GitHub-side runs)
+- **Steps:** 10 partial (pending on owner); step 2 follow-up done
+- **File check:** pass. The two changed files are the owner-approved step 2 follow-up; step 10 changed none.
+- **Phase verify:** `npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:workflows && npm run lint:workflows`
+  -> pass (41 files, 1641 tests). Every acceptance criterion either has evidence above or is listed as
+  pending on the owner.
+- **Commit proposal:** `fix: treat the private-repo 422 as unavailable in the settings check`;
+  `docs: record phase 5 hashes and log the local acceptance checks`
+- **Open issues:** The six owner actions listed under step 10. Then the agent records the results, and step 10
+  and the spec can close.
