@@ -57,9 +57,16 @@ locally and alerts loudly when the status changes. Not affiliated with the Minis
 ## Rules index
 
 - UI review of the screenshot matrix: `.claude/commands/review-ui.md` (read-only; run it after visual changes)
-- Decisions: `docs/adr/0002`…`0007` (stack, captcha, local data and encryption, distribution, brand and
-  licence, testing). If you think one is wrong, raise it with the user rather than silently reverting it.
+- Decisions: `docs/adr/0002`…`0008` (stack, captcha, local data and encryption, distribution, brand and
+  licence, testing, branches and releases). If you think one is wrong, raise it with the user rather than silently reverting it.
 - Open release gates and the audit trail: `docs/pre-release-audit-2026-11-18.md`
+
+## Branches and releases
+
+- Branch names, the changelog rule, versioning, release pull requests and fixes after a release:
+  [`docs/adr/0008-branches-fixes-and-releases.md`](docs/adr/0008-branches-fixes-and-releases.md).
+- Run `git branch --show-current` before editing. On `main`, stop and propose a branch (`<type>/<slug>`), or
+  create it with `git switch -c` and say so. Never commit, push, rebase or reset.
 
 ## Workflow
 
