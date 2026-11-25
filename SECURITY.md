@@ -23,7 +23,7 @@ There is no security email address: the extension sends nothing, and neither doe
 
 ## Supported versions
 
-The project is pre-release (0.x). Only the latest published release is supported; a fix ships as a new
+The project is pre-release. Only the latest published release is supported; a fix ships as a new
 version, and there are no backport branches. A report against an older build is still welcome, but the fix
 will not be retrofitted.
 
