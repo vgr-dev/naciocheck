@@ -1,5 +1,5 @@
 ---
-status: active # draft | active | done | abandoned
+status: done # draft | active | done | abandoned
 created: 2026-11-25
 status-date: 2026-11-25
 ---

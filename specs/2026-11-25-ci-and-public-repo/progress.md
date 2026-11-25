@@ -558,3 +558,51 @@ fix: extract lint tool binaries into a per-run temp directory
      guard, including the draft case, and the non-`main` guard.
 
   The Node download source is settled: it is `actions/node-versions` (second re-review).
+
+## 2026-11-25 - Step 10: Run the acceptance checks (owner-side runs)
+
+- **Status:** done
+- **Changed:** none (evidence only)
+- **Verified:** the orchestrator checked each item with read-only `gh` calls unless it is marked as reported
+  by the owner.
+  - **Settings, after the repository went public and the owner applied `docs/github-settings.md`:**
+    `node scripts/check-github-settings.mjs vgr-dev/naciocheck` -> `29 ok, 0 drift, 0 unavailable, 0 error`,
+    exit 0. The first run after the switch showed one drift, `merge-squash-only` (rebase merging was still
+    allowed). The owner turned rebase merging off and the rerun was clean.
+  - **Rulesets:** `main` (branch), `v-tags-create` and `v-tags-protect` (tag) are all active. The bypass list of
+    `v-tags-create` is exactly `RepositoryRole`, `actor_id` 5, `bypass_mode: always`, which confirms the admin
+    role id left open since step 2.
+  - **Green PR:** #1 (`ci/acceptance-green`) -> `checks` and `workflow-lint` both passed.
+  - **Intentional failures:** each PR failed `checks` at its matching step while `workflow-lint` passed, and the
+    `main` ruleset blocks merging each one.
+    - #2 format -> "Check formatting" (run 45700823647)
+    - #3 lint -> "Lint" (run 45700887422)
+    - #4 type -> "Typecheck" (run 45700938425)
+    - #5 test -> "Unit tests" (run 45700978928)
+    - #6 privacy -> "Privacy gate" (run 45701045529); the probe was guarded so the unit tests never call the
+      network.
+
+    The orchestrator had checked all five probes beforehand in a scratch copy of the tracked files.
+
+  - **Release runs in a throwaway repository:** reported by the owner as working, and the repository has been
+    deleted, so there are no run links. Per the Part 7 instructions this covered:
+    - the first run from `main` created a draft `v0.1.0` with four assets, and `sha256sum -c` passed on the
+      downloaded files;
+    - a second run stopped at the duplicate guard with the draft present, before `npm ci`;
+    - a run from `not-main` stopped at its first step.
+  - **Node source:** settled in the second re-review (`actions/node-versions`, 24.22.1).
+- **Commit:** uncommitted, proposed "docs: record the CI acceptance runs and close the CI spec"
+- **Run by:** main session (owner-side runs, verified with read-only `gh` calls)
+- **Open issues:** The failure PRs #2 to #6 are still open, and the owner closes them. The release runs have
+  only the owner's report as evidence, because the throwaway repository is deleted.
+
+## 2026-11-25 - Phase 6: Acceptance (closed)
+
+- **Status:** done
+- **Steps:** 10 done
+- **File check:** pass (only `plan.md`, `progress.md` and `spec.md` changed)
+- **Phase verify:** every acceptance criterion has evidence in this file. The settings check is clean against
+  the public repository.
+- **Commit proposal:** `docs: record the CI acceptance runs and close the CI spec` (through a pull request,
+  since `main` is protected)
+- **Open issues:** none for this spec

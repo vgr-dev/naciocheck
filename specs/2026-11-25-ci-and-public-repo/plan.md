@@ -34,7 +34,7 @@ Spec: `spec.md`
 
 **Phase 6: Acceptance**
 
-- [~] 10. Run the acceptance checks
+- [x] 10. Run the acceptance checks uncommitted
 
 ## Fixed names (all steps use these)
 
