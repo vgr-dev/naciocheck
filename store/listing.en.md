@@ -33,6 +33,8 @@ What it does
 - Sends the query once the captcha is solved and reads the status the site returns.
 - Keeps every check in your browser and tells you when the status changes.
 - Explains what each status means, with its sources, and flags what only law firms document.
+- Shows the status exactly as the sede electrónica printed it, whichever language the extension is in.
+- Builds a short numbered timeline of an application that you can copy, with an optional filing date; it contains dates and statuses, nothing else.
 - Can remind you at the hour and on the days you choose.
 
 What it does not do

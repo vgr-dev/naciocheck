@@ -32,6 +32,8 @@ Qué hace
 - Envía la consulta cuando el captcha está resuelto y lee el estado que devuelve.
 - Guarda cada comprobación en tu navegador y te avisa cuando el estado cambia.
 - Explica qué significa cada estado, con sus fuentes, y señala lo que solo está documentado por despachos.
+- Muestra el estado tal como lo escribió la sede electrónica, sea cual sea el idioma de la extensión.
+- Prepara una cronología numerada y breve de una solicitud que puedes copiar, con una fecha de presentación opcional; contiene fechas y estados, nada más.
 - Puedes poner un recordatorio: un aviso a la hora y los días que elijas.
 
 Qué no hace
