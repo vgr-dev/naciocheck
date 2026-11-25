@@ -41,12 +41,32 @@ const TILES = [
   },
 ];
 
-/** The icons: AMO's listing icon wants 32 and 64; 128 is the store icon CWS shows next to the name. */
-const ICONS = [32, 64, 128];
+/**
+ * The icons: AMO's listing icon wants 32 and 64, edge to edge; 128 is the store icon CWS shows next to the
+ * name, and CWS wants its artwork at 96×96 with 16 px of transparent padding on every side (C3).
+ */
+const ICONS = [
+  { size: 32, padding: 0 },
+  { size: 64, padding: 0 },
+  { size: 128, padding: 16 },
+];
 
-async function renderIcon(size) {
+const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
+
+async function renderIcon({ size, padding }) {
   const file = join(STORE, `icon-${String(size)}.png`);
-  await sharp(ICON, { density: 384 }).resize(size, size, { fit: 'contain' }).png().toFile(file);
+  const art = size - 2 * padding;
+  await sharp(ICON, { density: 384 })
+    .resize(art, art, { fit: 'contain', background: TRANSPARENT })
+    .extend({
+      top: padding,
+      bottom: padding,
+      left: padding,
+      right: padding,
+      background: TRANSPARENT,
+    })
+    .png()
+    .toFile(file);
   return file;
 }
 
@@ -61,7 +81,7 @@ async function renderTile({ file, width, height, logo, logoWidth }) {
 }
 
 const written = [
-  ...ICONS.map((size) => renderIcon(size)),
+  ...ICONS.map((icon) => renderIcon(icon)),
   ...TILES.map((tile) => renderTile(tile)),
 ];
 
