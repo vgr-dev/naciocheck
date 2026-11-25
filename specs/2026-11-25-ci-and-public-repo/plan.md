@@ -10,13 +10,13 @@ Spec: `spec.md`
 
 **Phase 1: Local policy and settings checkers**
 
-- [x] 1. Add the workflow policy check uncommitted
-- [x] 2. Add the read-only GitHub settings check uncommitted
+- [x] 1. Add the workflow policy check be9e4c9
+- [x] 2. Add the read-only GitHub settings check a54020f
 
 **Phase 2: Settings checklist and workflow linters**
 
-- [ ] 3. Write the public-repo settings checklist
-- [ ] 4. Add the pinned actionlint and zizmor runner
+- [x] 3. Write the public-repo settings checklist uncommitted
+- [x] 4. Add the pinned actionlint and zizmor runner uncommitted
 
 **Phase 3: Workflows**
 

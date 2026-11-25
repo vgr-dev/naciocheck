@@ -54,3 +54,59 @@ feat: add read-only GitHub settings check script
   `feat: add a read-only GitHub settings check`; `docs: start the CI spec and log phase 1`
 - **Open issues:** Q2 now needs two tag rulesets (see step 2); step 10 confirms the admin role id and the
   behaviour of `gh api --include` on errors.
+
+## 2026-11-25 - Step 3: Write the public-repo settings checklist
+
+- **Status:** done
+- **Changed:** `docs/github-settings.md`, `tests/github-settings-doc.test.ts`
+- **Verified:** `npx vitest run tests/github-settings-doc.test.ts` -> pass (8 tests: every script id
+  documented once, in order and in the right section, no extra id, Where/Expected/Why per entry, required
+  checks `checks` and `workflow-lint`, the two tag rulesets); targeted eslint and prettier -> pass.
+- **Commit:** uncommitted, proposed "docs: add the public-repo GitHub settings checklist"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+docs: add the public-repo GitHub settings checklist
+```
+
+- **Open issues:** The GitHub UI paths and labels (for example Settings > Advanced Security) come from the
+  builder's knowledge, not a live check; step 10 confirms them. The tag rule is two `refs/tags/v*`
+  rulesets: `v-tags-create` (creation, Repository admin bypass, `actor_id` 5 to confirm in step 10) and
+  `v-tags-protect` (update and deletion, no bypass). The apply order puts the `main` ruleset last, after CI
+  has run once so its checks can be picked.
+
+## 2026-11-25 - Step 4: Add the pinned actionlint and zizmor runner
+
+- **Status:** done
+- **Changed:** `scripts/lint-workflows.mjs`, `package.json` (scripts only: `lint:workflows`)
+- **Verified:** targeted eslint and prettier -> pass; `npm run lint:workflows` -> exit 0 (downloaded and
+  verified both tools, then "nothing to lint"; the rerun reused the cache). Changing the actionlint hash
+  constant -> exit 1 with a checksum mismatch and nothing extracted; the file was restored byte-for-byte.
+  A sample workflow outside the repo with `pull_request_target`, an unpinned action and an injection ->
+  zizmor reported 9 findings and the run failed.
+- **Commit:** uncommitted, proposed "feat: add a pinned actionlint and zizmor workflow lint runner"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+feat: add a pinned actionlint and zizmor workflow lint runner
+```
+
+- **Open issues:** Pins: actionlint v1.7.12 (`8aca8db9…a3d8`, from its checksums file, matched to the
+  asset digest and the download) and zizmor v1.32.0 (`bb110cc7…957b`, from the asset digest, matched to
+  the download). zizmor v1.33.x was under two weeks old. The tools download even when there is nothing to
+  lint, and CI downloads them from github.com on every run because caching is banned. zizmor prints
+  "(2 suppressed)" on a clean file without any config, which is its default.
+
+## 2026-11-25 - Phase 2: Settings checklist and workflow linters
+
+- **Status:** done
+- **Steps:** 3 done; 4 done
+- **File check:** pass
+- **Phase verify:** `npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:workflows && npm run lint:workflows`
+  -> pass (both workflow commands exit 0 with nothing to check)
+- **Commit proposal:** `docs: add the public-repo GitHub settings checklist`;
+  `feat: add a pinned actionlint and zizmor workflow lint runner`;
+  `docs: log phase 2 of the CI plan`
+- **Open issues:** Step 10 confirms the UI paths in the checklist and the admin `actor_id`.
