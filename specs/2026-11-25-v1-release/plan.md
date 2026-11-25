@@ -10,17 +10,17 @@ Spec: `spec.md`
 
 **Phase 0: Branch and release rules (own PR, branch `docs/branching-rules`)**
 
-- [x] 14. Record the branch, fix and release rules (ADR 0008, amend ADR 0005) (uncommitted)
+- [x] 14. Record the branch, fix and release rules (ADR 0008, amend ADR 0005) (88ebfd3)
 
 **Phase 1: Version, changelog, privacy pages, store texts and runbook**
 
-- [ ] 1. Bump the version to 1.0.0 and cut the changelog
-- [ ] 2. Point the privacy pages at 1.0.0 and mark the repository public
-- [ ] 3. Refresh the store listings and permission notes
-- [ ] 4. Write the release runbook and the AMO reviewer notes
-- [ ] 5. Update the remaining version references
-- [ ] 12. Let an agent run the Firefox checklist (amend ADR 0007)
-- [ ] 13. Create the repository brand preview image
+- [x] 1. Bump the version to 1.0.0 and cut the changelog (uncommitted)
+- [x] 2. Point the privacy pages at 1.0.0 and mark the repository public (uncommitted)
+- [x] 3. Refresh the store listings and permission notes (uncommitted)
+- [x] 4. Write the release runbook and the AMO reviewer notes (uncommitted)
+- [x] 5. Update the remaining version references (uncommitted)
+- [x] 12. Let an agent run the Firefox checklist (amend ADR 0007) (uncommitted)
+- [x] 13. Create the repository brand preview image (uncommitted)
 
 **Phase 2: Visual baselines for the 1.0.0 text**
 
