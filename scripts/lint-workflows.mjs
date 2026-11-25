@@ -12,10 +12,14 @@
  *    SHA-256 of `zizmor-x86_64-unknown-linux-gnu.tar.gz` comes from that asset's `digest` in
  *    `gh release view v1.32.0 -R zizmorcore/zizmor --json assets`, and matches the hash of the download.
  *
- * Each archive is downloaded into `.cache/workflow-tools/<tool>-<version>/` (git-ignored), its SHA-256 is
- * checked against the constants below before anything is extracted, and a verified copy is reused on the
- * next run. A mismatch deletes nothing and fails the run. To bump a pin, change the version and the hash
- * together, from the sources above, and update this comment.
+ * Each archive is downloaded into `.cache/workflow-tools/<tool>-<version>/` (git-ignored). Its SHA-256 is
+ * checked against the constants below in memory, before anything is written or extracted, and a verified
+ * archive is reused on the next run. The archive is written to a unique temporary file and renamed into
+ * place, so parallel runs never see a partial file. On every run the binary is extracted from the verified
+ * bytes into a directory unique to that run (under the OS temporary directory), executed from there and
+ * removed afterwards, also on failure, so runs share nothing but the verified archive and a binary left in
+ * the cache never runs. A mismatch deletes nothing and fails the run. To bump a pin, change the version and
+ * the hash together, from the sources above, and update this comment.
  *
  * actionlint runs with `-shellcheck= -pyflakes=` so results do not depend on whether shellcheck or pyflakes
  * happen to be installed (they are on `ubuntu-latest`, not necessarily locally); zizmor covers template
@@ -29,9 +33,20 @@
  * skipped with a note when there are none.
  */
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -60,9 +75,11 @@ function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
+/** A failure to report plainly (no stack) with exit code 1, after the cleanup in `main` has run. */
+class LintError extends Error {}
+
 function fail(message) {
-  console.error(`lint-workflows: ${message}`);
-  process.exit(1);
+  throw new LintError(message);
 }
 
 async function readIfExists(path) {
@@ -74,16 +91,18 @@ async function readIfExists(path) {
   }
 }
 
-/** Returns the path of a verified binary for `tool`, downloading and extracting it when needed. */
-async function ensureTool(tool) {
+/**
+ * Returns the bytes of a verified archive. The cached archive is hashed on every run; it is downloaded only
+ * when it is missing or fails the hash. A download is verified in memory, written to a unique temporary file
+ * in the cache directory and renamed into place, so a concurrent run either sees the complete verified
+ * archive or none, and two runs renaming identical verified bytes is harmless.
+ */
+async function ensureArchive(tool) {
   const dir = join(CACHE_DIR, `${tool.name}-${tool.version}`);
   const archivePath = join(dir, 'archive.tar.gz');
-  const binaryPath = join(dir, tool.name);
 
   const cached = await readIfExists(archivePath);
-  if (cached !== null && sha256(cached) === tool.sha256 && existsSync(binaryPath)) {
-    return binaryPath;
-  }
+  if (cached !== null && sha256(cached) === tool.sha256) return cached;
 
   console.log(`Downloading ${tool.name} ${tool.version}...`);
   const response = await fetch(tool.url);
@@ -100,9 +119,26 @@ async function ensureTool(tool) {
   }
 
   await mkdir(dir, { recursive: true });
+  const temporaryPath = `${archivePath}.${process.pid}-${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryPath, archive);
+    await rename(temporaryPath, archivePath);
+  } catch (error) {
+    await rm(temporaryPath, { force: true });
+    throw error;
+  }
+  return archive;
+}
+
+/**
+ * Extracts only the binary from the verified archive bytes into `runDir`, which belongs to this run alone,
+ * and marks it executable. Returns the path of the binary.
+ */
+async function extractBinary(tool, archive, runDir) {
+  const archivePath = join(runDir, `${tool.name}.tar.gz`);
   await writeFile(archivePath, archive);
-  // Only the binary is extracted; the archive is verified, but its other members are not needed.
-  await execFileAsync('tar', ['-xzf', archivePath, '-C', dir, tool.name]);
+  await execFileAsync('tar', ['-xzf', archivePath, '-C', runDir, tool.name]);
+  const binaryPath = join(runDir, tool.name);
   await chmod(binaryPath, 0o755);
   return binaryPath;
 }
@@ -146,7 +182,7 @@ async function main() {
     );
   }
 
-  const [actionlint, zizmor] = await Promise.all(TOOLS.map(ensureTool));
+  const archives = await Promise.all(TOOLS.map(ensureArchive));
 
   const args = process.argv.slice(2).map((arg) => resolve(arg));
   const githubDir = join(ROOT, '.github');
@@ -169,18 +205,33 @@ async function main() {
         ? await workflowFiles(workflowsDir)
         : [];
 
-  let ok = true;
-  if (actionlintTargets.length > 0) {
-    console.log(`actionlint ${TOOLS[0].version}: ${actionlintTargets.length} file(s)`);
-    ok = (await run(actionlint, ['-shellcheck=', '-pyflakes=', ...actionlintTargets])) && ok;
-  } else {
-    console.log('actionlint: no workflow files, skipped.');
-  }
-  console.log(`zizmor ${TOOLS[1].version}: ${zizmorTargets.length} target(s)`);
-  ok = (await run(zizmor, ['--offline', ...zizmorTargets])) && ok;
+  const runDir = await mkdtemp(join(tmpdir(), 'naciocheck-lint-'));
+  try {
+    const [actionlint, zizmor] = await Promise.all(
+      TOOLS.map((tool, index) => extractBinary(tool, archives[index], runDir)),
+    );
 
-  if (!ok) fail('findings reported above.');
-  console.log('lint-workflows: no findings.');
+    let ok = true;
+    if (actionlintTargets.length > 0) {
+      console.log(`actionlint ${TOOLS[0].version}: ${actionlintTargets.length} file(s)`);
+      ok = (await run(actionlint, ['-shellcheck=', '-pyflakes=', ...actionlintTargets])) && ok;
+    } else {
+      console.log('actionlint: no workflow files, skipped.');
+    }
+    console.log(`zizmor ${TOOLS[1].version}: ${zizmorTargets.length} target(s)`);
+    ok = (await run(zizmor, ['--offline', ...zizmorTargets])) && ok;
+
+    if (!ok) fail('findings reported above.');
+    console.log('lint-workflows: no findings.');
+  } finally {
+    await rm(runDir, { recursive: true, force: true });
+  }
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  if (error instanceof LintError) console.error(`lint-workflows: ${error.message}`);
+  else console.error(error);
+  process.exitCode = 1;
+}
