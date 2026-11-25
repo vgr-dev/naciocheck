@@ -61,3 +61,23 @@ Return the findings to the builder and keep the spec active. Repeat the review a
 Return the two remaining findings to the builder. Keep the spec active through the owner-side acceptance runs and confirmation.
 
 **Manual smoke test** — In a throwaway repo, run **Actions → Release → Run workflow** from `main`. Download the four draft assets and run `sha256sum -c naciocheck-0.1.0-SHA256SUMS.txt`. Run Release again and confirm the duplicate guard stops it before dependency installation.
+
+## 2026-11-25 — Second re-review — FAIL
+
+### Finding
+
+**P1 · CI and Release fail typecheck from a clean checkout.** The [main push run for `21fdf7c`](https://github.com/vgr-dev/naciocheck/actions/runs/45689113138/job/139469525141) reported TS2769 on the two calls to `browser.runtime.getURL('/icon/128.png')` at [background.ts:145](../../src/entrypoints/background.ts#L145) and [background.ts:637](../../src/entrypoints/background.ts#L637). The [install hook](../../package.json#L40) runs `wxt prepare`, but the [icon module](../../modules/icons.ts#L27) generates the files during build and dev-server startup. The public-path types produced by prepare on a clean tree therefore omit the icon. Both workflows typecheck before building. I reproduced the errors in a fresh export of the tracked tree using the existing dependencies, then ran the Chrome build in that export and confirmed that the type included the icon and typecheck passed. Make the generated icon paths available to WXT during prepare so typecheck works in the existing workflow order.
+
+### Verified fixes and scope
+
+- Overlapping creation rules without admin bypass now report drift. I replayed the original case, a single release tag and an all-tags ruleset. A valid admin bypass, an Evaluate-mode rule and a rule for unrelated tags all behaved as expected. The check can report drift for ambiguous overlapping patterns because it deliberately treats potential matches conservatively.
+- I forced the same extraction interleaving that previously caused `ENOENT`. Both workflow-lint processes used distinct extraction directories, exited 0 and cleaned up both directories.
+- The fixes are committed through `21fdf7c` and the committed diff passed `git diff --check`. The review added no implementation changes. Step 10 and the spec remain open.
+
+### Verification
+
+- In the existing worktree, `npm test` passed 1,693 extension and 31 Worker tests. Format, lint, typecheck, both extension builds, privacy and site checks, packaging and SHA-256 verification also passed. The local runtime is Node 24.22.0.
+- Both local workflow checks passed. Zizmor's default persona reported three suppressed advisories. GitHub's [`workflow-lint` job](https://github.com/vgr-dev/naciocheck/actions/runs/45689113138/job/139469524817) passed. The runner downloaded Node 24.22.1 from GitHub's `actions/node-versions` release.
+- The read-only private-repo settings check exited 1 with 2 matching settings, 7 with drift, 20 unavailable and 0 errors. Browser E2E is outside the CI acceptance scope. A green PR, intentional CI failures, live rulesets and throwaway release acceptance remain pending.
+
+**Manual smoke test** — From a fresh checkout, run `npm ci && npm run typecheck` before running either browser build. Confirm typecheck exits 0, then check that both GitHub CI jobs pass on the PR.

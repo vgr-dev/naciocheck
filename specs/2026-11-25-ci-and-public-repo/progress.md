@@ -513,3 +513,25 @@ fix: extract lint tool binaries into a per-run temp directory
   - `docs: align release checks and outside approval wording`
   - `docs: log both review rounds and their fixes for the CI spec`
 - **Open issues:** Repeat the review (`/spec-review`). Step 10's owner-side runs are still pending.
+
+## 2026-11-25 - Review fix round 3 (review.md, second re-review FAIL)
+
+- **Status:** done
+- **Finding:** P1. On a clean checkout, CI and Release fail typecheck with TS2769 at `background.ts` lines 145 and 637. `wxt prepare` writes the public-path types before `modules/icons.ts` has generated `public/icon/`, and
+  that only happens at build or dev-server start. The failing CI run was the `main` push of `21fdf7c`.
+- **Changed:** `modules/icons.ts` (new `prepare:publicPaths` hook and exported `GENERATED_ICON_PATHS`),
+  `tests/icons-module.test.ts` (new, 3 tests)
+- **Verified:**
+  - Reproduced first: `rm -rf public/icon .wxt && npx wxt prepare && npx tsc --noEmit` -> TS2769 at both
+    calls.
+  - After the fix, the same sequence -> pass. `paths.d.ts` lists the four PNGs and the animated SVG, and
+    lists each only once after a build.
+  - A fresh copy of the tracked files with a fresh `wxt prepare` and no `public/icon/` -> `npm run typecheck`
+    passes.
+  - Full verify in CI order from a clean prepare: `npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:workflows && npm run lint:workflows && npm run build:chrome && npm run build:firefox && npm run check:privacy && npm run check:site`
+    -> pass (42 files, 1696 tests).
+- **Commit:** uncommitted, proposed "fix: register generated icon paths so a clean checkout typechecks"
+- **Run by:** main session (no builder subagent: a single file and a test)
+- **Open issues:** Confirm on GitHub with a green CI run on the next push or PR. Repeat the review. Step 10's
+  owner-side runs are still pending. The second re-review confirms that `setup-node` took Node 24.22.1 from
+  `actions/node-versions` on GitHub, not from nodejs.org, which settles one step 10 item.
