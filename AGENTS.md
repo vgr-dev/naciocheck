@@ -41,7 +41,9 @@ locally and alerts loudly when the status changes. Not affiliated with the Minis
 - When encryption is on, no identity is ever written to storage in plain form, and no form keeps the
   passphrase.
 - Status explanations are never presented as official.
-- Firefox desktop is verified by hand with `docs/manual-firefox-checklist.md` before each release.
+- Before each release an agent runs `docs/manual-firefox-checklist.md` on Firefox desktop with the `firefox`
+  MCP tools, against the store-bound zip; the owner starts `firefox-agent --system` when needed and does the
+  live-sede rows and Firefox for Android by hand (ADR 0007).
 
 ## Boundaries
 
