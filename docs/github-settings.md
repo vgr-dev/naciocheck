@@ -13,11 +13,14 @@ a pull request and a green CI, and keep release tags from being moved or deleted
 1. Merge the workflows (`.github/workflows/ci.yml`, `release.yml`) and `.github/dependabot.yml` first. Every
    `uses:` in them is pinned to a full commit SHA, so the SHA-pinning setting will not break them. The status
    check names `checks` and `workflow-lint` only appear in the ruleset's check picker after CI has run once.
-2. Apply the Actions and General settings. They are available on a private repository.
+2. Apply the Actions and General settings, except `fork-pr-approval-all-outside`. They are available on a
+   private repository.
 3. Make the repository public (the owner's decision; see `docs/pre-release-audit-2026-11-18.md`).
-4. Apply the rulesets and the Security settings. On a private repository with the Free plan, rulesets, secret
-   scanning and private vulnerability reporting are not available, so the script lists them as
-   `unavailable`. Once the repository is public they are available for free, and a missing one is drift.
+4. Apply `fork-pr-approval-all-outside`, the rulesets and the Security settings. On a private repository with
+   the Free plan, fork pull request approval, rulesets, secret scanning and private vulnerability reporting are
+   not available (fork pull request approval answers HTTP 422 "not allowed for private repositories"), so the
+   script lists them as `unavailable`. Once the repository is public they are available for free, and a
+   missing one is drift.
 5. Run `node scripts/check-github-settings.mjs` and confirm there is no `DRIFT`, no `ERROR` and nothing
    `unavailable`.
 
