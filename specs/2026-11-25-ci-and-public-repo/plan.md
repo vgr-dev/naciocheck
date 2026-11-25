@@ -20,12 +20,12 @@ Spec: `spec.md`
 
 **Phase 3: Workflows**
 
-- [x] 5. Add the CI workflow and Dependabot config uncommitted
-- [x] 6. Add the manual release workflow uncommitted
+- [x] 5. Add the CI workflow and Dependabot config e5aba84
+- [x] 6. Add the manual release workflow f3b7ef4
 
 **Phase 4: Tie the workflows together**
 
-- [ ] 7. Test the real workflows against the spec
+- [x] 7. Test the real workflows against the spec uncommitted
 
 **Phase 5: Contribution flow and documentation**
 

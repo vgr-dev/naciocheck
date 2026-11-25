@@ -186,3 +186,35 @@ feat: add the manual draft release workflow
   `feat: add the manual draft release workflow`; `docs: record phase 2 hashes and log phase 3 of the CI plan`
 - **Open issues:** Step 10 confirms how `gh release view` handles drafts and where Node is downloaded from.
   Step 9 must write the ADR 0005 amendment (Q1) before the release workflow is used.
+
+## 2026-11-25 - Step 7: Test the real workflows against the spec
+
+- **Status:** done
+- **Changed:** `tests/workflows.test.ts`
+- **Verified:** `npx vitest run tests/workflows.test.ts` -> pass (21 tests); targeted eslint and prettier ->
+  pass; `npx tsc --noEmit -p .` -> pass. Negative checks: pinning `actions/checkout` to `@v7` in `ci.yml`
+  -> 1 test failed; removing the privacy gate step from `release.yml` -> 1 test failed. Both files were
+  restored byte-for-byte (`cmp`, `git diff --quiet .github/`).
+- **Commit:** uncommitted, proposed "test: check the real workflows against the CI spec"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+test: check the real workflows against the CI spec
+```
+
+- **Open issues:** The tests reuse `workflowProblems` and `dependabotProblems`, and also check
+  `REQUIRED_CHECKS` in the settings script against the CI job ids. `run:` extraction covers single-line
+  commands only, and the trigger assertions depend on the current inline `branches: [main]` form. No
+  workflow defect was found.
+
+## 2026-11-25 - Phase 4: Tie the workflows together
+
+- **Status:** done
+- **Steps:** 7 done
+- **File check:** pass
+- **Phase verify:** `npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:workflows && npm run lint:workflows`
+  -> pass (41 files, 1637 tests; no workflow findings)
+- **Commit proposal:** `test: check the real workflows against the CI spec`;
+  `docs: record phase 3 hashes and log phase 4 of the CI plan`
+- **Open issues:** none
