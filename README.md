@@ -1,6 +1,25 @@
-# NacioCheck
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/logo-horizontal-tagline-outlined-dark-en.svg">
+    <img src="brand/logo-horizontal-tagline-outlined-light-en.svg" alt="NacioCheck — Your nationality application, up to date." width="480">
+  </picture>
+</h1>
 
-_Your nationality application, up to date._
+<p align="center">
+  <a href="https://github.com/vgr-dev/naciocheck/actions/workflows/ci.yml"><img src="https://github.com/vgr-dev/naciocheck/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/status-pre--release%200.x-orange" alt="Status: pre-release 0.x">
+  <img src="https://img.shields.io/badge/Chrome-coming%20soon-lightgrey?logo=googlechrome&logoColor=white" alt="Chrome Web Store: coming soon">
+  <img src="https://img.shields.io/badge/Firefox-coming%20soon-lightgrey?logo=firefoxbrowser&logoColor=white" alt="Firefox Add-ons: coming soon">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-GPL--3.0--or--later-blue" alt="Licence: GPL-3.0-or-later"></a>
+  <img src="https://img.shields.io/badge/telemetry-none-brightgreen" alt="Telemetry: none">
+</p>
+
+<p align="center">
+  <a href="https://naciocheck.vgr.cat/en/">Website</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#privacy">Privacy</a> ·
+  <a href="CONTRIBUTING.md">Contribute</a>
+</p>
 
 NacioCheck is a browser extension for Chrome and Firefox that makes checking the status of a Spanish
 nationality-by-residence application a **reminder → captcha → result** task. It fills in the official query form
@@ -12,8 +31,8 @@ Justicia or any Spanish administration. The official resolution of an applicatio
 [DEHú](https://sede.mjusticia.gob.es/), never through this extension. The explanations it shows for each status
 are an unofficial reading, with their sources, and are labelled as such.
 
-> **Status: pre-release (0.x).** It has not been published to the stores yet, and Firefox for Android has not been
-> tested on a device. See [Install](#install).
+> [!NOTE]
+> **Status: pre-release (0.x).** It has not been published to the stores yet. See [Install](#install).
 
 ## What it does
 
@@ -66,10 +85,34 @@ cannot be recovered.**
 
 ## Install
 
+### Not a developer? Start here
+
+You do not need to download anything from this page, and you never need the files on it.
+
+> [!IMPORTANT]
+> NacioCheck is **not in the stores yet**. Until it is, there is nothing to install for everyday use: please check
+> back here or on [the website](https://naciocheck.vgr.cat/en/), where the install buttons will appear. Do not
+> install a copy from anywhere else, and never give your NIE to a site or app that claims to be NacioCheck.
+
+Once it is published, installing takes about a minute:
+
+1. On a computer, open **Chrome** or **Firefox** and follow the store link (it will be at the top of this page and
+   on the website).
+2. Click **Add to Chrome** or **Add to Firefox**, then confirm.
+3. Click the puzzle-piece icon next to the address bar and pin **NacioCheck**, so its icon stays visible.
+4. A welcome page opens. Type your NIE and date of birth once, and choose the days and time for your reminder.
+5. When the reminder comes, click it, solve the "I'm not a robot" check on the official page, and NacioCheck shows
+   you the status. If it changes, you will know.
+
+Your details stay in your browser. To remove NacioCheck, right-click its icon and choose **Remove**.
+
+### For developers
+
 NacioCheck will be published on the **Chrome Web Store** and on **addons.mozilla.org** (Firefox desktop), and
 only there: the store versions are the supported way to install it. Store links will be
 added here when the listings are live. Until then, [build it from source](#build-from-source) and load it as a
-development build.
+development build. The files attached to a GitHub Release are for verifying a build, not for installing it
+([see below](#continuous-integration-and-releases)).
 
 Supported browsers: Chrome (Manifest V3), Firefox 128 or newer on desktop, and Firefox for Android.
 
@@ -149,6 +192,40 @@ npm run format:check    # `npm run format` fixes
 npm run check:privacy   # needs a build first
 npm run check:site      # builds the site first; scripts only on the feedback pages, no other third-party URLs
 ```
+
+### Continuous integration and releases
+
+GitHub Actions runs the fast checks on every pull request and every push to `main` ([`ci.yml`](.github/workflows/ci.yml)).
+The `checks` job runs `format:check`, `lint`, `typecheck`, `test`, both browser builds, `check:privacy` and
+`check:site`; the `workflow-lint` job runs the two workflow commands below. Both must be green before a pull
+request merges. The E2E and visual suites are not part of CI: they stay local. Workflows from a first-time
+contributor wait for the owner's approval, and none of them can reach a secret.
+
+```sh
+npm run check:workflows   # policy check of .github/: pinned actions, no secrets, read-only tokens, no risky triggers
+npm run lint:workflows    # actionlint and zizmor, pinned and checksum-verified; downloads them once (Linux x64 only)
+```
+
+A release is started by hand: the owner runs the **Release** workflow
+([`release.yml`](.github/workflows/release.yml)) from `main` in the Actions tab. It reads the version from
+`package.json`, fails if a release or tag `v<version>` already exists, runs the same checks as CI, builds the
+packages and creates a **draft** GitHub Release with `naciocheck-<version>-chrome.zip`,
+`naciocheck-<version>-firefox.zip`, `naciocheck-<version>-sources.zip` and `naciocheck-<version>-SHA256SUMS.txt`.
+The owner downloads the files, checks them with `sha256sum -c`, uploads to the stores and publishes the draft,
+which creates the tag. The release assets exist so a build can be reproduced and verified; they are not an
+install channel, and the supported way to install NacioCheck is from the stores (see [Install](#install)).
+
+The repository settings that make this safe (Actions permissions, the `main` and `v*` rulesets, security
+features) are listed in [`docs/github-settings.md`](docs/github-settings.md). The owner applies them in the
+GitHub UI; this reads them back and reports every difference, with only `GET` requests (it needs the `gh`
+CLI, signed in as an admin):
+
+```sh
+node scripts/check-github-settings.mjs [owner/repo]   # defaults to the origin remote
+```
+
+To contribute, see [`CONTRIBUTING.md`](CONTRIBUTING.md): changes go through a pull request from a branch, with a
+Conventional Commits title that becomes the squash-merge commit.
 
 ### The website
 

@@ -17,6 +17,8 @@ locally and alerts loudly when the status changes. Not affiliated with the Minis
 - Test (all): `npm test`; filtered: `npx vitest run tests/<file>.test.ts`
 - Lint / format: `npm run lint`; `npm run format` (check: `npm run format:check`)
 - Typecheck: `npm run typecheck`
+- Workflows: `npm run check:workflows` (policy check of `.github/`); `npm run lint:workflows` (pinned actionlint + zizmor)
+- GitHub settings drift (read-only, needs `gh`): `node scripts/check-github-settings.mjs [owner/repo]`
 - Privacy gate: `npm run check:privacy` (needs a build first)
 - Build: `npm run build:chrome` / `npm run build:firefox`
 - Dev: `npm run dev` (Chrome) / `npm run dev:firefox`
@@ -47,9 +49,10 @@ locally and alerts loudly when the status changes. Not affiliated with the Minis
   use `storage.sync`; send personal data anywhere; strip response headers; reach the live sede or reCAPTCHA
   from a test or a tool; commit personal data (the git history becomes public).
 - Never: run `npm run deploy:site`, upload to a store, or change repository visibility. Those are the user's.
+- Never: dispatch a workflow, push a tag, publish a release or change repository settings. Those are the user's.
 - Ask first: any new manifest permission or host pattern (`npm run check:privacy` allows exactly one host),
-  new URLs in `scripts/allowed-urls.json`, dependency changes, anything that touches a settled decision in
-  `docs/adr/`.
+  new URLs in `scripts/allowed-urls.json`, dependency changes (a new workflow action or Dependabot ecosystem
+  counts as one), anything that touches a settled decision in `docs/adr/`.
 
 ## Rules index
 
@@ -63,4 +66,5 @@ locally and alerts loudly when the status changes. Not affiliated with the Minis
 - Spec-driven: see `docs/adr/0001-agent-workflow.md`. Work lives in `specs/<date>-<slug>/`.
 - stale-after-days: 14
 - Commit format: Conventional Commits, one line, imperative, at most 72 characters, no `"` characters.
-  Agents propose the message; the user commits.
+  Agents propose the message; the user commits on a branch and opens the PR. The format applies to the
+  squash-merge title.
