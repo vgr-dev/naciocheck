@@ -1,7 +1,7 @@
 # 0005. Store-only distribution, public repo after first release, pages on vgr.cat
 
 - **Status:** accepted
-- **Date:** 2026-11-06, amended 2026-11-24 (recorded 2026-11-18)
+- **Date:** 2026-11-06, amended 2026-11-25 (recorded 2026-11-18)
 
 ## Context
 
@@ -180,3 +180,36 @@ when the file is cached. Step 11 of `specs/2026-11-24-landing-page-polish/` meas
   bootstrap, any reference to `/theme.js`, and a served `theme.js` file.
 - The build fails if `site/theme.js` is missing or contains `</script` or `<!--`.
 - Any change to `site/theme.js` changes every page; the gate follows it because it reads the same file.
+
+## Amendment 2026-11-25: GitHub Release assets are for verification, not installation
+
+- **Amendment status:** accepted 2026-11-25 (owner sign-off of `specs/2026-11-25-ci-and-public-repo/`, question Q1).
+
+### Context
+
+The CI spec has a manual release workflow that builds the Chrome, Firefox and sources zips from `main` and
+creates a draft GitHub Release with a SHA-256 checksum file, so the owner uploads to the stores from a
+reproducible build instead of a local one. Once the owner publishes that draft, the zips are downloadable
+from a public page. The decision above says "No unlisted or self-hosted releases", and read literally that
+would forbid the release.
+
+### Decision
+
+- The decision above stands: the stores are the only supported way to install NacioCheck. Nothing here adds
+  an install channel.
+- A GitHub Release holds reproducibility and verification artefacts: the browser zips and the source
+  archive exactly as sent to the stores, and their checksums, so anyone can rebuild from the tagged source
+  and compare. It is not distribution, and no page, README text or store listing points people to it to
+  install.
+- The README says to install from the stores and that the release files are for verifying a build.
+- The release workflow only ever creates a draft. Dispatching it, publishing the draft (which creates the
+  tag), uploading to the stores and changing repository settings remain the user's actions, never an
+  agent's.
+
+### Consequences
+
+- `README.md` describes the assets that way; `docs/github-settings.md` protects the
+  `v*` tags from being moved or deleted.
+- Whether to publish a draft at all is the owner's call per release. If the owner decides that downloadable
+  zips are unwanted, publish releases with the sources and checksums only, or keep the draft unpublished;
+  that needs a new amendment, not a silent change to the workflow.
