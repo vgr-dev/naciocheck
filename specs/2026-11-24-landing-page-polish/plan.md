@@ -41,7 +41,7 @@ segmented footer switcher. The re-verify moved to Phase 9 as step 16.
 
 **Phase 6: Verify the finished site**
 
-- [!] 11. Compare performance and check the manual states (theme-script threshold tripped; fixed in phase 7, rerun as step 16)
+- [x] 11. Compare performance and check the manual states (theme-script threshold tripped; fixed in phase 7, rerun as step 16)
 
 **Phase 7: Fix the measured and audited issues**
 
