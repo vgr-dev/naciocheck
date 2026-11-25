@@ -218,3 +218,60 @@ test: check the real workflows against the CI spec
 - **Commit proposal:** `test: check the real workflows against the CI spec`;
   `docs: record phase 3 hashes and log phase 4 of the CI plan`
 - **Open issues:** none
+
+## 2026-11-25 - Step 8: Add CONTRIBUTING.md and the PR template
+
+- **Status:** done
+- **Changed:** `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`
+- **Verified:** `npx prettier --check CONTRIBUTING.md .github/PULL_REQUEST_TEMPLATE.md` -> pass;
+  `npm run check:workflows` -> pass.
+- **Commit:** uncommitted, proposed "docs: add CONTRIBUTING.md and a pull request template"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+docs: add CONTRIBUTING.md and a pull request template
+```
+
+- **Open issues:** The PR template asks for more confirmations than the plan listed: the project boundaries,
+  a Conventional Commits PR title and GPL-3.0-or-later, alongside the summary, the checks and no personal
+  data. Every command it cites exists in `package.json`, and it says E2E stays local.
+
+## 2026-11-25 - Step 9: Document CI, releases and the PR flow
+
+- **Status:** done
+- **Changed:** `README.md`, `AGENTS.md`, `docs/adr/0005-distribution-and-public-pages.md`. `SECURITY.md`
+  is unchanged because its wording still matches.
+- **Verified:** `npx vitest run tests/licence.test.ts` -> pass (13 tests); `npx prettier --check` on the four
+  files -> pass. The orchestrator confirmed that the ADR's claim about the `v*` tags matches the
+  `v-tags-protect` ruleset in `docs/github-settings.md`.
+- **Commit:** uncommitted, proposed "docs: document CI, releases and the PR flow"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+docs: document CI, releases and the PR flow
+```
+
+```
+docs: amend ADR 0005 for release assets as verification only
+```
+
+- **Open issues:** The ADR 0005 amendment (Q1, option a) is dated 2026-11-25 and leaves the original
+  decision text untouched. It says the stores remain the only install channel, and that publishing zips as
+  an install channel would need a new amendment. AGENTS.md now says agents never dispatch a workflow, push
+  a tag, publish a release or change repository settings, and treats a new workflow action or Dependabot
+  ecosystem as a dependency change.
+
+## 2026-11-25 - Phase 5: Contribution flow and documentation
+
+- **Status:** done
+- **Steps:** 8 done; 9 done
+- **File check:** pass
+- **Phase verify:** `npm run format:check && npm run lint && npm run typecheck && npm test` -> pass (41 files,
+  1637 tests, including `tests/licence.test.ts`)
+- **Commit proposal:** `docs: add CONTRIBUTING.md and a pull request template`;
+  `docs: amend ADR 0005 for release assets as verification only`;
+  `docs: document CI, releases and the PR flow`;
+  `docs: record phase 4 hashes and log phase 5 of the CI plan`
+- **Open issues:** none

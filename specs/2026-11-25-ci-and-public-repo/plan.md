@@ -25,12 +25,12 @@ Spec: `spec.md`
 
 **Phase 4: Tie the workflows together**
 
-- [x] 7. Test the real workflows against the spec uncommitted
+- [x] 7. Test the real workflows against the spec 5c0051a
 
 **Phase 5: Contribution flow and documentation**
 
-- [ ] 8. Add CONTRIBUTING.md and the PR template
-- [ ] 9. Document CI, releases and the PR flow
+- [x] 8. Add CONTRIBUTING.md and the PR template uncommitted
+- [x] 9. Document CI, releases and the PR flow uncommitted
 
 **Phase 6: Acceptance**
 
