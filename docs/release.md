@@ -113,7 +113,8 @@ Below, `<version>` is the number in `package.json` (for example `1.0.0`) and the
   listing:
   - Texts: the summary and the detailed description from `store/listing.en.md` and `store/listing.es.md`; the
     slug `naciocheck`; categories and tags as they say; licence `GPL-3.0-or-later`; support site
-    `https://naciocheck.vgr.cat/` and a support email of your choice; Firefox for Android enabled.
+    `https://naciocheck.vgr.cat/` and the support email `naciocheck@vgr.cat` (the project's public contact,
+    ADR 0005); Firefox for Android enabled.
   - Images: `store/icon-32.png` and `store/icon-64.png`, and the screenshots in `store/screenshots/`.
   - Data collection and privacy: the answers under "addons.mozilla.org, submission answers" in
     `store/permissions.md` (nothing collected, `"required": ["none"]`), and the privacy policy URL.

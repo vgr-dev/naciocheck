@@ -117,11 +117,12 @@ docs: add the release runbook and the AMO reviewer notes
 ```
 
 - **Open issues:** AMO notes are 2029 characters; `store/REQUIREMENTS.md` records no limit for that field.
-  The notes name Node 24.22.1 but no build OS. Step 7 of the runbook says "a support email of your choice"
-  although ADR 0005 names `naciocheck@vgr.cat` as the public contact. The AMO form wording about minified
+  The notes name Node 24.22.1 but no build OS. The AMO form wording about minified
   code is from memory, to be read against the live form. Draft assets are downloaded in the browser (no
   `gh release download` for drafts). The 1.0.0 checklist result block is kept with the release evidence and
   added to the checklist in the post-release PR.
+- **Fix (orchestrator, owner request):** runbook step 7 now names the support email `naciocheck@vgr.cat`
+  (ADR 0005) instead of "a support email of your choice".
 
 ## 2026-11-25 - Step 5: Update the remaining version references
 
@@ -194,5 +195,4 @@ docs: add the GitHub social preview image and upload step
   -> pass (unit 42 files / 1697 tests, worker 2 / 31; privacy gate 56 files; site gate 15 pages; the three
   1.0.0 zips; six pages list 1.0.0)
 - **Commit proposal:** seven commits, one per step (see the reply), then the spec log.
-- **Open issues:** `test:e2e` fails on the visual baselines until Phase 2 (expected). Support email in the
-  runbook, row 15 of the checklist, AMO notes build OS (see steps 3, 4, 12).
+- **Open issues:** `test:e2e` fails on the visual baselines until Phase 2 (expected). Row 15 of the checklist, AMO notes build OS (see steps 3, 4, 12).
