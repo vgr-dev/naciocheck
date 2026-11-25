@@ -133,6 +133,16 @@ Measured contrast (WCAG):
 
 No red together with yellow, and no flag colours or crests: the brand must not look official.
 
+## GitHub social preview
+
+[`social-preview.png`](social-preview.png): the image GitHub shows when the repository link is shared. 1280 × 640
+PNG, the icon, the **NacioCheck** wordmark and the English tagline on the dark brand background (`#111827`). It
+has no text layer and no EXIF or XMP metadata, and shows no personal data.
+
+It is uploaded by the owner under Settings > General > Social preview (see
+[`docs/github-settings.md`](../docs/github-settings.md)). It is not served by the site, which keeps its own
+generated `social-card.png`, and it is not shipped in the extension.
+
 ## Rules
 
 - Do not redraw, rotate, recolour or stretch the icon; do not put it on busy backgrounds.
