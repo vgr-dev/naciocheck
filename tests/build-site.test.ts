@@ -623,7 +623,7 @@ describe('the real build inputs', () => {
     expect(config).toEqual({
       chromeStoreUrl: null,
       firefoxStoreUrl: null,
-      repositoryPublic: false,
+      repositoryPublic: true,
     });
     const outDir = mkdtempSync(join(tmpdir(), 'naciocheck-real-build-'));
     try {
