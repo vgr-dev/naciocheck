@@ -69,5 +69,5 @@ was read from and the date it was read.
   and `THIRD-PARTY-NOTICES.txt` into both the Chrome and Firefox packages; the source archive contains the same
   files. `npm run check:privacy` asserts both in each build. The notice covers the WXT 0.21.5 and
   `@wxt-dev/browser` 0.3.7 runtime code compiled into the bundles (MIT, Copyright (c) 2023 Aaron).
-- **Android is an unverified target.** Adding viewport metadata is necessary but not sufficient; a real device run
-  remains open before the listing may claim verified Android support (A6).
+- **Android is verified on a device.** Viewport metadata alone was not enough; the owner's device run on
+  2026-11-24 passed, so the listing may claim Android support (A6).

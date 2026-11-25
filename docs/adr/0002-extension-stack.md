@@ -16,4 +16,4 @@ desktop and Firefox for Android. Tests use Vitest; the Chrome end-to-end suite u
 
 - One codebase covers PC and mobile, since Firefox for Android supports extensions.
 - No backend to run, secure or pay for.
-- Firefox for Android is not verified on a device yet (see `docs/pre-release-audit-2026-11-18.md`).
+- Firefox for Android was verified on a device on 2026-11-24 (see `docs/pre-release-audit-2026-11-18.md`).

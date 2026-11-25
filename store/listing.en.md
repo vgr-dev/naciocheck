@@ -48,7 +48,7 @@ Your data
 - "Report a problem" shows you the text first and sends nothing: it only opens our website with that text in the address, which browsers do not send to the server. If you press Send there, the text goes through Cloudflare Turnstile to the maintainer by email and is not stored. Your own result and your identifiers are never included.
 
 Languages
-Spanish and English. Firefox for Android is a target and has not been verified on a device yet.
+Spanish and English. Works on Firefox for Android too.
 
 Notice
 NacioCheck is not affiliated with the Ministerio de Justicia or any public body. The statuses and their explanations come from the official site and from what has been observed in real files; they do not replace the official resolution.

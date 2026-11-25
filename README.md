@@ -71,8 +71,7 @@ only there: the store versions are the supported way to install it. Store links 
 added here when the listings are live. Until then, [build it from source](#build-from-source) and load it as a
 development build.
 
-Supported browsers: Chrome (Manifest V3) and Firefox 128 or newer on desktop. Firefox for Android is a target and
-is not verified on a device yet.
+Supported browsers: Chrome (Manifest V3), Firefox 128 or newer on desktop, and Firefox for Android.
 
 ## Build from source
 

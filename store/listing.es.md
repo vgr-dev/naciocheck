@@ -47,7 +47,7 @@ Tus datos
 - «Informar de un problema» te muestra primero el texto y no envía nada: solo abre nuestra web con ese texto en la dirección, que los navegadores no envían al servidor. Si pulsas Enviar allí, el texto pasa por Cloudflare Turnstile y llega por correo a quien mantiene el proyecto, y no se guarda. Tu propio resultado y tus datos identificativos nunca se incluyen.
 
 Idiomas
-Español e inglés. Firefox para Android es un objetivo y aún no se ha verificado en un dispositivo.
+Español e inglés. También funciona en Firefox para Android.
 
 Aviso
 NacioCheck no está afiliado al Ministerio de Justicia ni a ningún organismo público. Los estados y sus explicaciones se basan en la propia web oficial y en lo observado en expedientes reales, y no sustituyen a la resolución oficial.
