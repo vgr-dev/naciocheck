@@ -47,7 +47,7 @@ release spec and plan` (spec folder; `brand/social-preview.png` stays untracked 
   uses inline text; new render test of the real file)
 - **Verified:** numstat 1/1 and 2/2; `npx vitest run tests/changelog.test.ts` -> pass (17); eslint and prettier
   -> clean; both builds -> pass; manifests -> `[ '1.0.0', '1.0.0' ]`.
-- **Commit:** uncommitted, proposed "chore: release 1.0.0 and cut the changelog"
+- **Commit:** a54780b
 - **Run by:** implement-phase (builder subagent, model Sonnet)
 - **Proposed commit (builder):**
 
@@ -65,7 +65,7 @@ chore: release 1.0.0 and cut the changelog
   (`repositoryPublic: true`, store URLs `null`), `tests/build-site.test.ts` (real build inputs expectation)
 - **Verified:** prettier and eslint -> clean; `npx vitest run tests/build-site.test.ts tests/site-gate.test.ts
 tests/changelog.test.ts` -> pass (610); diff stat shows the five files (plus step 1's test file).
-- **Commit:** uncommitted, proposed "docs: point privacy pages at 1.0.0 and mark repo public"
+- **Commit:** b286a91
 - **Run by:** implement-phase (builder subagent, model Haiku)
 - **Proposed commit (builder):**
 
@@ -87,7 +87,7 @@ docs: point privacy pages at 1.0.0 and mark repo public
   short description equals `extensionDescription` in both locales; C6 topical keywords at most 5.
 - **Store-rule re-read:** all 13 listed URLs read OK on 2026-11-25; no limit changed. Four pages were not read to the
   end (A3/A4 last 158 characters, A5 last 2912, A6 last 1332, A7 last 6662).
-- **Commit:** uncommitted, proposed "docs: refresh store listings and permission notes for 1.0.0"
+- **Commit:** 86d886d
 - **Run by:** implement-phase (builder subagent, model Sonnet)
 - **Proposed commit (builder):**
 
@@ -108,7 +108,7 @@ docs: refresh store listings and permission notes for 1.0.0
   something goes wrong", "Patch release" per ADR 0008, "AMO reviewer notes", "Related")
 - **Verified:** prettier -> clean; `## AMO reviewer notes` at line 183; 14 `store/` references; licence test
   -> pass (13).
-- **Commit:** uncommitted, proposed "docs: add the release runbook and the AMO reviewer notes"
+- **Commit:** ab0293c, then f7fb0c7 (support email)
 - **Run by:** implement-phase (builder subagent, model Sonnet)
 - **Proposed commit (builder):**
 
@@ -138,7 +138,7 @@ docs: add the release runbook and the AMO reviewer notes
   (historical record), `docs/github-settings.md:156`, `tests/check-github-settings.test.ts` (example tag
   `v0.1.0`), `tests/feedback-page.test.ts:310` (sample report), `tests/site-gate.test.ts:838` (sample URL), the
   audit and past specs.
-- **Commit:** uncommitted, proposed "docs: drop the 0.x wording from README and SECURITY"
+- **Commit:** 08c343b
 - **Run by:** implement-phase (builder subagent, model Haiku)
 - **Proposed commit (builder):**
 
@@ -156,7 +156,7 @@ docs: drop the 0.x wording from README and SECURITY
   (Standards line), `docs/manual-firefox-checklist.md` ("Who runs what", "Before you start" step 3 with
   `install_extension` under `firefox-agent --system`, "Data", closing note; checks and 0.1.0 record unchanged)
 - **Verified:** prettier -> clean; amendment at line 33; "verified by hand" gone from `AGENTS.md`.
-- **Commit:** uncommitted, proposed "docs: let an agent run the Firefox checklist (ADR 0007 amendment)"
+- **Commit:** 504ece5
 - **Run by:** implement-phase (builder subagent, model Sonnet)
 - **Proposed commit (builder):**
 
@@ -175,7 +175,7 @@ docs: let an agent run the Firefox checklist (ADR 0007 amendment)
 - **Verified:** size `(1280, 640)`; chunks `IHDR`, `pHYs`, `IDAT`, `IEND` only; prettier -> clean;
   `tests/check-github-settings.test.ts`, `tests/brand.test.ts` -> pass (130); `tests/github-settings-doc.test.ts`
   -> pass (10).
-- **Commit:** uncommitted, proposed "docs: add the GitHub social preview image and upload step"
+- **Commit:** c2f8e2b
 - **Run by:** implement-phase (builder subagent, model Haiku)
 - **Proposed commit (builder):**
 
@@ -196,3 +196,40 @@ docs: add the GitHub social preview image and upload step
   1.0.0 zips; six pages list 1.0.0)
 - **Commit proposal:** seven commits, one per step (see the reply), then the spec log.
 - **Open issues:** `test:e2e` fails on the visual baselines until Phase 2 (expected). Row 15 of the checklist, AMO notes build OS (see steps 3, 4, 12).
+
+## 2026-11-25 - Step 6: Update the visual baselines that show the new text
+
+- **Status:** done
+- **Changed:** 51 images in `e2e/baselines/chrome/`: all 48 `site-*` (12 each of `site-404`, `site-changelog`,
+  `site-landing`, `site-privacy`) and 3 `result-error-report-*` (`en-1280x800`, `en-412x915`, `es-1280x800`;
+  `es-412x915` unchanged). None added, deleted or restored; every other image unchanged.
+- **What changed:** changelog shows `1.0.0 2026-11-25` with its Added list; privacy lead line says 1.0.0 and
+  25 November 2026; every site footer gains "Source code (GPL-3.0)" (repository block); the error report text
+  says `version: 1.0.0`. In `site-404-*-es-1280x800` the longer "Código fuente (GPL-3.0)" moves the theme
+  switcher to its own line under the credit (checked by the orchestrator: aligned and readable).
+- **Verified:** `npm run test:e2e:update-baselines` -> pass (Chrome for Testing 158.0.8127.88, `system-ui` =
+  DejaVu Sans); `git status --porcelain e2e/baselines` -> 51 modified, all expected; `npm run test:e2e` -> 6/6
+  specs, 170 tests, `outside it 0`.
+- **Commit:** uncommitted, proposed "test: update visual baselines for the 1.0.0 site and report text"
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+test: update visual baselines for the 1.0.0 site and report text
+```
+
+- **Open issues:** Run `/review-ui` on the changed images, especially the es and ca footers at 1280 where
+  the new link wraps the row. Local Node is v24.22.0, while `.nvmrc` pins 24.22.1 (step 7 must use 24.22.1).
+
+## 2026-11-25 - Phase 2: Visual baselines for the 1.0.0 text
+
+- **Status:** done
+- **Steps:** 6 done
+- **File check:** pass (51 baselines in step 6's Files; `plan.md` and `progress.md` are the orchestrator's,
+  with the Phase 1 commit hashes recorded)
+- **Phase verify:** `npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:e2e`
+  -> pass (unit 1697, worker 31; E2E 6/6 specs, 170 tests, no visual mismatch; every network guard line
+  `outside it 0`; `check-flow` reads seen 621 / answered 620 / outside 0, one request neither answered nor
+  outside, not a gate failure)
+- **Commit proposal:** (1) `test: update visual baselines for the 1.0.0 site and report text`; (2) spec log.
+- **Open issues:** `/review-ui` on the 51 images; Node 24.22.1 for step 7.
