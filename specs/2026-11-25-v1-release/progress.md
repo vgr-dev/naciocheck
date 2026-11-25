@@ -210,7 +210,7 @@ docs: add the GitHub social preview image and upload step
 - **Verified:** `npm run test:e2e:update-baselines` -> pass (Chrome for Testing 158.0.8127.88, `system-ui` =
   DejaVu Sans); `git status --porcelain e2e/baselines` -> 51 modified, all expected; `npm run test:e2e` -> 6/6
   specs, 170 tests, `outside it 0`.
-- **Commit:** uncommitted, proposed "test: update visual baselines for the 1.0.0 site and report text"
+- **Commit:** a5b2ecb
 - **Run by:** implement-phase (builder subagent, model Sonnet)
 - **Proposed commit (builder):**
 
@@ -233,3 +233,50 @@ test: update visual baselines for the 1.0.0 site and report text
   outside, not a gate failure)
 - **Commit proposal:** (1) `test: update visual baselines for the 1.0.0 site and report text`; (2) spec log.
 - **Open issues:** `/review-ui` on the 51 images; Node 24.22.1 for step 7.
+
+## 2026-11-25 - Step 7: Rehearse the release from a fresh clone
+
+- **Status:** done
+- **Cloned:** `8cafbedab3cee1bb3d661f361dcfc9ecdaa10e80` (HEAD of `release/v1.0.0`) with `git clone --no-hardlinks`
+  into the session scratchpad; clone clean after the run. Node `v24.22.1` (installed with nvm for this step),
+  npm `11.19.1`, in the clone and in the sources directory.
+- **Changed:** nothing in the repository.
+- **Verified (clone):** `npm ci`, `format:check`, `lint`, `typecheck`, `npm test`, `build:chrome`,
+  `build:firefox`, `check:privacy`, `check:site`, `zip`, `zip:sources`, `test:e2e` -> all exit 0. Unit 42 files
+  / 1697 tests, worker 2 / 31, E2E 6/6 specs / 170 tests. Network guard: 622/621/0, 523/523/0, 376/376/0,
+  346/346/0, 0/0/0, 1063/1063/0 (seen / answered / outside). Privacy gate: storage, alarms, notifications;
+  one host; notices in every build. Site gate: 15 pages.
+- **Manifests in the zips:** chrome `1.0.0`; firefox `1.0.0`, gecko id `naciocheck@vgr.cat`, `strict_min_version`
+  128.0, `data_collection_permissions` required `none`. Sources zip: 374 files, `package.json` 1.0.0, `.nvmrc`
+  24.22.1.
+- **Rebuild from the sources zip** (commands in `docs/release.md` "AMO reviewer notes"): `npm ci`,
+  `build:chrome`, `build:firefox`, `check:privacy`, `npx wxt zip -b firefox` -> all exit 0; `cmp` with the
+  clone's Firefox zip -> exit 0 (byte-identical). The README line "checked for 1.0.0" is proven.
+- **sha256** (identical in the clone and the sources rebuild; re-checked by the orchestrator):
+  - `naciocheck-1.0.0-chrome.zip` `8194d37ad1735f4ff6e336c732b127e0dc236821cebe5c8ca4cdb62d30d38d29` (106014 bytes)
+  - `naciocheck-1.0.0-firefox.zip` `54402e0aa821274fc8453064fc7459e7074378c68a41034997cc2ef52a8cd9c0` (106095 bytes)
+  - `naciocheck-1.0.0-sources.zip` `5da2f1ef41ad8edcce7599e3c13913f10fc87e25b728da7bb1e6280b3513d325` (25650815 bytes)
+- **Commit:** none (no repository change)
+- **Run by:** implement-phase (builder subagent, model Sonnet)
+- **Proposed commit (builder):**
+
+```
+none (no repository change)
+```
+
+- **Open issues:** `npm ci` warns about install scripts not covered by `allowScripts` (workerd x2, edgedriver,
+  esbuild, geckodriver) and a deprecated `whatwg-encoding@3.1.1`; an AMO reviewer will see the same output.
+  WebdriverIO warns that root-level compare options are deprecated. `check-flow` again shows one request seen
+  but neither answered nor outside (622/621/0; Phase 2 had 621/620/0): consistent, not a gate failure, worth a
+  look later. The draft's CI-built zips may differ from these checksums (different machine); the gate is the
+  draft's own SHA256SUMS plus the rebuild in runbook step 4.
+
+## 2026-11-25 - Phase 3: Clean-checkout rehearsal
+
+- **Status:** done
+- **Steps:** 7 done
+- **File check:** pass (no repository file changed by the builder; `plan.md` and `progress.md` are the
+  orchestrator's)
+- **Phase verify:** `git status --porcelain` -> pass (only `plan.md` and `progress.md`, the orchestrator's log)
+- **Commit proposal:** one commit, the spec log.
+- **Open issues:** PR 1 (Phases 1 to 3) is ready for review and merge; Phases 4 and 5 wait for the store URLs.

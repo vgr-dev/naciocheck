@@ -24,11 +24,11 @@ Spec: `spec.md`
 
 **Phase 2: Visual baselines for the 1.0.0 text**
 
-- [x] 6. Update the visual baselines that show the new text (uncommitted)
+- [x] 6. Update the visual baselines that show the new text (a5b2ecb)
 
 **Phase 3: Clean-checkout rehearsal**
 
-- [ ] 7. Rehearse the release from a fresh clone
+- [x] 7. Rehearse the release from a fresh clone (no repository change)
 
 **Phase 4: Post-release site and README (second PR, blocked until the owner says go)**
 
