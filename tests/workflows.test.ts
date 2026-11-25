@@ -172,7 +172,59 @@ describe('release.yml', () => {
     expect(CI).not.toMatch(/: write\b/);
     const lines = job(RELEASE, 'release').map((line) => line.text);
     const at = lines.indexOf('permissions:');
-    expect(lines.slice(at, at + 2)).toEqual(['permissions:', 'contents: write']);
+    expect(lines[at]).toBe('permissions:');
+    expect(lines[at + 1]).toMatch(/^contents: write(?: #.*)?$/);
+  });
+
+  it('keeps the release job permissions to contents: write and nothing else', () => {
+    const lines = job(RELEASE, 'release').map((line) => line.text);
+    const at = lines.indexOf('permissions:');
+    expect(lines[at + 1]).toMatch(/^contents: write(?: #.*)?$/);
+    expect(lines[at + 2]).not.toMatch(/^[\w-]+: (read|write|none)$/);
+    expect(RELEASE).toMatch(/^permissions: \{\}$/m);
+  });
+
+  describe('duplicate guard', () => {
+    const step = (): string => {
+      const start = RELEASE.indexOf('- name: Fail if the release or the tag already exists');
+      expect(start).toBeGreaterThanOrEqual(0);
+      const rest = RELEASE.slice(start + 1);
+      const end = rest.search(/^ {6}- name:/m);
+      return end < 0 ? rest : rest.slice(0, end);
+    };
+    const code = (): string =>
+      step()
+        .split(/\r?\n/)
+        .filter((line) => !line.trim().startsWith('#'))
+        .join('\n');
+
+    it('lists the releases through the REST API, which includes drafts, and filters by tag', () => {
+      expect(code()).toMatch(
+        /gh api --method GET --paginate "repos\/\$GITHUB_REPOSITORY\/releases"/,
+      );
+      expect(code()).toMatch(/--jq '[^']*\.tag_name == "v" \+ env\.VERSION[^']*'/);
+    });
+
+    it('does not use gh release view, which cannot tell a failure from a missing release', () => {
+      expect(code()).not.toMatch(/gh release view/);
+    });
+
+    it('fails closed when the list request fails and when a release matches', () => {
+      expect(code()).toMatch(/if ! existing="\$\(gh api /);
+      expect(code()).toContain('Could not list the releases');
+      expect(code()).toMatch(/if \[ -n "\$existing" \]; then/);
+    });
+
+    it('still checks the tag ref and treats only a 404 as absent', () => {
+      expect(code()).toContain('gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION"');
+      expect(code()).toMatch(/grep -q 'HTTP 404'/);
+    });
+
+    it('gets its token through env: and interpolates nothing into the script', () => {
+      expect(code()).toContain('GH_TOKEN: ${{ github.token }}');
+      const run = code().slice(code().indexOf('run: |'));
+      expect(run).not.toContain('${{');
+    });
   });
 
   it('runs install, the fixed check list in order, then the two zip scripts', () => {

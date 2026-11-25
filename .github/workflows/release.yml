@@ -17,7 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: write
+      # The token reaches only the two gh steps (the duplicate check and the release creation), each
+      # through its own env:.
+      contents: write # create the draft release and upload its assets
     steps:
       - name: Require the main branch
         run: |
@@ -41,17 +43,24 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # Draft releases have no tag yet, so the tag check alone would miss them. The REST list of releases
+      # includes drafts for a caller with push access ("Only users with push access will receive listings
+      # for draft releases", https://docs.github.com/en/rest/releases/releases#list-releases), which the
+      # job token has through contents: write. `gh release view` is not used: a failed request there
+      # looks the same as a missing release. Here any non-zero exit from gh fails the step. The jq filter
+      # is a fixed string; it reads the version from the environment, which is already validated above.
       - name: Fail if the release or the tag already exists
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if output="$(gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" 2>&1)"; then
-            echo "::error::A release for v$VERSION already exists"
+          if ! existing="$(gh api --method GET --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            --jq '.[] | select(.tag_name == "v" + env.VERSION) | .tag_name')"; then
+            echo "::error::Could not list the releases, so cannot tell whether v$VERSION exists"
             exit 1
           fi
-          if ! printf '%s' "$output" | grep -q 'release not found'; then
-            echo "::error::Could not tell whether the release exists: $output"
+          if [ -n "$existing" ]; then
+            echo "::error::A release (published or draft) for v$VERSION already exists"
             exit 1
           fi
           if output="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" 2>&1)"; then
