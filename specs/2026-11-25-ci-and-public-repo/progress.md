@@ -356,3 +356,160 @@ fix: treat the private-repo 422 as unavailable in the settings check
   `docs: record phase 5 hashes and log the local acceptance checks`
 - **Open issues:** The six owner actions listed under step 10. Then the agent records the results, and step 10
   and the spec can close.
+
+## 2026-11-25 - Review fix round 1 (review.md, FAIL)
+
+The owner approved fixing all three findings and all four suggested follow-ups. Three builders ran in
+parallel, one per group of files.
+
+### Part A: Settings checker (findings 1 and 2, required-check source)
+
+- **Status:** done
+- **Changed:** `scripts/check-github-settings.mjs`, `scripts/check-github-settings.d.mts`,
+  `tests/check-github-settings.test.ts`, `docs/github-settings.md`, `tests/github-settings-doc.test.ts`
+- **Verified:** `npx vitest run` on the settings and settings-doc test files -> pass (96 tests); targeted
+  eslint, prettier and `tsc` -> pass. Read-only real check: `2 ok, 7 drift, 20 unavailable, 0 error`, exit 1
+  on owner-side drift.
+- **Commit:** uncommitted, proposed "fix: tighten the GitHub settings check for tags, branch and checks"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+fix: require full v* tag coverage and Always allow bypass in settings check
+fix: count the default-branch ruleset as main only when main is default
+feat: require the main status checks to come from GitHub Actions
+docs: document tag exclusions, default branch and check source settings
+```
+
+- **Open issues:** The changes:
+  - **Tag rulesets:** they must include exactly `refs/tags/v*` (or `~ALL`) and exclude nothing.
+  - **Creation bypass:** exactly one actor, `RepositoryRole` 5, with `bypass_mode: always`.
+  - **Default branch:** `~DEFAULT_BRANCH` counts as `main` only when the repository's `default_branch` is
+    `main`. A `main` ruleset that excludes `main` does not count.
+  - **New settings:** `default-branch-main` and `main-ruleset-checks-from-actions`, which requires
+    `integration_id` 15368, taken from a read-only `GET apps/github-actions`. That makes 29 settings.
+
+  Still open: `actor_id` 5 is not in the docs and is confirmed only on a real ruleset. An exclude glob such as
+  `refs/heads/ma*` is not read as excluding `main`, but any non-empty exclude is still drift.
+
+### Part B: Release duplicate guard (finding 3, permission note)
+
+- **Status:** done
+- **Changed:** `.github/workflows/release.yml`, `tests/workflows.test.ts`
+- **Verified:** `npm run check:workflows` -> pass; `npm run lint:workflows -- .github/workflows/release.yml`
+  -> no findings; prettier and eslint -> pass; `npx vitest run tests/workflows.test.ts` -> pass (27 tests).
+  zizmor's auditor persona went from 2 findings to 1; the remaining one is info-level `anonymous-definition`.
+- **Commit:** uncommitted, proposed "fix: list releases through the REST API in the release duplicate guard"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+fix: list releases through the REST API in the release duplicate guard
+```
+
+- **Open issues:** The guard is
+  `gh api --method GET --paginate repos/$GITHUB_REPOSITORY/releases --jq '... env.VERSION ...'`. A failed
+  request stops the job, a match stops it, and only an empty result passes. The tag-ref check is unchanged.
+  A comment documents `contents: write`. Still to confirm in the throwaway-repo runs: that gh's `--jq`
+  accepts `env.VERSION` on a real match, and that the guard finds a draft. `name: release` would clear the
+  info-level finding; it was left out because job ids are fixed.
+
+### Part C: Docs wording and lint tool cache
+
+- **Status:** done
+- **Changed:** `README.md`, `CONTRIBUTING.md`, `scripts/lint-workflows.mjs`
+- **Verified:** targeted eslint and prettier -> pass; `npx vitest run tests/licence.test.ts tests/brand.test.ts`
+  -> pass (39 tests); `npm run lint:workflows -- .github/workflows/ci.yml` -> no findings.
+  - Tampered binary: stub binaries in `.cache/` were replaced by the real ones on the next run.
+  - Negative hash test: the run failed with nothing extracted, and the script was restored byte-for-byte.
+- **Commit:** uncommitted, proposed "fix: extract the lint tool binaries from the verified archive each run"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+docs: say Release runs the eight checks job, not workflow-lint
+docs: require approval for all outside contributor workflows
+fix: extract the lint tool binaries from the verified archive each run
+```
+
+- **Open issues:** If the cached archive fails its hash and the network is down, the run fails. The old
+  binary never runs on any path.
+
+### Round check
+
+- **File check:** pass. Every changed file is in its part's Files list. `review.md` is the reviewer's file.
+- **Verify:** `npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:workflows && npm run lint:workflows && npm run build:chrome && npm run build:firefox && npm run check:privacy && npm run check:site`
+  -> pass (41 files, 1675 tests; no workflow findings).
+- **Commit proposal:**
+  - `fix: tighten the GitHub settings check for tags, branch and checks`
+  - `fix: list releases through the REST API in the release duplicate guard`
+  - `fix: extract the lint tool binaries from the verified archive each run`
+  - `docs: align release checks and outside approval wording`
+  - `docs: log the first review and its fix round for the CI spec`
+- **Open issues:** Repeat the review (`/spec-review`). Step 10's owner-side runs are still pending. The spec
+  stays active.
+
+## 2026-11-25 - Review fix round 2 (review.md, re-review FAIL)
+
+The owner approved fixing both re-review findings. Two builders ran in parallel on top of the uncommitted
+round 1 changes.
+
+### Part A: Layered tag creation rulesets (re-review finding 1)
+
+- **Status:** done
+- **Changed:** `scripts/check-github-settings.mjs`, `tests/check-github-settings.test.ts`,
+  `docs/github-settings.md`
+- **Verified:** `npx vitest run` on the settings, settings-doc and workflows test files -> pass (141 tests);
+  targeted eslint, prettier and `tsc` -> pass. Read-only real check: `2 ok, 7 drift, 20 unavailable, 0 error`,
+  exit 1 on owner-side drift. The tag settings are unavailable on the private repo, so the real check does not
+  exercise the new logic yet.
+- **Commit:** uncommitted, proposed "fix: require admin bypass on every layered v* tag creation ruleset"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+fix: require admin bypass on every layered v* tag creation ruleset
+```
+
+- **Open issues:** `tag-ruleset-creation-admin-bypass` now requires the admin role with Always allow on every
+  active tag ruleset that could apply to `v*` tags and restricts creation; it ignores Evaluate and Disabled
+  rulesets. When an include pattern can't be classified, the ruleset counts as applying, so the check can
+  report false drift but never a false ok. The reviewer's snapshot now reports drift. `actor_id` 5 is still
+  confirmed only on a real ruleset.
+
+### Part B: Per-run extraction of the lint tools (re-review finding 2)
+
+- **Status:** done
+- **Changed:** `scripts/lint-workflows.mjs`
+- **Verified:** targeted eslint and prettier -> pass; `npm run lint:workflows`, with no arguments and with
+  `ci.yml dependabot.yml` -> no findings.
+  - Parallel runs: 5 rounds of two runs, plus one round from a cold cache where both runs downloaded -> 12 of
+    12 exit 0, with no `.tmp` or `naciocheck-lint-*` leftovers.
+  - Negative hash test: the run failed with nothing extracted and no run directory left, and the script was
+    restored byte-for-byte.
+  - Stub binaries planted in the cache never ran.
+- **Commit:** uncommitted, proposed "fix: extract lint tool binaries into a per-run temp directory"
+- **Run by:** implement-phase (builder subagent, model Sonnet 5.5)
+- **Proposed commit (builder):**
+
+```
+fix: extract lint tool binaries into a per-run temp directory
+```
+
+- **Open issues:** The archive cache is written atomically with a temp file and a rename. Each run extracts
+  the binaries from the verified in-memory bytes into a `mkdtemp` directory, which is removed in `finally`.
+  `fail()` now throws instead of calling `process.exit`, so cleanup runs on errors. A SIGKILL can still leave
+  a temp directory behind.
+
+### Round check
+
+- **File check:** pass. Every changed file is in its part's Files list.
+- **Verify:** `npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:workflows && npm run lint:workflows && npm run build:chrome && npm run build:firefox && npm run check:privacy && npm run check:site`
+  -> pass (41 files, 1693 tests; no workflow findings; no `naciocheck-lint-*` leftovers in `/tmp`).
+- **Commit proposal:** rounds 1 and 2 are combined, because both are uncommitted in the same files:
+  - `fix: tighten the GitHub settings check for tags, branch and checks`
+  - `fix: list releases through the REST API in the release duplicate guard`
+  - `fix: extract lint tool binaries from a verified archive per run`
+  - `docs: align release checks and outside approval wording`
+  - `docs: log both review rounds and their fixes for the CI spec`
+- **Open issues:** Repeat the review (`/spec-review`). Step 10's owner-side runs are still pending.
