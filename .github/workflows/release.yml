@@ -1,0 +1,130 @@
+name: Release
+
+# Started by hand only. Builds the browser packages from main and creates a DRAFT GitHub Release for the
+# version in package.json. The owner publishes the draft (which creates the tag) and uploads to the stores.
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Require the main branch
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::The release workflow runs on main only (got $GITHUB_REF)"
+            exit 1
+          fi
+
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the version
+        id: version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::package.json version is not a plain semantic version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Fail if the release or the tag already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if output="$(gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" 2>&1)"; then
+            echo "::error::A release for v$VERSION already exists"
+            exit 1
+          fi
+          if ! printf '%s' "$output" | grep -q 'release not found'; then
+            echo "::error::Could not tell whether the release exists: $output"
+            exit 1
+          fi
+          if output="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" 2>&1)"; then
+            echo "::error::The tag v$VERSION already exists"
+            exit 1
+          fi
+          if ! printf '%s' "$output" | grep -q 'HTTP 404'; then
+            echo "::error::Could not tell whether the tag exists: $output"
+            exit 1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build for Chrome
+        run: npm run build:chrome
+
+      - name: Build for Firefox
+        run: npm run build:firefox
+
+      - name: Privacy gate
+        run: npm run check:privacy
+
+      - name: Site gate
+        run: npm run check:site
+
+      - name: Package the browser zips
+        run: npm run zip
+
+      - name: Package the sources zip
+        run: npm run zip:sources
+
+      - name: Write the checksums
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        working-directory: .output
+        run: |
+          sha256sum \
+            "naciocheck-$VERSION-chrome.zip" \
+            "naciocheck-$VERSION-firefox.zip" \
+            "naciocheck-$VERSION-sources.zip" \
+            > "naciocheck-$VERSION-SHA256SUMS.txt"
+          cat "naciocheck-$VERSION-SHA256SUMS.txt"
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --target "$GITHUB_SHA" \
+            --title "NacioCheck $VERSION" \
+            --notes "Draft for NacioCheck $VERSION, built from commit $GITHUB_SHA. See CHANGELOG.md for the changes. These files let the owner verify and upload the build; install NacioCheck from the browser stores. Check the files against the SHA256SUMS file." \
+            ".output/naciocheck-$VERSION-chrome.zip" \
+            ".output/naciocheck-$VERSION-firefox.zip" \
+            ".output/naciocheck-$VERSION-sources.zip" \
+            ".output/naciocheck-$VERSION-SHA256SUMS.txt"
