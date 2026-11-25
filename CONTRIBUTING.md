@@ -38,8 +38,12 @@ npm ci
 ## Make a change
 
 1. Fork the repository, or create a branch if you have write access, from an up-to-date `main`. Never work on
-   `main` directly.
-2. Keep the change to one concern, and add or update tests for it.
+   `main` directly. Name the branch after the commit type, as in
+   [ADR 0008](docs/adr/0008-branches-fixes-and-releases.md): `feat/<slug>`, `fix/<slug>`, `docs/<slug>`,
+   `ci/<slug>`, `chore/<slug>`, `test/<slug>` or `refactor/<slug>`.
+2. Keep the change to one concern, and add or update tests for it. If the change is visible to people who use
+   the extension, add a line under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md); docs, CI and
+   test-only changes do not need one.
 3. Run the same checks CI runs, and fix anything that fails:
 
    ```sh
@@ -58,6 +62,10 @@ npm ci
    UI or the check flow.
 
 4. Push your branch and open a pull request against `main`. Fill in the template.
+
+Maintainers cut releases from `main` with a `release/v<version>` pull request and then follow
+[`docs/release.md`](docs/release.md). Fixes after a release go to `main` and ship in a patch release; there
+are no release branches or backports.
 
 ## Pull requests and CI
 

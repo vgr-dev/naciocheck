@@ -213,3 +213,29 @@ would forbid the release.
 - Whether to publish a draft at all is the owner's call per release. If the owner decides that downloadable
   zips are unwanted, publish releases with the sources and checksums only, or keep the draft unpublished;
   that needs a new amendment, not a silent change to the workflow.
+
+## Amendment 2026-11-25: the repository is public before the first release
+
+- **Amendment status:** accepted 2026-11-25 (owner decision, `specs/2026-11-25-v1-release/`, Phase 0).
+
+### Context
+
+The decision above keeps the repository private until the first public release. The protections from
+`specs/2026-11-25-ci-and-public-repo/` (the `main` ruleset, the `v*` tag rulesets and approval of fork pull
+request workflows) need a public repository on the Free plan, and the owner wanted them in place before
+1.0.0, not after it.
+
+### Decision
+
+- The repository went public before 1.0.0 was in the stores, and stays public for good. The history audit
+  (`docs/pre-release-audit-2026-11-18.md`) still applies.
+- The original decision text above is kept as the record of what was planned; this amendment replaces only
+  its timing.
+- Changing repository visibility and settings remain the user's actions, never an agent's.
+
+### Consequences
+
+- The site's `repositoryPublic` in `site/_build/config.json` is true from 1.0.0, so the site shows the source
+  and per-release GitHub links from the first release.
+- The release runbook (`docs/release.md`) has no go-public step.
+- How changes reach `main` and how releases are cut now that `main` is protected is recorded in ADR 0008.
