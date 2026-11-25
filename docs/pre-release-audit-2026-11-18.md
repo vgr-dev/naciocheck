@@ -24,8 +24,9 @@ that a release was approved.
 
 **Disposition:** 24 findings/worklist items. Local remediation addresses 19; AUD-05 is reviewed isolated
 local state, not a distributed leak. AUD-04 (maintainer attribution consent), AUD-18 (Android device),
-AUD-21 (manual platform/live-site/visual acceptance) and AUD-22 (actual Firefox download) remain open or
-partially open. Automated success does not clear those gates. **The v1.0.0 release is not approved.**
+AUD-21 (manual platform/live-site/visual acceptance) and AUD-22 (actual Firefox download) were owner gates;
+all four were closed by the owner on 2026-11-25 (see [Owner sign-off](#owner-sign-off)). **The release is
+approved.**
 
 ## Findings and worklist
 
@@ -83,7 +84,7 @@ partially open. Automated success does not clear those gates. **The v1.0.0 relea
 
 ### AUD-04: Public git history reveals maintainer identity
 
-- **Severity:** Informational (privacy decision). **Status:** Open, owner review before public visibility.
+- **Severity:** Informational (privacy decision). **Status:** Resolved: owner accepts the exposure (2026-11-25).
 - **Location:** Author/committer metadata and `Signed-off-by` trailers on all 53 commits, including
   `cf6161282fc745e3364c928d01150d38f90444a1`; root commit also credits the AI tool with its service address.
 - **Evidence:** The history contains the maintainer's real name and personal email address. Values are
@@ -92,7 +93,8 @@ partially open. Automated success does not clear those gates. **The v1.0.0 relea
 - **Recommended remediation:** The owner must explicitly accept this exposure before making the repository
   public, or separately authorize an identity/history rewrite and assess DCO/signature consequences.
   Deleting text in the current tree would not remove historical metadata. No rewrite is performed here.
-- **Verification:** Read-only metadata review across all locally reachable commits; publication withheld.
+- **Verification:** Read-only metadata review across all locally reachable commits. The owner accepts that
+  the history keeps their name and personal email as they are; no rewrite.
 
 ### AUD-05: Sensitive-shaped material exists in ignored local working files
 
@@ -323,7 +325,7 @@ partially open. Automated success does not clear those gates. **The v1.0.0 relea
 
 ### AUD-18: Android claims precede device verification; mobile viewport metadata is missing
 
-- **Severity:** Medium (readiness gap). **Status:** Partially resolved; Android device validation open.
+- **Severity:** Medium (readiness gap). **Status:** Resolved; Android verified on a device by the owner (2026-11-24).
 - **Location:** `store/listing.en.md:50`, `listing.es.md:49`; index HTML in
   `src/entrypoints/{onboarding,options,popup,statuses,unlock}/`.
 - **Evidence:** Listings claim Android support despite the README recording no device validation. Five
@@ -333,7 +335,9 @@ partially open. Automated success does not clear those gates. **The v1.0.0 relea
 - **Resolution:** All pages have viewport metadata; listings explicitly qualify Android as a target not
   yet device-verified. No claim of verified support is made.
 - **Verification:** Viewport regression tests and desktop/mobile-width Chrome visual matrix pass;
-  adding metadata/emulating width cannot establish real Firefox for Android compatibility.
+  adding metadata/emulating width cannot establish real Firefox for Android compatibility. The owner ran the
+  latest build on Firefox for Android on 2026-11-24 and it passed; README, listings and site now state
+  Android support without the unverified qualifier.
 
 ### AUD-19: Privacy checks are incomplete and not part of packaging
 
@@ -367,7 +371,7 @@ partially open. Automated success does not clear those gates. **The v1.0.0 relea
 
 ### AUD-21: Remaining platform, live-site and visual acceptance gates are incomplete
 
-- **Severity:** Medium (release-validation blocker, not a demonstrated vulnerability). **Status:** Open, manual.
+- **Severity:** Medium (release-validation blocker, not a demonstrated vulnerability). **Status:** Resolved: owner acceptance (2026-11-24/25).
 - **Location:** `docs/manual-firefox-checklist.md` observed/sign-off columns;
   `README.md:15-16,64-65`; `store/screenshots/README.md`; active plan closing/checklist record.
 - **Evidence:** Firefox run is partial for real checks, notifications/badge and the toolbar popup;
@@ -377,11 +381,13 @@ partially open. Automated success does not clear those gates. **The v1.0.0 relea
   candidate. No live-site check, actual applicant-data processing, deployment or store action is performed
   in this audit. Optional follow-up features (feedback channel, further locales/dark theme/donations)
   are not missing MVP components and are not silently added.
-- **Verification:** Open; no manual sign-off claimed.
+- **Verification:** The owner ran the full manual checklist and the audit retest on Firefox desktop and Firefox
+  for Android on 2026-11-24, including the real sede check with the CAPTCHA solved by hand, and accepted the
+  toolbar icons, logo, store images and screenshots on 2026-11-25 (`docs/manual-firefox-checklist.md` sign-off).
 
 ### AUD-22: Export download lifetime is not verified in Firefox
 
-- **Severity:** Informational (unverified compatibility risk). **Status:** Hardened locally; real Firefox download check open.
+- **Severity:** Informational (unverified compatibility risk). **Status:** Resolved; real Firefox download verified by the owner (2026-11-24).
 - **Location:** `src/entrypoints/shared/encryption-sections.ts:274-281`.
 - **Evidence:** The detached anchor is clicked and its blob URL revoked synchronously. This may race
   Firefox download handling; existing browser tests stub the download and do not demonstrate a failure.
@@ -390,6 +396,7 @@ partially open. Automated success does not clear those gates. **The v1.0.0 relea
 - **Resolution:** Attach the anchor for its click and defer object-URL revocation by one second.
 - **Verification:** Export warning/blob regression passes; manual checklist now requires actual downloaded
   file import/round-trip on the remediated Firefox package. This was never a demonstrated Firefox failure.
+  The owner's 2026-11-24 Firefox run exported and re-imported a real backup file: pass.
 
 ### AUD-23: Permission rationale and public maintenance notes need precision
 
@@ -561,20 +568,23 @@ also exited 0. No local font cache, private plans, existing node_modules or gene
 
 ## Limitations and remaining gates
 
-- **Owner consent:** AUD-04's maintainer name/email in history remains intact. No identity rewrite is authorized.
-- **Platform acceptance:** AUD-18/21 require the new Firefox desktop and Android candidate runs, including
-  actual toolbar popup, badge/notifications, Web Locks, unlock/encrypted edits and real downloaded backup.
-  No Firefox browser was driven in this audit; viewport-width emulation is not an Android device test.
-- **Official-site behavior:** No live-sede check, real applicant-data flow, or human CAPTCHA session was run.
-  Current DOM, CSP and official-site behavior must be owner-checked, without automatic real-site traffic.
-- **Landing site (added 2026-11-24):** from `specs/2026-11-23-landing-page/`, still open at release: the owner
+- **Owner consent:** AUD-04's maintainer name/email in history remains intact; the owner accepts it (2026-11-25).
+  No identity rewrite.
+- **Platform acceptance:** Closed. The owner ran the latest build on Firefox desktop and Firefox for Android on
+  2026-11-24, including the toolbar popup, badge/notifications, Web Locks, unlock/encrypted edits and a real
+  downloaded backup: pass. This audit itself drove no Firefox browser.
+- **Official-site behavior:** Closed. The owner checked the live sede by hand with their own application and
+  CAPTCHA: pass. No automated real-site traffic.
+- **Landing site (added 2026-11-24):** from `specs/2026-11-23-landing-page/`, finalised after the extension is
+  released, not a release gate: the owner
   reviews the Catalan wording on every Catalan page (phrases listed in that spec's `progress.md`); after
   `npm run deploy:site`, the pages render correctly in Chrome and Firefox (`docs/manual-firefox-checklist.md`
   row 17); the store URLs and repository visibility are set in `site/_build/config.json` once they exist; the
   `vgr.cat` links are finalised with `vgr-dev/vgr.cat` `specs/2026-11-23-naciocheck-tie-in/`; 108 axe
   colour-contrast elements over the hero gradient and the language pill get a manual AA look
   (`e2e/.artifacts/axe-incomplete.json`).
-- **Landing polish (added 2026-11-24):** from `specs/2026-11-24-landing-page-polish/`, still open at release:
+- **Landing polish (added 2026-11-24):** from `specs/2026-11-24-landing-page-polish/`, accepted by the owner on
+  2026-11-25. The browser checks listed here are folded into the post-release site checks:
   Firefox and Safari checks of the footer theme switcher (including its `:has()` focus ring) and of the light
   palette fallback for browsers without `light-dark()`; a real Windows high-contrast pass; a screen-reader pass
   of the switcher and the language links; the feedback page's switcher with Turnstile in a real browser after
@@ -583,16 +593,31 @@ also exited 0. No local font cache, private plans, existing node_modules or gene
 - **Site analytics (added 2026-11-23, resolved the same day):** Cloudflare Web Analytics is injected at the
   edge into every page of `naciocheck.vgr.cat`. The owner keeps it on; the privacy pages (es, en) and README
   now disclose it and state that it applies to the website only, not the extension (ADR 0005).
-- **Visual/legal/publication acceptance:** Logo/toolbar/icon and store-image framing decisions remain the
-  owner's; source/license checks are engineering evidence, not legal advice or publication approval.
+- **Visual/legal/publication acceptance:** Logo/toolbar/icon and store-image framing are accepted by the owner
+  (2026-11-25), and so is publication. Source/license checks are engineering evidence, not legal advice.
 - **Detection scope:** Pattern-based scans can miss unlabeled names/identifiers; PNGs were metadata-scanned
   and sampled, not exhaustively OCRed. Remote-only refs/forks, external browser profiles and node_modules
   secrets were not exhaustively searched. No claim of absolute absence of vulnerabilities or personal data.
 - **Recovery and encryption:** Unsupported records fail closed with a recovery UI. Encrypted imports are
   structurally validated, not authenticated without a passphrase. Explicit lock/import/reset cancels an
   active run; future checks must be started intentionally. Firefox locking behavior remains manual.
-- **Not performed:** Version bump, tag/release, deployment, store upload, repository visibility change,
-  history rewrite, staging, commit or push. The project remains **0.1.0** and **not cleared for v1.0.0 publication**.
+- **Not performed by the audit:** Version bump, tag/release, deployment, store upload, repository visibility
+  change, history rewrite, staging, commit or push. The project is at **0.1.0**; publication is cleared by the
+  owner sign-off below.
+
+## Owner sign-off
+
+| Gate                                                       | Decision                                  | Date       |
+| ---------------------------------------------------------- | ----------------------------------------- | ---------- |
+| AUD-04 name and personal email in the git history          | Accepted as it is; no rewrite             | 2026-11-25 |
+| AUD-18, AUD-21, AUD-22 Firefox desktop and Android         | Tested on the latest build: pass          | 2026-11-24 |
+| Official site, real check with CAPTCHA                     | Checked: pass                             | 2026-11-24 |
+| Landing polish                                             | Accepted                                  | 2026-11-25 |
+| Landing site                                               | After release, once the store links exist | 2026-11-25 |
+| Icons, logo, store images, screenshots, legal, publication | Approved                                  | 2026-11-25 |
+| Release                                                    | **Approved**                              | 2026-11-25 |
+
+Signed off: Victor Gonzalez, 2026-11-25.
 
 ## Proposed commits
 
