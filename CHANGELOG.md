@@ -5,6 +5,8 @@ All notable changes to NacioCheck are listed here, in English. The format is a s
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-25
+
 ### Added
 
 - A reminder, captcha and result flow for checking a Spanish nationality-by-residence application: the

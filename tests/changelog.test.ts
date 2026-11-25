@@ -107,10 +107,15 @@ describe('parseChangelog', () => {
     throwsWith('## [Unreleased]\n\n### Added\n\n- a **broken item\n', 'line 5', 'inline');
   });
 
-  it('parses the real CHANGELOG.md without throwing', () => {
+  it('parses the real CHANGELOG.md and keeps it in step with package.json', () => {
     const releases = parseChangelog(readFileSync('CHANGELOG.md', 'utf8'));
-    expect(releases.length).toBeGreaterThan(0);
     expect(releases[0]?.version).toBe('Unreleased');
+    expect(releases[0]?.sections).toEqual([]);
+    expect(releases[1]?.version).toBe('1.0.0');
+    expect(releases[1]?.date).toBe('2026-11-25');
+    const newestDated = releases.find((r) => r.date !== null);
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
+    expect(newestDated?.version).toBe(pkg.version);
   });
 });
 
@@ -178,10 +183,19 @@ describe('renderChangelog', () => {
   it('shows the empty state with no releases, or with only Unreleased', () => {
     const empty = '<p class="changelog-empty">No releases yet.</p>';
     const options = { lang: 'en', strings: STRINGS, repositoryPublic: true };
+    const onlyUnreleased = '## [Unreleased]\n\n### Added\n\n- A thing still in progress.\n';
     expect(renderChangelog([], options)).toBe(empty);
-    expect(renderChangelog(parseChangelog(readFileSync('CHANGELOG.md', 'utf8')), options)).toBe(
-      empty,
-    );
+    expect(renderChangelog(parseChangelog(onlyUnreleased), options)).toBe(empty);
+  });
+
+  it('renders the real CHANGELOG.md with the 1.0.0 release', () => {
+    const html = renderChangelog(parseChangelog(readFileSync('CHANGELOG.md', 'utf8')), {
+      lang: 'en',
+      strings: STRINGS,
+      repositoryPublic: false,
+    });
+    expect(html).toContain('<h2>1.0.0 <time datetime="2026-11-25">');
+    expect(html).not.toContain('Unreleased');
   });
 
   it('marks the English entries when the page is not English', () => {

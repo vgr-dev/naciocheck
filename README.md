@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/vgr-dev/naciocheck/actions/workflows/ci.yml"><img src="https://github.com/vgr-dev/naciocheck/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
-  <img src="https://img.shields.io/badge/status-pre--release%200.x-orange" alt="Status: pre-release 0.x">
+  <img src="https://img.shields.io/badge/status-pre--release-orange" alt="Status: pre-release">
   <img src="https://img.shields.io/badge/Chrome-coming%20soon-lightgrey?logo=googlechrome&logoColor=white" alt="Chrome Web Store: coming soon">
   <img src="https://img.shields.io/badge/Firefox-coming%20soon-lightgrey?logo=firefoxbrowser&logoColor=white" alt="Firefox Add-ons: coming soon">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-GPL--3.0--or--later-blue" alt="Licence: GPL-3.0-or-later"></a>
@@ -32,7 +32,7 @@ Justicia or any Spanish administration. The official resolution of an applicatio
 are an unofficial reading, with their sources, and are labelled as such.
 
 > [!NOTE]
-> **Status: pre-release (0.x).** It has not been published to the stores yet. See [Install](#install).
+> **Status: pre-release.** Version 1.0.0 is being prepared for the stores and is not published yet. See [Install](#install).
 
 ## What it does
 
@@ -134,7 +134,7 @@ npm run zip             # Chrome and Firefox zips in .output/
 npm run zip:sources     # the source archive Mozilla's reviewers rebuild from
 ```
 
-Rebuilding the source archive reproduces the Firefox package byte for byte (checked for 0.1.0).
+Rebuilding the source archive reproduces the Firefox package byte for byte (checked for 1.0.0).
 
 The source archive is for rebuilding the extension, not a full test checkout: WXT excludes unit-test
 files. Use the repository checkout for the complete test suite. The archive includes `.nvmrc` so its
@@ -212,6 +212,7 @@ A release is started by hand: the owner runs the **Release** workflow
 `checks` job (not `workflow-lint`), builds the packages and creates a **draft** GitHub Release with
 `naciocheck-<version>-chrome.zip`, `naciocheck-<version>-firefox.zip`, `naciocheck-<version>-sources.zip` and
 `naciocheck-<version>-SHA256SUMS.txt`.
+The step-by-step release runbook is in [`docs/release.md`](docs/release.md).
 The owner downloads the files, checks them with `sha256sum -c`, uploads to the stores and publishes the draft,
 which creates the tag. The release assets exist so a build can be reproduced and verified; they are not an
 install channel, and the supported way to install NacioCheck is from the stores (see [Install](#install)).
@@ -332,9 +333,10 @@ brand and layout rules.
 #### Firefox
 
 Automated Firefox runs are not possible today: Marionette refuses to navigate to `moz-extension://` pages, so
-`npm run test:e2e:firefox` runs only a smoke spec and fails on purpose. Firefox desktop is verified by hand before
-each release with [`docs/manual-firefox-checklist.md`](docs/manual-firefox-checklist.md), run against the same
-package that goes to the store.
+`npm run test:e2e:firefox` runs only a smoke spec and fails on purpose. Before each release, an agent runs
+[`docs/manual-firefox-checklist.md`](docs/manual-firefox-checklist.md) against the same Firefox zip that goes to the
+store, driving Firefox with the `firefox` MCP tools. The owner runs the checks that reach the real sede and the
+Firefox for Android checks by hand.
 
 ### Maintainer tasks
 

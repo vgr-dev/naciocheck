@@ -3,16 +3,28 @@
 The automated end-to-end suite runs in Chrome only (see `docs/adr/0007-testing-strategy.md`). This list is what
 replaces it on Firefox desktop: run it before every release against the same package that goes to AMO.
 
-Out of scope here: Chrome (automated in `e2e/`), Firefox for Android (device, see the README), the store
-review, and anything the user must do by hand in the store dashboards. Only check 7
-touches the real sede, and only because a person runs it; nothing in `npm run test:e2e` leaves the fake site.
+**Who runs what.** Since 2026-11-25 (ADR 0007, amendment) an agent runs this list through the `firefox` MCP
+tools; nobody is expected to click through it by hand. The owner does the rows that reach the real sede (row 7
+and the real check in row 8, which include the captcha) and everything on Firefox for Android. An agent never
+reaches the live sede, never solves the captcha and never runs `firefox-agent --system`. What an agent cannot
+observe (a native notification, for example) is recorded as "not observed" and passed to the owner, never
+marked PASS.
+
+Out of scope here: Chrome (automated in `e2e/`), the store review, and anything the user must do by hand in
+the store dashboards. Firefox for Android is the owner's, on a device (see the README). Only check 7 and the
+real check in check 8 touch the real sede, and only because the owner runs them; nothing in
+`npm run test:e2e` leaves the fake site, and no agent run does either.
 
 ## Before you start
 
 1. `npm ci`
 2. `npm run build:firefox && npm run zip` → `.output/naciocheck-<version>-firefox.zip`, the Firefox package the
    store receives (the source archive `npm run zip:sources` is separate).
-3. In Firefox desktop 128 or newer, pin NacioCheck to the toolbar, open
+3. Load the zip as a temporary add-on in Firefox desktop 128 or newer. In the agent session, install it with
+   the `firefox` tool `install_extension` (temporary) pointing at that zip, in a browser the owner started
+   with `firefox-agent --system`: `moz-extension://` pages are only reachable with system access. If a tool
+   reports that system access is required, stop and ask the owner to restart with `firefox-agent --system`;
+   never run it yourself. When the owner does it by hand instead, pin NacioCheck to the toolbar, open
    `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on…** and select that zip. If the
    picker only accepts a manifest, select `.output/firefox-mv3/manifest.json` from the same build; it is the
    same code as the zip.
@@ -21,10 +33,10 @@ touches the real sede, and only because a person runs it; nothing in `npm run te
 5. `npm run test:e2e:firefox` is not a signal: that spec fails on purpose because Marionette cannot open
    `moz-extension://` pages, which is exactly why this list exists.
 
-**Data.** Check 7 needs your own application and the captcha is yours to solve. Everything else works with
-any application you can delete afterwards. This file is tracked and the repository becomes public: write only
-`PASS`, `FAIL` or a short note in the **Observed** column, never a NIE, a name, a birth date, a passphrase or a
-screenshot of real data.
+**Data.** Check 7 needs the owner's own application and the captcha is theirs to solve. Everything else works
+with a fake application that can be deleted afterwards (fake identities only), which is what an agent run uses.
+This file is tracked and the repository is public: write only `PASS`, `FAIL` or a short note in the **Observed**
+column, never a NIE, a name, a birth date, a passphrase or a screenshot of real data.
 
 ## The checks
 
@@ -118,4 +130,6 @@ See `docs/pre-release-audit-2026-11-18.md` for automated evidence and limitation
 | Result           | Rows 1–16 and the Audit Retest pass on desktop and Android, including the real sede check; row 17 after release |
 | Checked by       | Victor Gonzalez                                                                                                 |
 
-Record the version, platform and result in the release notes; keep personal data out of this file.
+Record the version, platform and result in the release notes; keep personal data out of this file. A new
+release run adds its own result block after this one, saying which rows the agent ran and which the owner did;
+the 0.1.0 block above stays as the historical record.

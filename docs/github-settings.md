@@ -208,6 +208,9 @@ public repositories; on a private Free-plan repository the script reports them a
 
 Settings > General.
 
+Owner step, not checked by the script: upload `brand/social-preview.png` (1280 × 640) under Settings > General >
+Social preview. It is the image GitHub shows when the repository link is shared; see `brand/README.md`.
+
 - **`default-branch-main`**
   - Where: Branches, "Default branch".
   - Expected: `main`.

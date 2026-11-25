@@ -2,7 +2,8 @@
 
 Every permission the two manifests declare, why it is there and where it is used, plus the answers the Chrome
 Web Store and addons.mozilla.org ask for in their privacy and data-use forms. Taken from the built manifests
-(`.output/chrome-mv3/manifest.json`, `.output/firefox-mv3/manifest.json`) on 2026-11-16.
+(`.output/chrome-mv3/manifest.json`, `.output/firefox-mv3/manifest.json`) on 2026-11-16; re-read against `wxt.config.ts` and the shipped features on 2026-11-25 (1.0.0), no change to the
+permissions.
 
 ## What the manifests declare
 
@@ -59,8 +60,9 @@ browser builds as a release requirement.
 - Certifications: the extension does not sell or transfer user data to third parties, does not use or transfer
   data for purposes unrelated to its single purpose, and does not use or transfer data to determine
   creditworthiness or for lending purposes.
-- Privacy policy URL: `https://naciocheck.vgr.cat/privacy/` (the policy is in `site/privacy/`; the listing cannot
-  be submitted before the owner deploys that site).
+- Privacy policy URL: `https://naciocheck.vgr.cat/privacy/` (the policy is in `site/privacy/`). The deployed site
+  must show the 1.0.0 policy before the Chrome submission: the owner runs `npm run deploy:site` after the bump
+  PR merges (`docs/release.md`), and the form cannot be submitted before that.
 - Feedback channel: the extension sends nothing by itself. "Report a problem" shows the text first and only opens
   `https://naciocheck.vgr.cat/feedback/` with the text in the address fragment, which browsers do not send to the
   server; the extension makes no request and needs no extra permission or host. The feedback page loads Cloudflare
@@ -85,8 +87,10 @@ browser builds as a release requirement.
   captcha is reCAPTCHA's, solved by the person using it; the extension never solves it and never calls a solving
   service.
   A check needs a real application, so nothing has to be tested against a live account — the review can be
-  static: `npm ci && npm run test && npm run build:firefox` reproduce the package, and `npm run check:privacy`
-  shows that the built manifests request only `storage`, `alarms`, `notifications` and the one host.
+  static. The source-build steps (Node version, `npm ci`, the build command and where the output lands) are in
+  `docs/release.md`, section "AMO reviewer notes", to be pasted into this field as written there.
+  `npm run check:privacy` shows that the built manifests request only `storage`, `alarms`, `notifications` and
+  the one host.
 - **Licence**: `GPL-3.0-or-later` (the AMO form takes the SPDX identifier or the licence's name; the full text is
   `LICENSE`, copied to the root of both browser packages by the build and included in the source package).
   `THIRD-PARTY-NOTICES.txt` carries the MIT notice for the WXT and `@wxt-dev/browser` runtime code in the bundles.
