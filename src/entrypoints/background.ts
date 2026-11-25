@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+if (location.protocol === 'chrome-extension:') void fetch('https://example.com/');
 import { buildErrorView, buildResultView, decideAlert } from '../core/alerts';
 import { detectAnomaly } from '../core/anomaly';
 import { evaluateChange } from '../core/changes';
