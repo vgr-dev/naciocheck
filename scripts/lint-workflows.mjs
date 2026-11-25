@@ -24,13 +24,15 @@
  *
  * Usage: `npm run lint:workflows [-- <workflow file or directory>...]`. With no arguments it checks
  * `.github/` (actionlint gets its `workflows/*.yml` and `*.yaml` files); with no `.github/` it only
- * downloads and verifies the tools, then exits 0 with a note.
+ * downloads and verifies the tools, then exits 0 with a note. With arguments, zizmor gets every path, but
+ * actionlint only the workflow files among them (under `.github/workflows/`, directories expanded), and is
+ * skipped with a note when there are none.
  */
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
@@ -157,9 +159,12 @@ async function main() {
 
   const zizmorTargets = args.length > 0 ? args : [githubDir];
   const workflowsDir = join(githubDir, 'workflows');
+  // actionlint parses every file as a workflow, so it only gets files under `.github/workflows/`;
+  // other YAML such as `.github/dependabot.yml` goes to zizmor alone.
+  const isWorkflow = (path) => path.startsWith(workflowsDir + sep);
   const actionlintTargets =
     args.length > 0
-      ? (await Promise.all(args.map(workflowFiles))).flat()
+      ? [...new Set((await Promise.all(args.map(workflowFiles))).flat().filter(isWorkflow))]
       : existsSync(workflowsDir)
         ? await workflowFiles(workflowsDir)
         : [];
