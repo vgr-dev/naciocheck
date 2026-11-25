@@ -3,7 +3,8 @@
  * Read-only check of the GitHub repository settings against `docs/github-settings.md`.
  *
  * It reads the settings through `gh api --method GET` and prints one line per setting: ok, drift
- * (the setting differs from the checklist), unavailable (HTTP 403/404 or plan-gated, for example
+ * (the setting differs from the checklist), unavailable (HTTP 403/404, a 422 saying the feature is
+ * not allowed for private repositories in `message` or `errors`, or plan-gated, for example
  * rulesets, secret scanning and private vulnerability reporting on a private Free-plan repository),
  * or error (anything else, such as a bad login or a network failure). It never writes to GitHub: only
  * GET requests, no request body, no fields.
@@ -425,6 +426,19 @@ function securityStatus(body, feature) {
   return status === 'enabled' ? undefined : drift(`${feature} is "${String(status)}"`);
 }
 
+/**
+ * The text of a 422 that says the feature is not allowed for private repositories, or `undefined`.
+ * GitHub answers `{"message":"Validation Failed","errors":"Fork PR approval is not allowed for
+ * private repositories."}`, so the text may be in `errors` (a string or a list of strings) as well
+ * as in `message`. Any other 422 stays an error.
+ */
+function privateRepoRefusal(response) {
+  if (response.status !== 422 || !isRecord(response.body)) return undefined;
+  const { message, errors } = response.body;
+  const texts = [message, ...(Array.isArray(errors) ? errors : [errors])];
+  return texts.find((text) => typeof text === 'string' && /private repositor/i.test(text));
+}
+
 /** Every endpoint the check reads, without the per-ruleset detail requests the CLI adds. */
 export function endpointsToCollect() {
   const endpoints = new Set();
@@ -459,6 +473,12 @@ export function compareSettings(responses) {
         result.drift.push({ id, describe, actual: 'not enabled (HTTP 404)' });
       } else if (response.status === 403 || response.status === 404) {
         result.unavailable.push({ id, describe, reason: `HTTP ${response.status}${message}` });
+      } else if (privateRepoRefusal(response) !== undefined) {
+        result.unavailable.push({
+          id,
+          describe,
+          reason: `HTTP ${response.status}: ${privateRepoRefusal(response)}`,
+        });
       } else {
         result.errors.push({ id, describe, reason: `HTTP ${response.status}${message}` });
       }

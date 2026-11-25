@@ -518,6 +518,64 @@ describe('compareSettings', () => {
       expect(driftIds(responses)).toEqual(['wiki-off']);
     });
 
+    it('lists the real private-repository 422 (text in errors) as unavailable', () => {
+      const text = 'Fork PR approval is not allowed for private repositories.';
+      const responses = drifted((r) => {
+        r['actions/permissions/fork-pr-contributor-approval'] = {
+          status: 422,
+          body: { message: 'Validation Failed', errors: text, status: '422' },
+        };
+      });
+      const result = compareSettings(responses);
+      expect(result.errors).toEqual([]);
+      expect(result.drift).toEqual([]);
+      expect(result.unavailable.map((item) => item.id)).toEqual(['fork-pr-approval-all-outside']);
+      expect(result.unavailable[0]!.reason).toBe(`HTTP 422: ${text}`);
+    });
+
+    it('also reads the private-repository text from message or a list, ignoring case', () => {
+      for (const body of [
+        { message: 'NOT ALLOWED FOR PRIVATE REPOSITORIES' },
+        { message: 'Validation Failed', errors: ['x', 'Not allowed for private repositories'] },
+      ]) {
+        const responses = drifted((r) => {
+          r['actions/permissions/fork-pr-contributor-approval'] = { status: 422, body };
+        });
+        const result = compareSettings(responses);
+        expect(result.errors).toEqual([]);
+        expect(result.unavailable.map((item) => item.id)).toEqual(['fork-pr-approval-all-outside']);
+      }
+    });
+
+    it('keeps any other 422 as an error', () => {
+      const responses = drifted((r) => {
+        r['actions/permissions/fork-pr-contributor-approval'] = {
+          status: 422,
+          body: { message: 'Validation Failed', errors: 'approval_policy is invalid' },
+        };
+        r['actions/permissions/workflow'] = { status: 422, body: null };
+      });
+      const result = compareSettings(responses);
+      expect(result.unavailable).toEqual([]);
+      expect(result.errors.map((e) => e.id)).toEqual([
+        'workflow-token-read',
+        'actions-no-pr-approval',
+        'fork-pr-approval-all-outside',
+      ]);
+    });
+
+    it('does not treat the private-repository text on other statuses as unavailable', () => {
+      const responses = drifted((r) => {
+        r['actions/permissions/fork-pr-contributor-approval'] = {
+          status: 500,
+          body: { message: 'not allowed for private repositories' },
+        };
+      });
+      expect(compareSettings(responses).errors.map((e) => e.id)).toEqual([
+        'fork-pr-approval-all-outside',
+      ]);
+    });
+
     it('treats other failures as errors, not as unavailable', () => {
       const responses = drifted((r) => {
         r['actions/permissions/workflow'] = { status: 401, body: { message: 'Bad credentials' } };
