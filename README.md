@@ -198,8 +198,8 @@ npm run check:site      # builds the site first; scripts only on the feedback pa
 GitHub Actions runs the fast checks on every pull request and every push to `main` ([`ci.yml`](.github/workflows/ci.yml)).
 The `checks` job runs `format:check`, `lint`, `typecheck`, `test`, both browser builds, `check:privacy` and
 `check:site`; the `workflow-lint` job runs the two workflow commands below. Both must be green before a pull
-request merges. The E2E and visual suites are not part of CI: they stay local. Workflows from a first-time
-contributor wait for the owner's approval, and none of them can reach a secret.
+request merges. The E2E and visual suites are not part of CI: they stay local. Workflows from any outside
+contributor's pull request wait for the owner's approval, and none of them can reach a secret.
 
 ```sh
 npm run check:workflows   # policy check of .github/: pinned actions, no secrets, read-only tokens, no risky triggers
@@ -208,9 +208,10 @@ npm run lint:workflows    # actionlint and zizmor, pinned and checksum-verified;
 
 A release is started by hand: the owner runs the **Release** workflow
 ([`release.yml`](.github/workflows/release.yml)) from `main` in the Actions tab. It reads the version from
-`package.json`, fails if a release or tag `v<version>` already exists, runs the same checks as CI, builds the
-packages and creates a **draft** GitHub Release with `naciocheck-<version>-chrome.zip`,
-`naciocheck-<version>-firefox.zip`, `naciocheck-<version>-sources.zip` and `naciocheck-<version>-SHA256SUMS.txt`.
+`package.json`, fails if a release or tag `v<version>` already exists, runs the same eight checks as the CI
+`checks` job (not `workflow-lint`), builds the packages and creates a **draft** GitHub Release with
+`naciocheck-<version>-chrome.zip`, `naciocheck-<version>-firefox.zip`, `naciocheck-<version>-sources.zip` and
+`naciocheck-<version>-SHA256SUMS.txt`.
 The owner downloads the files, checks them with `sha256sum -c`, uploads to the stores and publishes the draft,
 which creates the tag. The release assets exist so a build can be reproduced and verified; they are not an
 install channel, and the supported way to install NacioCheck is from the stores (see [Install](#install)).

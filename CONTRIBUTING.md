@@ -64,8 +64,8 @@ npm ci
 - Every pull request runs the CI workflow. Two checks must pass before it can be merged: `checks` (format,
   lint, typecheck, unit tests, both builds, the privacy gate and the site check) and `workflow-lint` (the
   workflow policy check and the workflow lint).
-- If this is your first contribution, the workflows wait for the maintainer to approve the run before they
-  start. That is expected, not a failure; the maintainer reads the change first.
+- The workflows of a pull request from an outside contributor wait for the maintainer to approve the run
+  before they start. That is expected, not a failure; the maintainer reads the change first.
 - Pull requests that change workflows, permissions or dependencies get closer scrutiny.
 - Resolve every review conversation. Do not force-push over a review in progress without saying so.
 
