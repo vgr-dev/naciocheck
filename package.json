@@ -29,6 +29,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json && tsc --noEmit -p worker/tsconfig.json",
     "check:privacy": "node scripts/check-privacy.mjs",
+    "check:workflows": "node scripts/check-workflows.mjs",
     "build:site": "node scripts/build-site.mjs",
     "check:site": "npm run build:site && node scripts/check-site.mjs",
     "logo:outline": "node scripts/outline-logo.mjs",
